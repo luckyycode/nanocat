@@ -1,0 +1,51 @@
+"
+layout(location = 0) in vec3 vertexPosition_modelspace;
+layout(location = 1) in vec2 UV;
+
+uniform mat4 ModelMatrix;
+uniform mat4 ProjMatrix;
+
+out vec4 TP, FUV; // Texture pos, Fixed UV
+
+mat3 m3( mat4 m )
+{
+	mat3 result;
+	
+	result[0][0] = m[0][0]; 
+	result[0][1] = m[0][1]; 
+	result[0][2] = m[0][2]; 
+
+	result[1][0] = m[1][0]; 
+	result[1][1] = m[1][1]; 
+	result[1][2] = m[1][2]; 
+	
+	result[2][0] = m[2][0]; 
+	result[2][1] = m[2][1]; 
+	result[2][2] = m[2][2]; 
+	
+	return result;
+}
+
+void main() {
+	  vec3 pos = vec3(vertexPosition_modelspace);
+
+    mat4 InversedModel = inverse(ModelMatrix);
+    TP = ProjMatrix * ModelMatrix * vec4(vertexPosition_modelspace, 1.0);
+    FUV = vec4(UV, 1.0, 1.0);
+
+    gl_Position = ProjMatrix * ModelMatrix * vec4(vertexPosition_modelspace, 1.0);
+}
+
+"
+uniform float time; // time in seconds
+
+uniform sampler2D decal;
+
+in vec4 TP, FUV;
+out vec4 color;
+
+void main() {
+
+  color = texture(decal, FUV.xy);
+}
+"

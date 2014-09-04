@@ -1,0 +1,356 @@
+"
+
+/* 
+	Beautiful water shader.
+*/
+
+layout(location = 0) in vec3 vertexPosition_modelspace;
+layout(location = 1) in vec2 UV;
+layout(location = 2) in vec3 vertexNormal_space;
+
+uniform mat4 ModelMatrix;
+uniform mat4 ProjMatrix;
+uniform vec3 cameraPos;
+
+out vec3 T, B, N; // Ta, Bi, No
+out vec4 TP, FUV; // Texture pos, Fixed UV
+out vec3 VV;      // View vector
+
+out mat4 InversedModelMatrix;
+out vec3 worldPosA;
+
+mat3 m3( mat4 m )
+{
+	mat3 result;
+	
+	result[0][0] = m[0][0]; 
+	result[0][1] = m[0][1]; 
+	result[0][2] = m[0][2]; 
+
+	result[1][0] = m[1][0]; 
+	result[1][1] = m[1][1]; 
+	result[1][2] = m[1][2]; 
+	
+	result[2][0] = m[2][0]; 
+	result[2][1] = m[2][1]; 
+	result[2][2] = m[2][2]; 
+	
+	return result;
+}
+
+void main() {
+	vec3 pos = vec3(vertexPosition_modelspace);
+	mat4 normalMatrix = transpose(inverse(ModelMatrix));
+	vec4 norm = ModelMatrix * vec4(vertexNormal_space, 0.0);
+	vec4 Tangent = vec4(5.0); 
+	
+	/*
+	vec3 c1 = cross(norm.xyz, vec3(0.0, 0.0, 1.0)); 
+	vec3 c2 = cross(norm.xyz, vec3(0.0, 1.0, 0.0)); 
+
+	if( length(c1) > length(c2) )
+	{
+		Tangent = vec4(c1, 0.0);	
+	}
+	else
+	{
+		Tangent = vec4(c2, 0.0);	
+	}
+	Tangent = normalize(Tangent);
+	*/
+
+	
+    T   = m3(ModelMatrix) * Tangent.xyz;
+    B   = m3(ModelMatrix) * cross(norm.xyz, Tangent.xyz);
+    N   = m3(ModelMatrix) * norm.xyz;
+    
+    mat4 InversedModel = inverse(ModelMatrix);
+    InversedModelMatrix = InversedModel;
+    TP = ProjMatrix * ModelMatrix * vec4(vertexPosition_modelspace, 1.0);
+    VV = pos - m3(ModelMatrix) * InversedModel[3].xyz;
+    FUV = vec4( UV, 0.0, 0.0 );
+
+    worldPosA = vec3(ModelMatrix*vec4(vertexPosition_modelspace, 1.0));
+    gl_Position = ProjMatrix * ModelMatrix * vec4(vertexPosition_modelspace, 1.0);
+}
+
+"
+
+uniform float time; // time in seconds
+
+uniform sampler2D normal_texture;
+uniform sampler2D reflection_texture; 
+uniform sampler2D refraction_texture; // scene buffer
+uniform sampler2D depth_texture;
+
+in vec3 T, B, N; //tangent binormal normal
+in vec4 TP, FUV;
+in vec3 VV;
+in vec3 worldPosA;
+
+in mat4 InversedModelMatrix;
+
+out vec4 outColor;
+
+#define timer time / 100.0
+#define reflectionSampler reflection_texture
+#define refractionSampler refraction_texture
+#define normalSampler normal_texture
+#define depthSampler depth_texture
+
+uniform vec3 cameraPos;
+
+
+vec2 windDir = vec2(-0.5, 0.8); //wind direction XY
+float windSpeed = 0.1; //wind speed
+
+float visibility = 512.0;
+
+float scale = 1.0; //overall wave scale
+
+vec2 bigWaves = vec2(0.3, 0.3); //strength of big waves
+vec2 midWaves = vec2(0.3, 0.15); //strength of middle sized waves
+vec2 smallWaves = vec2(0.15, 0.1); //strength of small waves
+
+vec3 waterColor = vec3(0.2,0.4,0.5); //color of the water
+float waterDensity = 0.0; //water density (0.0-1.0)
+    
+float choppy = 0.15; //wave choppyness
+float aberration = 0.00002; //chromatic aberration amount
+float bump = 0.3; //overall water surface bumpyness
+float reflBump = 0.04; //reflection distortion amount
+float refrBump = 0.03; //refraction distortion amount
+
+vec3 sunPos = vec3(InversedModelMatrix * vec4(-114.0, 60.0, -117.0, 1.0));
+float sunSpec = 1000.0; //Sun specular hardness
+
+float scatterAmount = 3.5; //amount of sunlight scattering of waves
+vec3 scatterColor = vec3(0.0,1.0,0.95);// color of the sunlight scattering
+//----------------
+
+vec3 tangentSpace( vec3 v ) {
+	vec3 vec;
+	vec.xy = v.xy;
+	vec.z = sqrt( 1.0 - dot( vec.xy, vec.xy ) );
+	vec.xyz = normalize( vec.x * T + vec.y * B + vec.z * N );
+	return vec;
+}
+
+
+
+vec3 intercept(vec3 lineP,
+               vec3 lineN,
+               vec3 planeN,
+               float  planeD)
+{
+  
+	float distance = (planeD - dot(planeN, lineP)) /dot(lineN, planeN);
+	return lineP + lineN * distance;
+}
+
+
+float fresnel_dielectric( vec3 Incoming, vec3 Normal, float eta ) {
+    float c = abs(dot(Incoming, Normal));
+    float g = eta * eta - 1.0 + c * c;
+    float result;
+
+    if(g > 0.0) {
+        g = sqrt(g);
+        float A =(g - c)/(g + c);
+        float B =(c *(g + c)- 1.0)/(c *(g - c)+ 1.0);
+        result = 0.5 * A * A *(1.0 + B * B);
+    }
+    else
+        result = 1.0;  
+
+    return result;
+}
+
+vec2 flipTexcoords( in vec2 texcoords )  {
+	return -texcoords + 1.0;
+}
+
+vec3 perturb(sampler2D tex, vec2 coords, float bend)
+{
+bend *= choppy;
+vec3 col = vec3(0.0);
+vec2 nCoord = vec2(0.0); //normal coords
+
+nCoord = coords * (scale * 0.04) + windDir * timer * (windSpeed*0.03);
+col += texture(tex,nCoord + vec2(-timer*0.005,-timer*0.01)).rgb*0.20;
+nCoord = coords * (scale * 0.1) + windDir * timer * (windSpeed*0.05)-(col.xy/col.zz)*bend;
+col += texture(tex,nCoord + vec2(+timer*0.01,+timer*0.005)).rgb*0.20;
+
+nCoord = coords * (scale * 0.25) + windDir * timer * (windSpeed*0.1)-(col.xy/col.zz)*bend;
+col += texture(tex,nCoord + vec2(-timer*0.02,-timer*0.03)).rgb*0.20;
+nCoord = coords * (scale * 0.5) + windDir * timer * (windSpeed*0.2)-(col.xy/col.zz)*bend;
+col += texture(tex,nCoord + vec2(+timer*0.03,+timer*0.02)).rgb*0.15;
+
+nCoord = coords * (scale* 1.0) + windDir * timer * (windSpeed*1.0)-(col.xy/col.zz)*bend;
+col += texture(tex, nCoord + vec2(-timer*0.06,+timer*0.08)).rgb*0.15;
+nCoord = coords * (scale * 2.0) + windDir * timer * (windSpeed*1.3)-(col.xy/col.zz)*bend;
+col += texture(tex,nCoord + vec2(+timer*0.08,-timer*0.06)).rgb*0.10;
+
+return col;
+}
+
+
+
+#define height -900.0
+void main() {
+
+    vec2 fragCoord = TP.xy/TP.w*0.5+0.5;
+    fragCoord = clamp(fragCoord,0.002,0.998);
+
+
+    vec2 nCoord = vec2(0.0); //normal coords
+    vec2 coo = ((FUV.st) / 1106.208)-0.5;
+    float depth = .1;//texture(depthSampler,coo).r;
+    float coast = smoothstep(0.3,0.7,depth);
+    float coast1 = smoothstep(0.49,0.5,depth);
+
+    choppy = choppy * (coast)+0.05;
+    bump = -bump*clamp(1.0-coast+0.0,0.0,1.0);
+    bump = bump*clamp(1.0-coast1+0.0,0.0,1.0);
+
+    //scale = scale - (coast*0.1);
+    //scale = scale * (coast*0.1+0.9);
+    float time = timer - (coast)*80.0; //hmmm
+    //timer = timer * (coast*0.5+0.5)*1.5;
+    //smallWaves.x = smallWaves.x + (0.1*coast);
+    //smallWaves.y = smallWaves.y + (0.1*coast);
+    //bigWaves.x = bigWaves.x - (0.1*(1.0-coast));
+    //bigWaves.y = bigWaves.y + (0.1*(1.0-coast));
+
+    vec3 mudext = vec3(1.0, 0.7, 0.5);//mud extinction
+    float atmosphere = length(cameraPos-worldPosA)/200.0;
+
+    vec3 atmopherefog = clamp(1.0-exp(-atmosphere/mudext),0.0,1.0);
+	float n_scale = 32.0;
+    nCoord = (FUV.xy*vec2(n_scale)) * (scale * 0.04) + windDir * time * (windSpeed*0.04);
+    vec3 normal0 = 2.0 * texture(normalSampler, nCoord + vec2(-time*0.015,-time*0.005)).rgb - 1.0;
+    nCoord = (FUV.xy*vec2(n_scale)) * (scale * 0.1) + windDir * time * (windSpeed*0.08)-(normal0.xy/normal0.zz)*choppy;
+    vec3 normal1 = 2.0 * texture(normalSampler, nCoord + vec2(+time*0.020,+time*0.015)).rgb - 1.0;
+
+    nCoord = (FUV.xy*vec2(n_scale)) * (scale * 0.25) + windDir * time * (windSpeed*0.07)-(normal1.xy/normal1.zz)*choppy;
+    vec3 normal2 = 2.0 * texture(normalSampler, nCoord + vec2(-time*0.04,-time*0.03)).rgb - 1.0;
+    nCoord = (FUV.xy*vec2(n_scale))* (scale * 0.5) + windDir * time * (windSpeed*0.09)-(normal2.xy/normal2.z)*choppy;
+    vec3 normal3 = 2.0 * texture(normalSampler, nCoord + vec2(+time*0.03,+time*0.04)).rgb - 1.0;
+
+    nCoord = (FUV.xy*vec2(n_scale))* (scale* 1.0) + windDir * time * (windSpeed*0.4)-(normal3.xy/normal3.zz)*choppy;
+    vec3 normal4 = 2.0 * texture(normalSampler, nCoord + vec2(-time*0.02,+time*0.1)).rgb - 1.0;  
+    nCoord = (FUV.xy*vec2(n_scale))* (scale * 2.0) + windDir * time * (windSpeed*0.7)-(normal4.xy/normal4.zz)*choppy;
+    vec3 normal5 = 2.0 * texture(normalSampler, nCoord + vec2(+time*0.1,-time*0.06)).rgb - 1.0;
+
+
+    vec3 normal = normalize(normal0 * bigWaves.x + normal1 * bigWaves.y +
+                  normal2 * midWaves.x + normal3 * midWaves.y +
+      normal4 * smallWaves.x + normal5 * smallWaves.y);
+
+    //normal.x = -normal.x; 
+    //normal.y = -normal.y; 
+
+    vec3 nVec = tangentSpace( normal * 1.0 ); //converting normals to tangent space    
+    vec3 vVec = normalize( VV );
+    vec3 lVec = normalize( sunPos );
+
+    // normal for light scattering
+    vec3 lNormal = normalize( normal0 * bigWaves.x*0.5 + normal1 * bigWaves.y*0.5 +
+    normal2 * midWaves.x*0.1 + normal3 * midWaves.y*0.1 +
+    normal4 * smallWaves.x*0.1 + normal5 * smallWaves.y*0.1 );
+    
+    lNormal = tangentSpace(lNormal * bump);
+    vec3 pNormal = tangentSpace(vec3(0.0));
+
+    vec3 lR = reflect(lVec, lNormal);
+    vec3 llR = reflect(lVec, pNormal);
+
+    float sunFade = clamp((sunPos.y+10.0)/20.0,0.0,1.0);
+    float scatterFade = clamp((sunPos.y+50.0)/200.0,0.0,1.0);
+    vec3 sunext = vec3(0.45, 0.55, 0.68);//sunlight extinction
+
+    float s = clamp((dot(lR, vVec)*2.0-1.2), 0.0,1.0);
+    float lightScatter = clamp((clamp(dot(-lVec,lNormal)*0.7+0.3,0.0,1.0)*s)*scatterAmount,0.0,1.0)*sunFade *clamp(1.0-exp(-(sunPos.y/500.0)),0.0,1.0);
+    scatterColor = mix(vec3(scatterColor)*vec3(1.0,0.4,0.0), scatterColor, clamp(1.0-exp(-(sunPos.y/500.0)*sunext),0.0,1.0));
+
+    //fresnel term
+    float ior = 1.33;
+    ior = (cameraPos.z>height)?(1.333/1.0):(1.0/1.333); //air to water; water to air
+    float eta = max(ior, 0.00001);
+    float fresnel = fresnel_dielectric(-vVec,nVec,eta);
+
+    //texture edge bleed removal
+    float fade = 12.0;
+    vec2 distortFade = vec2(0.0);
+    distortFade.s = clamp(fragCoord.s*fade,0.0,1.0);
+    distortFade.s -= clamp(1.0-(1.0-fragCoord.s)*fade,0.0,1.0);
+    distortFade.t = clamp(fragCoord.t*fade,0.0,1.0);
+    distortFade.t -= clamp(1.0-(1.0-fragCoord.t)*fade,0.0,1.0); 
+
+    vec2 reflCoord = (fragCoord+(nVec.st*vec2(reflBump,reflBump*(6.0))*distortFade));
+    vec3 reflection = texture(reflectionSampler, reflCoord).rgb;
+
+		
+	vec4 fragmentColor = vec4(0.0, 0.0, 0.0, 0.0);
+	vec2 blurSizes = vec2(0.002, 0.002);
+
+	fragmentColor += texture( reflectionSampler, reflCoord - 4.0 * blurSizes ) * 0.05;
+	fragmentColor += texture( reflectionSampler, reflCoord - 3.0 * blurSizes ) * 0.09;
+	fragmentColor += texture( reflectionSampler, reflCoord - 2.0 * blurSizes ) * 0.12;
+	fragmentColor += texture( reflectionSampler, reflCoord - 1.0 * blurSizes ) * 0.15;
+	fragmentColor += texture( reflectionSampler, reflCoord                  ) * 0.16;
+	fragmentColor += texture( reflectionSampler, reflCoord + 1.0 * blurSizes ) * 0.15;
+	fragmentColor += texture( reflectionSampler, reflCoord + 2.0 * blurSizes ) * 0.12;
+	fragmentColor += texture( reflectionSampler, reflCoord + 3.0 * blurSizes ) * 0.09;
+	fragmentColor += texture( reflectionSampler, reflCoord + 4.0 * blurSizes ) * 0.05;
+
+	reflection += fragmentColor.rgb;	
+
+    vec3 luminosity = vec3(0.30, 0.59, 0.11);
+	
+    float reflectivity = pow(dot(luminosity, reflection.rgb*2.0),3.0);
+    float reflectivity1 = pow(dot(luminosity, reflection.rgb),3.0);
+
+    vec3 R = reflect(vVec, nVec);
+
+    float specular = clamp(pow(atan(max(dot(R, lVec),0.0)*1.55), 1000.0)*reflectivity*8.0,0.0,1.0);
+
+    vec3 specColor = mix(vec3(1.0,0.5,0.2), vec3(1.0,1.0,1.0), clamp(1.0-exp(-(sunPos.y/500.0)*sunext),0.0,1.0));
+
+    vec2 rcoord = reflect( vVec,nVec ).st;
+    vec3 refraction = vec3( 0.0 );
+
+    refraction.r = texture(refractionSampler, (fragCoord-(nVec.st*refrBump*distortFade))*1.0).r;
+    refraction.g = texture(refractionSampler, (fragCoord-(nVec.st*refrBump*distortFade))*1.0-(rcoord*aberration)).g;
+    refraction.b = texture(refractionSampler, (fragCoord-(nVec.st*refrBump*distortFade))*1.0-(rcoord*aberration*2.0)).b;
+	
+	
+    float waterSunGradient = dot(normalize(cameraPos-worldPosA ), -normalize(sunPos));
+    waterSunGradient = clamp(pow(waterSunGradient*0.7+0.3,2.0),0.0,1.0);  
+    vec3 waterSunColor = vec3(0.0,1.0,0.85)*waterSunGradient;
+    waterSunColor = (cameraPos.z<height)?waterSunColor*0.5:waterSunColor*0.25;//below or above water?
+
+    float waterGradient = dot(normalize(cameraPos-worldPosA), vec3(0.0,0.0,-1.0));
+    waterGradient = clamp((waterGradient*0.5+0.5),0.2,1.0);
+    vec3 watercolor = (vec3(0.0078, 0.5176, 0.700)+waterSunColor)*waterGradient*0.5;
+    vec3 waterext = vec3(0.6, 0.8, 1.0);//water extinction
+
+    watercolor = mix(watercolor*0.3*sunFade, watercolor, clamp(1.0-exp(-(sunPos.y/500.0)*sunext),0.0,1.0));
+
+    float fog = length( cameraPos - worldPosA ) / visibility; 
+ 
+    fog = clamp( pow( fog, 1.0 ), 0.0, 1.0 );
+
+    float darkness = visibility * 2.0;
+    darkness = clamp( ( cameraPos.y + darkness ) / darkness, 0.0, 1.0 );
+
+    fresnel = clamp( fresnel, 0.0, 1.0 );
+	
+    vec3 color = mix( mix( refraction, scatterColor, lightScatter), reflection, fresnel * 0.6);
+ 	
+    color = mix( clamp(refraction*1.2,0.0,1.0),reflection, fresnel);   
+    color = mix( color, watercolor*darkness*scatterFade, clamp( fog / waterext, 0.0, 1.0 ) );
+
+    outColor = vec4(vec3(color+(specColor*specular)), 1.0);
+}
+"

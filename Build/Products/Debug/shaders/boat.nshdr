@@ -1,0 +1,62 @@
+"
+uniform float time;
+
+void main(void) {
+    vec4 position = gl_Vertex;
+    
+    float speed = 0.75;
+    
+    float magnitude = (sin((time * 3.14159265358979323846264 / ((28.0) * speed))) * 0.05 + 0.15) * 0.1;
+    float d0 = sin(time * 3.14159265358979323846264 / (122.0 * speed)) * 3.0 - 1.5;
+    float d1 = sin(time * 3.14159265358979323846264 / (142.0 * speed)) * 3.0 - 1.5;
+    float d2 = sin(time * 3.14159265358979323846264 / (162.0 * speed)) * 3.0 - 1.5;
+    float d3 = sin(time * 3.14159265358979323846264 / (112.0 * speed)) * 3.0 - 1.5;
+    position.x += sin((time * 3.14159265358979323846264 / (13.0 * speed)) + (position.x + d0)*0.9 + (position.z + d1)*0.9) * magnitude;
+    position.z += sin((time * 3.14159265358979323846264 / (16.0 * speed)) + (position.z + d2)*0.9 + (position.x + d3)*0.9) * magnitude;
+    position.y += sin((time * 3.14159265358979323846264 / (15.0 * speed)) + (position.z + d2) + (position.x + d3)) * (magnitude/1.0);
+    
+    gl_TexCoord[0] = gl_MultiTexCoord0;
+  
+
+    gl_Position = gl_ProjectionMatrix * (gl_ModelViewMatrix * position );
+	
+}
+
+"
+
+#define midDist 0.7
+uniform float maxDist;
+
+uniform sampler2D tex;
+
+uniform float e_time;
+
+float matNear       = 0.02;
+float matFar        = 0.2;
+float maximumMix    = 0.8;
+
+void main(void)
+{
+    
+    float z         = clamp( (gl_FragCoord.z / gl_FragCoord.w / 2000.0), 0.0, 1.0 );
+	float zNear     = clamp((1.0-(z/midDist)),0.0,1.0);
+	float zFar      = clamp((1.0-(z/(1.0-midDist)-midDist)),0.0,1.0);
+	float zMat      = clamp((1.0-(z/matNear-matFar)),0.0,maximumMix);
+    
+    vec4 c = texture2D( tex, gl_TexCoord[0].st );
+    
+    float middayperc = e_time * 0.0005;
+    vec3 skycolor =  vec3(middayperc + 0.4, middayperc + 0.5, middayperc + 0.9);
+    
+    vec3 beauty = mix(skycolor * (middayperc * 1.6 + 0.5), (mix(skycolor * (middayperc * 1.6 + 0.5), c.rgb, zNear)), zFar);
+
+    vec4 color = vec4(beauty, c.a);
+
+    
+    gl_FragColor = color;
+    
+    //if ( z > 0.1 )
+    //     gl_FragColor = vec4(0.0);
+ 
+}
+"

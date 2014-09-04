@@ -1,0 +1,432 @@
+"
+layout(location = 0) in vec3 model_vertexpos;
+layout(location = 1) in vec2 model_uvs;
+out vec2 UV;
+out vec4 fragPos;
+out vec4 posPos;
+
+/* Main shader matrices. */
+uniform mat4 ModelMatrix;
+uniform mat4 ProjectionMatrix;
+uniform mat4 ViewMatrix;
+
+float FXAA_SUBPIX_SHIFT = 1.0/4.0;
+
+
+
+void main(){
+
+  mat4 mvp = ProjectionMatrix * ViewMatrix * ModelMatrix;
+ 
+  UV = model_uvs;//(model_vertexpos.xy + vec2(1.0, 1.0)) / 2.0;
+  
+  vec2 rcpFrame = vec2(1.0/640, 1.0/480);
+  posPos.xy = UV;
+  posPos.zw = UV - 
+                  (rcpFrame * (0.5 + FXAA_SUBPIX_SHIFT));
+   fragPos = vec4( model_vertexpos, 1.0 );
+   gl_Position =  vec4( model_vertexpos, 1.0 );
+
+}
+
+"
+/*
+  Scene shader.
+  
+  * Thanks to John Chapman ( http://john-chapman-graphics.blogspot.ru/ ) for 
+  Pseudo Lens Flare method.
+*/
+
+#define PI  3.14159265
+#define ASAMPLES 32
+#define NSAMPLES 5
+#define FXAA_SPAN_MAX 16.0
+#define FXAA_REDUCE_MUL 1.0/8.0
+
+uniform sampler2D renderedTexture;
+uniform sampler2D depthTexture;
+uniform sampler2D uLensColor;
+
+uniform int aFX;
+uniform int use_lensanam;
+uniform int use_dof;
+
+in vec2 UV;
+in vec4 fragPos;
+in vec4 posPos;
+
+out vec4 color;
+
+uniform float time;
+uniform float width;
+uniform float height;
+
+vec2 fullscreen_texel = vec2( 1.0 / width, 1.0 / height );
+
+// Depth of Field.
+int dof_samples = 3;
+int dof_rings = 5;
+
+vec2 dof_focus = vec2(0.5, 0.5);
+float dof_range = 4.0; 
+float dof_maxblur = 1.25; 
+float dof_threshold = 0.5; 
+float dof_gain = 10.0;
+float dof_bias = 0.4; 
+float dof_fringe = 0.5; 
+float dof_namount = 0.0001; 
+float dof_dbsize = 2.0; 
+bool dof_noise = true; 
+
+// Lens.
+
+float FLARE_DISPERSAL = 0.3;
+float FLARE_HALO_WIDTH = 0.45;
+vec3 FLARE_CHROMA_DISTORTION = vec3(0.01, 0.03, 0.05);
+
+float threshold = 0.65; 
+float gain = 1.3;   
+
+// Blur.
+vec2 texel = vec2(1.0/128.0,1.0/128.0);
+float glowsize = 1.0;
+
+#define timer time/800.0
+float resettimer = 0.0;
+float randomtime = 500.0;
+
+const float permTexUnit = 1.0/256.0;		
+const float permTexUnitHalf = 0.5/256.0;	
+
+vec2 flipTexcoords(in vec2 texcoords)  {
+	return -texcoords + 1.0;
+}
+
+float vignette(in vec2 coords) {
+	float dist = distance(coords, vec2(0.5,0.5));
+	dist = smoothstep(FLARE_HALO_WIDTH-0.2, FLARE_HALO_WIDTH, dist);
+	return clamp(dist,0.0,1.0);
+}
+
+vec3 blur(in sampler2D tex, in vec2 coords) {
+	vec3 col = vec3(0.0);
+	float kernel[25];
+	vec2 offset[25];
+	
+	vec2 wh = vec2(texel.x, texel.y) * glowsize;
+	
+	offset[0] = vec2(-2.0,-2.0)*wh;
+	offset[1] = vec2(-1.0,-2.0)*wh;
+	offset[2] = vec2( 0.0,-2.0)*wh;
+	offset[3] = vec2( 1.0,-2.0)*wh;
+	offset[4] = vec2( 2.0,-2.0)*wh;
+
+	offset[5] = vec2(-2.0,-1.0)*wh;
+	offset[6] = vec2(-1.0,-1.0)*wh;
+	offset[7] = vec2( 0.0,-1.0)*wh;
+	offset[8] = vec2( 1.0,-1.0)*wh;
+	offset[9] = vec2( 2.0,-1.0)*wh;
+
+	offset[10] = vec2(-2.0, 0.0)*wh;
+	offset[11] = vec2(-1.0, 0.0)*wh;
+	offset[12] = vec2( 0.0, 0.0)*wh;
+	offset[13] = vec2( 1.0, 0.0)*wh;
+	offset[14] = vec2( 2.0, 0.0)*wh;
+
+	offset[15] = vec2(-2.0, 1.0)*wh;
+	offset[16] = vec2(-1.0, 1.0)*wh;
+	offset[17] = vec2( 0.0, 1.0)*wh;
+	offset[18] = vec2( 1.0, 1.0)*wh;
+	offset[19] = vec2( 2.0, 1.0)*wh;
+
+	offset[20] = vec2(-2.0, 2.0)*wh;
+	offset[21] = vec2(-1.0, 2.0)*wh;
+	offset[22] = vec2( 0.0, 2.0)*wh;
+	offset[23] = vec2( 1.0, 2.0)*wh;
+	offset[24] = vec2( 2.0, 2.0)*wh;
+
+	kernel[0] = 1.0/256.0;   kernel[1] = 4.0/256.0;   kernel[2] = 6.0/256.0;   kernel[3] = 4.0/256.0;   kernel[4] = 1.0/256.0;
+	kernel[5] = 4.0/256.0;   kernel[6] = 16.0/256.0;  kernel[7] = 24.0/256.0;  kernel[8] = 16.0/256.0;  kernel[9] = 4.0/256.0;
+	kernel[10] = 6.0/256.0;  kernel[11] = 24.0/256.0; kernel[12] = 36.0/256.0; kernel[13] = 24.0/256.0; kernel[14] = 6.0/256.0;
+	kernel[15] = 4.0/256.0;  kernel[16] = 16.0/256.0; kernel[17] = 24.0/256.0; kernel[18] = 16.0/256.0; kernel[19] = 4.0/256.0;
+	kernel[20] = 1.0/256.0;  kernel[21] = 4.0/256.0;  kernel[22] = 6.0/256.0;  kernel[23] = 4.0/256.0;  kernel[24] = 1.0/256.0;
+
+	for( int i=0; i<25; i++ ) {
+		vec3 tmp = texture(tex, coords + offset[i]).rgb;
+		col += tmp * kernel[i];
+	}
+	
+	return col;
+}
+
+vec3 treshold(in sampler2D tex, in vec2 coords) {
+	vec3 col = texture(tex,coords).rgb;
+	
+	vec3 lumcoeff = vec3(0.299,0.587,0.114);
+	float lum = dot(col.rgb, lumcoeff);
+	float thresh = max((lum-threshold)*gain, 0.0);
+	return mix(vec3(0.0),col,thresh);
+}
+
+vec3 textureDistorted(in sampler2D tex,in vec2 sample_center,in vec2 sample_vector,in vec3 distortion) {
+	vec3 col = vec3(0.0);
+
+	col.r = treshold(tex, sample_center + sample_vector * distortion.r).r;
+	col.g = treshold(tex, sample_center + sample_vector * distortion.g).g;
+	col.b = treshold(tex, sample_center + sample_vector * distortion.b).b;
+
+	return col;
+}
+
+vec2 rand(in vec2 coord) { 
+	float noiseX = ((fract(1.0-coord.s*(width/2.0))*0.25)+(fract(coord.t*(height/2.0))*0.75))*2.0-1.0;
+	float noiseY = ((fract(1.0-coord.s*(width/2.0))*0.75)+(fract(coord.t*(height/2.0))*0.25))*2.0-1.0;
+	
+	if (dof_noise) {
+      noiseX = clamp(fract(sin(dot(coord ,vec2(12.9898,78.233))) * 43758.5453),0.0,1.0)*2.0-1.0;
+      noiseY = clamp(fract(sin(dot(coord ,vec2(12.9898,78.233)*2.0)) * 43758.5453),0.0,1.0)*2.0-1.0;
+	}
+	
+	return vec2(noiseX,noiseY);
+}
+
+// FXAA
+vec3 make_fxaa( vec4 posPos, sampler2D tex, vec2 rcpFrame) { 
+  
+    #define FXAA_REDUCE_MIN   (1.0/4096.0)
+
+    vec3 rgbNW = textureLod(tex, posPos.zw, 0.0).xyz;
+    vec3 rgbNE = textureLodOffset(tex, posPos.zw, 0.0, ivec2(1,0)).xyz;
+    vec3 rgbSW = textureLodOffset(tex, posPos.zw, 0.0, ivec2(0,1)).xyz;
+    vec3 rgbSE = textureLodOffset(tex, posPos.zw, 0.0, ivec2(1,1)).xyz;
+    vec3 rgbM  = textureLod(tex, posPos.xy, 0.0).xyz;
+
+    vec3 luma = vec3(0.299, 0.587, 0.114);
+    float lumaNW = dot(rgbNW, luma);
+    float lumaNE = dot(rgbNE, luma);
+    float lumaSW = dot(rgbSW, luma);
+    float lumaSE = dot(rgbSE, luma);
+    float lumaM  = dot(rgbM,  luma);
+
+    float lumaMin = min(lumaM, min(min(lumaNW, lumaNE), min(lumaSW, lumaSE)));
+    float lumaMax = max(lumaM, max(max(lumaNW, lumaNE), max(lumaSW, lumaSE)));
+
+    vec2 dir; 
+    dir.x = -((lumaNW + lumaNE) - (lumaSW + lumaSE));
+    dir.y =  ((lumaNW + lumaSW) - (lumaNE + lumaSE));
+
+    float dirReduce = max(
+        (lumaNW + lumaNE + lumaSW + lumaSE) * (0.25 * FXAA_REDUCE_MUL),
+        FXAA_REDUCE_MIN);
+    float rcpDirMin = 1.0/(min(abs(dir.x), abs(dir.y)) + dirReduce);
+    dir = min(vec2( FXAA_SPAN_MAX,  FXAA_SPAN_MAX), 
+          max(vec2(-FXAA_SPAN_MAX, -FXAA_SPAN_MAX), 
+          dir * rcpDirMin)) * rcpFrame.xy;
+
+    vec3 rgbA = (1.0/2.0) * (
+        textureLod(tex, posPos.xy + dir * (1.0/3.0 - 0.5), 0.0).xyz +
+        textureLod(tex, posPos.xy + dir * (2.0/3.0 - 0.5), 0.0).xyz);
+    vec3 rgbB = rgbA * (1.0/2.0) + (1.0/4.0) * (
+        textureLod(tex, posPos.xy + dir * (0.0/3.0 - 0.5), 0.0).xyz +
+        textureLod(tex, posPos.xy + dir * (3.0/3.0 - 0.5), 0.0).xyz);
+    float lumaB = dot(rgbB, luma);
+    if((lumaB < lumaMin) || (lumaB > lumaMax)) return rgbA;
+      return rgbB; 
+}
+  
+vec4 apply_fxaa(sampler2D tex, vec2 uv, float time) {
+  vec4 c = vec4(0.0);
+  c.rgb = make_fxaa(posPos, tex, fullscreen_texel);
+  c.a = 1.0;
+  return c;
+}
+  
+vec3 apply_blur(vec2 coords,float blur) {
+	vec3 col = vec3(0.0);
+	
+	col.r = texture(renderedTexture, coords + vec2(0.0,1.0)*fullscreen_texel*dof_fringe*blur, 0.0).r;
+	col.g = texture(renderedTexture, coords + vec2(-0.866,-0.5)*fullscreen_texel*dof_fringe*blur, 0.0).g;
+	col.b = texture(renderedTexture, coords + vec2(0.866,-0.5)*fullscreen_texel*dof_fringe*blur, 0.0).b;
+
+	vec3 lumcoeff = vec3(0.299,0.587,0.114);
+	float lum = dot(col.rgb, lumcoeff);
+	float thresh = max((lum-dof_threshold)*dof_gain, 0.0);
+	
+	return col+mix(vec3(0.0),col,thresh*blur);
+}
+
+
+
+uniform vec2 LensCenter;
+uniform vec2 ScreenCenter;
+uniform vec2 Scale;
+uniform vec2 ScaleIn;
+uniform vec4 HmdWarpParam;
+
+vec2 HmdWarp(vec2 texIn)
+{
+   vec2 theta = (texIn - LensCenter) * ScaleIn;
+   float rSq = theta.x * theta.x + theta.y * theta.y;
+   vec2 theta1 = theta * (HmdWarpParam.x + HmdWarpParam.y * rSq + HmdWarpParam.z * rSq * rSq + HmdWarpParam.w * rSq * rSq * rSq);
+   return LensCenter + Scale * theta1;
+}
+
+/*
+const vec4 kappa = vec4(1.0,1.7,0.7,15.0);
+
+ float screen_width = 1280.0;
+ float screen_height = 768.0;
+
+const float scaleFactor = 0.9;
+
+const vec2 leftCenter = vec2(0.25, 0.5);
+const vec2 rightCenter = vec2(0.75, 0.5);
+
+
+// Scales input texture coordinates for distortion.
+vec2 hmdWarp(vec2 LensCenter, vec2 texCoord, vec2 Scale, vec2 ScaleIn) {
+    vec2 theta = (texCoord - LensCenter) * ScaleIn; 
+    float rSq = theta.x * theta.x + theta.y * theta.y;
+    vec2 rvector = theta * (kappa.x + kappa.y * rSq + kappa.z * rSq * rSq + kappa.w * rSq * rSq * rSq);
+    vec2 tc = LensCenter + Scale * rvector;
+    return tc;
+}
+
+bool validate(vec2 tc, int left_eye) {
+    //keep within bounds of texture 
+    if ((left_eye == 1 && (tc.x < 0.0 || tc.x > 0.5)) ||   
+        (left_eye == 0 && (tc.x < 0.5 || tc.x > 1.0)) ||
+        tc.y < 0.0 || tc.y > 1.0) {
+        return false;
+    }
+    return true;
+}
+*/
+
+
+
+// Main
+void main(){
+
+
+    //vec2 TEXCOORD = (fragPos.xy/fragPos.w)*0.5+0.5;
+    //TEXCOORD = clamp(TEXCOORD,0.002,0.998);
+    
+    vec4 ChromAbParam = vec4(0.996000, -0.004000, 1.014000,0.000000);
+
+    vec2 tc = HmdWarp(UV);
+
+	vec2 theta = (UV - LensCenter) * ScaleIn; // Scales to [-1, 1]
+    float rSq = theta.x * theta.x + theta.y * theta.y;
+   	vec2 theta1 = theta * (HmdWarpParam.x + HmdWarpParam.y * rSq + HmdWarpParam.z * rSq * rSq + HmdWarpParam.w * rSq * rSq * rSq);
+    vec2 tcs = LensCenter + Scale * theta1;
+	vec2 TEXCOORD = tc;
+    vec2 thetaBlue = theta1 * (ChromAbParam.z + ChromAbParam.w * rSq);
+    vec2 tcBlue = LensCenter + Scale * thetaBlue;
+
+   float blue = texture(renderedTexture, tcBlue).b;
+   vec2 tcGreen = LensCenter + Scale * theta1;
+   float green = texture(renderedTexture, tcGreen).g;
+   vec2 thetaRed = theta1 * (ChromAbParam.x + ChromAbParam.y * rSq);
+   vec2 tcRed = LensCenter + Scale * thetaRed;
+   float red = texture(renderedTexture, tcRed).r;
+
+	vec4 outColor = vec4(red, green, blue, 1.0);
+    
+    
+    // Lens FX
+
+    vec2 image_center = vec2(0.5);
+    vec2 sample_vector = (image_center - TEXCOORD) * FLARE_DISPERSAL;
+    vec2 halo_vector = normalize(sample_vector) * FLARE_HALO_WIDTH;
+
+    vec3 result = textureDistorted(renderedTexture, TEXCOORD + halo_vector, halo_vector, FLARE_CHROMA_DISTORTION).rgb;
+    result *= vignette(TEXCOORD);
+
+    vec2 offset;
+    for (int i = 0; i < NSAMPLES; ++i)  {
+        offset = sample_vector * float(i);
+        result += textureDistorted(renderedTexture, TEXCOORD + offset, offset, FLARE_CHROMA_DISTORTION).rgb;
+    }
+    
+    vec3 anamorph = vec3(0.0);
+    float s;
+     
+    for (int i = -ASAMPLES; i < ASAMPLES; ++i) {
+      s = clamp(1.0/abs(float(i)),0.0,1.0);
+      anamorph += treshold(renderedTexture, vec2(TEXCOORD.x + float(i)*(1.0/64.0),TEXCOORD.y)).rgb*s;
+    }
+	vec3 dust = texture(uLensColor,TEXCOORD).rgb;
+    vec3 colorB = apply_fxaa( renderedTexture, tc, 0.0 ).rgb;
+
+    // Glow.
+    float sparklesize = 128.0;
+    int g_samples = 8;
+    float sparklefade = 1.1;
+    
+    vec3 g_anamorph = vec3(0.0);
+    float gs;
+
+    for (int i = -g_samples; i < g_samples; ++i) {
+      gs = clamp(pow(1.0/abs(float(i)),sparklefade),0.0,1.0);
+      g_anamorph += treshold(renderedTexture, clamp(vec2(tc.x + float(i)*(1.0/sparklesize),tc.y - float(i)*(1.0/sparklesize)),0.02,0.98)).rgb*gs;
+    }
+
+    for (int i = -g_samples; i < g_samples; ++i) {
+      gs = clamp(pow(1.0/abs(float(i)),sparklefade),0.0,1.0);
+      g_anamorph += treshold(renderedTexture, clamp(vec2(tc.x - float(i)*(1.0/sparklesize),tc.y - float(i)*(1.0/sparklesize)),0.02,0.98)).rgb*gs;
+    }
+
+    for (int i = -g_samples; i < g_samples; ++i) {
+      gs = clamp(pow(1.0/abs(float(i)),sparklefade),0.0,1.0);
+      g_anamorph += treshold(renderedTexture, clamp(vec2(tc.x,tc.y+ float(i)*(1.0/sparklesize)),0.02,0.98)).rgb*gs;
+    }
+    
+    // Depth of Field.
+    float depth = texture(depthTexture, tc).x;
+    float blur = 0.0;
+
+    float fDepth = texture(depthTexture, dof_focus).x;
+    blur = clamp( ( abs(depth - fDepth) / dof_range) * 100.0, -dof_maxblur, dof_maxblur );
+
+    vec2 noise = rand(tc) * dof_namount * blur;
+
+    float w = ( 1.0 / width ) * blur + noise.x;
+    float h =  ( 1.0 / height ) * blur + noise.y;
+
+    float s2 = 1.0;
+
+    int ringsamples;
+
+    for (int i = 1; i <= dof_rings; i += 1) {   
+      ringsamples = i * dof_samples;
+
+      for (int j = 0 ; j < ringsamples ; j += 1) {
+        float step = PI*2.0 / float(ringsamples);
+        float pw = (cos(float(j)*step)*float(i));
+        float ph = (sin(float(j)*step)*float(i));
+        float p = 1.0;
+
+        colorB += apply_blur( tc + vec2(pw * w,ph * h), blur ) * mix( 1.0, (float(i)) / (float(dof_rings)), dof_bias ) * p;  
+        s2 += 1.0 * mix( 1.0, (float(i) ) / (float(dof_rings)), dof_bias) * p;   
+      }
+    }
+
+    colorB /= s2;  
+	
+    vec4 cleanRender = texture( renderedTexture, UV );
+	
+    vec3 lensAnamorph = use_lensanam == 1 ? anamorph * vec3(0.1, 0.0, 1.0) * 2.5 : vec3(0.0);
+	vec4 dofFX = use_dof == 1 ? vec4( colorB, 1.0 ) : cleanRender;
+	vec4 lensFX = vec4(((result+lensAnamorph) * (dust*0.8+0.2)) , 1.0);
+
+    vec4 fxRender = vec4(g_anamorph, 1.0) +  dofFX + lensFX;
+
+    if (any(bvec2(clamp(tc, ScreenCenter-vec2(0.50,0.5), ScreenCenter+vec2(0.50,0.5))-tc))) 
+       color = vec4(0.0, 0.0, 0.0, 1.0);
+    else
+       color = outColor;  
+        
+    //color = aFX == 0 ? cleanRender : fxRender;
+}
+"

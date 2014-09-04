@@ -353,7 +353,7 @@
 				LastUpgradeCheck = 0600;
 				ORGANIZATIONNAME = "Neko Vision";
 			};
-			buildConfigurationList = 7EF8EAE418737E2B00D2384D /* Build configuration list for PBXProject "SkyCatCPP" */;
+			buildConfigurationList = 7EF8EAE418737E2B00D2384D /* Build configuration list for PBXProject "Nanocat" */;
 			compatibilityVersion = "Xcode 3.2";
 			developmentRegion = English;
 			hasScannedForEncodings = 0;
@@ -599,7 +599,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		7EF8EAE418737E2B00D2384D /* Build configuration list for PBXProject "SkyCatCPP" */ = {
+		7EF8EAE418737E2B00D2384D /* Build configuration list for PBXProject "Nanocat" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				7EF8EB1818737E2C00D2384D /* Debug */,

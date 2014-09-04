@@ -23,7 +23,7 @@ ncClientGame _clientgame;
     Client game has nothing to networking.
 */
 
-ConsoleVariable     mapname("level", "name", "Current level name", "world", CVAR_READONLY );
+ConsoleVariable     mapname( "level", "name", "Current level name", "world", CVFLAG_READONLY );
 
 /*
     Initialize client game.
@@ -68,7 +68,7 @@ bool ncClientGame::Loadmap( const char *map_name ) {
         _core.Print( LOG_INFO, "Creating map entities..\n" );
 
         // Refresh map stuff.
-        // console_exec( str("exec config/%s.cfg", map_name) );
+        // console_exec( str("readconfig config/%s.nconf", map_name) );
 
         // Well, instant apply.
         _gconsole.Execute( "glrefresh" );

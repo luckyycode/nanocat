@@ -14,8 +14,6 @@
 #include "systemshared.h"
 #include "server.h"
 
-
-
 static void lazyVariablelist( void ) {
     _cvarmngr.Printlist();
 }
@@ -28,9 +26,8 @@ CvarManager::CvarManager( void ) {
     Initialize console variable stuff.
 */
 void CvarManager::Initialize( void ) {
-    _core.Print( LOG_INFO, "Preparing memory for %i console variables.\n", MAX_CVARS);
+    _core.Print( LOG_INFO, "Preparing memory for %i console variables.\n", MAX_CVARS );
 
-   
     _commandManager.Add( "cvarlist", lazyVariablelist );
 }
 
@@ -45,10 +42,10 @@ void ConsoleVariable::Set( const char *value ) {
     Integer = atoi(value);
 }
 
-ConsoleVariable::ConsoleVariable( const char *group, const char *name, const char *desc, const char *value, int flags ) {
+ConsoleVariable::ConsoleVariable( const char *group, const char *name, const char *desc, const char *value, CVFlag flags ) {
     int     c_flag;
 
-    if(flags < 1) c_flag = CVAR_NONE;
+    if(flags < 1) c_flag = CVFLAG_NONE;
     else
         c_flag = flags;
     
@@ -114,6 +111,10 @@ const char *ConsoleVariable::GetDescription( void ) {
     return Description;
 }
 
+const char *ConsoleVariable::GetDefaultValue( void ) {
+    return DefaultValue;
+}
+
 /*
     List all existing console variables.
 */
@@ -133,7 +134,7 @@ void CvarManager::Shutdown( void ) {
     Lock console variable.
 */
 void ConsoleVariable::Lock( void ) {
-    Flag = CVAR_LOCKED;
+    Flag = CVFLAG_LOCKED;
 }
 
 /*

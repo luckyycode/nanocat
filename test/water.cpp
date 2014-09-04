@@ -37,7 +37,7 @@ GLuint      waterVBO;
 GLuint      waterNVBO;
 GLuint      waterUVVBO;
 
-ConsoleVariable    water_distance("water", "distance", "Distance to be rendered.", "1000", CVAR_NEEDSREFRESH);
+ConsoleVariable    water_distance("water", "distance", "Distance to be rendered.", "1000", CVFLAG_NEEDSREFRESH);
 
 const float normal_water_data[] = {
     0.0f, 0.0f, 1.0f,

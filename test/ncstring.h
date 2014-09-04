@@ -10,12 +10,11 @@
 #ifndef ncstring_h
 #define ncstring_h
 
-
 // Main string class.
 class ncStringHelper {
 public:
     void        SafeCopy( char *dest, const char *src, unsigned long size );
-    void        Chomp(char *s);
+    void        Chomp( char *s );
     void        SkipCharacter( char *s, char a );
     void        SPrintf( char *dest, unsigned long size, const char *fmt, ...);
     void        RemoveChar( char *str, char garbage );

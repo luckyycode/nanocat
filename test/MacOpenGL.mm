@@ -27,7 +27,7 @@
     
     const int swapInt = render_vsync.GetInteger();
     
-    _gconsole.Execute( "exec config.cfg" );     // Load some settings
+    _gconsole.Execute( "readconfig config.nconf" );     // Load some settings
     
     _core.UseGraphics = server_dedi.GetInteger() ? false : true;
     

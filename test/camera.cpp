@@ -12,8 +12,8 @@
 
 ncCamera _camera;
 
-ConsoleVariable  cam_speed("camera", "speed", "Camera movement speed.", "2", CVAR_CHEAT);
-ConsoleVariable  clientgame_fov("client", "fov", "Client field of view.", "120.0", CVAR_NEEDSREFRESH);
+ConsoleVariable  cam_speed("camera", "speed", "Camera movement speed.", "2", CVFLAG_KID);
+ConsoleVariable  clientgame_fov("camera", "fov", "Client field of view.", "120.0", CVFLAG_NEEDSREFRESH);
 
 void ncCamera::Initialize() {
     _core.Print( LOG_INFO, "Camera initializing...\n" );

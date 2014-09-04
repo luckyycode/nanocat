@@ -18,10 +18,12 @@ public:
     Byte *Bits;
     
     bool Initialize( int num );
+    
     void ClearAll( void );
     void Clear( int num );
     void Set( int num );
     void SetAll( void );
+    
     Byte IsSet( int num );
 };
 

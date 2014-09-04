@@ -13,29 +13,35 @@
 #include "systemshared.h"
 #include "consolevar.h"
 
-typedef struct {
-    int     offset, length;
-} filechunk_t;
+struct filechunk_t {
+    int offset;
+    int length;
+};
 
 class ncFileSystem {
 public:
     void Initialize( const char *defaultpath );
     void GenerateConfigurationFile( void );
     void Shutdown( void );
+    
     const char *GetFileName( const char *path );
     const char *GetFileExtension( const char *filename );
+    
     void ReadConfiguration( void );
     void WriteLog( const char *msg );
+    
     long GetFileLength( FILE *f );
+    
     void Write( FILE *f, const void *buffer, int len );
     void Read( FILE *f, void *data, long len );
+    
     FILE *OpenWrite( const char *filename );
     FILE *OpenRead( const char *filename );
+    
     long Load( const char *filename, void **buffer );
 };
 
 extern ncFileSystem _filesystem;
-
 
 // FILE SYSTEM
 extern ConsoleVariable       filesystem_path;                           // Current game path.

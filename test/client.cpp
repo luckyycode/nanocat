@@ -28,13 +28,13 @@ Client _client;
 */
 
 // Is client running?
-ConsoleVariable      client_running( "client", "running", "Is client running?", "0", CVAR_READONLY );
+ConsoleVariable      client_running( "client", "running", "Is client running?", "0", CVFLAG_READONLY );
 // User name.
-ConsoleVariable      namevar( "client", "name", "Client username.", "A cat", CVAR_NONE );
+ConsoleVariable      namevar( "client", "name", "Client username.", "A cat", CVFLAG_NONE );
 // Server timeout. ( In seconds )
-ConsoleVariable      client_servertimeout( "client", "servertimeout", "Server timeout.", "30", CVAR_NEEDSREFRESH );
+ConsoleVariable      client_servertimeout( "client", "servertimeout", "Server timeout.", "30", CVFLAG_NEEDSREFRESH );
 // Maximum packets to be send per frame.
-ConsoleVariable      client_maxpackets( "client", "maxpackets", "Maximum packets to be send per frame.", "33", CVAR_NEEDSREFRESH );
+ConsoleVariable      client_maxpackets( "client", "maxpackets", "Maximum packets to be send per frame.", "33", CVFLAG_NEEDSREFRESH );
 
 // Uh oh, global variables.
 ncVec3 latestPosition;

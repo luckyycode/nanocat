@@ -19,7 +19,7 @@ bool ncBitset::Initialize( int num ) {
 	Bits = (byte*)malloc( sizeof(byte) * Size );
 
 	if( !Bits ) {
-        _core.Error( ERC_FATAL, "Bitset failed to allocate memory for %i bytes.\n", Size );
+        _core.Error( ERC_FATAL, "ncBitset failed to allocate memory for %i bytes.\n", Size );
 		return false;
 	}
 
@@ -58,7 +58,6 @@ void ncBitMessage::Create( Byte data[], int len ) {
     Data = data;
     
     //_core.Print( LOG_NONE, "size: %i maxsize: %i data: %s\n", Size, MaxSize, Data );
-    //memcpy( Data, data, sizeof(Byte[13894]));
 }
 
 void *ncBitMessage::GetSpace( int length ) {
@@ -67,14 +66,14 @@ void *ncBitMessage::GetSpace( int length ) {
 	if( Size + length > MaxSize ) {
 
 		if( !AllowOverflow )
-			_core.Error( ERC_FATAL, "No overflow allowed for ncBitsetMessage.\n" );
+			_core.Error( ERC_FATAL, "No overflow allowed for ncBitMessage.\n" );
 
 		if( length > MaxSize )
-			_core.Error( ERC_FATAL, "Given length to ncBitsetMessage is more than its max allowed size.", length );
+			_core.Error( ERC_FATAL, "Given length to ncBitMessage is more than its max allowed size.", length );
 
 		Overflowed = true;
 
-		_core.Print( LOG_WARN, "ncBitsetMessage overflowed.\n" );
+		_core.Print( LOG_WARN, "ncBitMessage overflowed ( Now: %i MaxSize: %i ) \n", Size + length, MaxSize );
 
         Clear();
 	}
@@ -86,29 +85,30 @@ void *ncBitMessage::GetSpace( int length ) {
 }
 
 void ncBitMessage::WriteChar( int c ) {
-	byte    *g_buf;
-    g_buf       = (byte*)GetSpace( 1 );
+	Byte    *g_buf;
+    g_buf       = (Byte*)GetSpace( 1 );
 	g_buf[0]    = c;
 }
 
 void ncBitMessage::WriteByte( int c )  {
-	byte    *g_buf;
+	Byte    *g_buf;
 
-    g_buf       = (byte*)GetSpace( 1 );
+    g_buf       = (Byte*)GetSpace( 1 );
 	g_buf[0]    = c;
 }
 
 void ncBitMessage::WriteInt32( int c ) {
-	byte    *g_buf;
+	Byte    *g_buf;
 
-    g_buf       = (byte*)GetSpace( 2 );
+    g_buf       = (Byte*)GetSpace( 2 );
 	g_buf[0]    = c & 0xff;
 	g_buf[1]    = c >> 8;
 }
 
 void ncBitMessage::WriteLong( int c ) {
-	byte    *g_buf;
-	g_buf       = (byte*)GetSpace( 4 );
+	Byte    *g_buf;
+    
+	g_buf       = (Byte*)GetSpace( 4 );
     g_buf[0]    = c & 0xff;
 	g_buf[1]    = (c >> 8) & 0xff;
 	g_buf[2]    = (c >> 16) & 0xff;
@@ -135,11 +135,11 @@ void ncBitMessage::WriteString( const char *s ) {
     if ( !s ) {
         // Empty string, skip it
         // and write empty space to keep something.
-		Write( (byte*)"", 1 );
+		Write( (Byte*)"", 1 );
     }
     else {
         // Ignore this damned warning.
-		Write( (byte*)s, strlen(s) + 1 );
+		Write( (Byte*)s, strlen(s) + 1 );
     }
 }
 
@@ -178,7 +178,7 @@ int ncBitMessage::ReadByte() {
 		return -1;
 	}
 
-	c = (byte)Data[DataRead];
+	c = (Byte)Data[DataRead];
 	DataRead++;
 
 	return c;
@@ -207,10 +207,7 @@ int ncBitMessage::ReadLong() {
 		return -1;
 	}
 
-	c = Data[DataRead]
-	+ (Data[DataRead + 1] << 8)
-	+ (Data[DataRead + 2] << 16)
-	+ (Data[DataRead + 3] << 24);
+	c = Data[DataRead] + (Data[DataRead + 1] << 8) + (Data[DataRead + 2] << 16) + (Data[DataRead + 3] << 24);
 
 	DataRead += 4;
 

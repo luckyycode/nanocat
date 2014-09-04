@@ -32,7 +32,7 @@ public:
 
 class ncImageLoader {
 public:
-    bool CreateImage( byte *data, imagetype_t type, const char *filename );
+    bool CreateImage( int width, int height, byte *data, imagetype_t type, const char *filename );
     bool Load( imagetype_t type, const char *filename, ncImage *img );
     void Unload( ncImage *tex );
     

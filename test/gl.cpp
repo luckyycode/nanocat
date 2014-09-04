@@ -14,8 +14,8 @@
 #include "gl.h"
 #include "clientgame.h"
 
-ConsoleVariable  glsl_version("glsl", "version", "OpenGL Shading language version.", "400", CVAR_NEEDSREFRESH );
-ConsoleVariable  render_openglversion("opengl", "version", "OpenGL version to be used.", "4.1c", CVAR_NEEDSREFRESH );
+ConsoleVariable  glsl_version("glsl", "version", "OpenGL Shading language version.", "400", CVFLAG_NEEDSREFRESH );
+ConsoleVariable  render_openglversion("opengl", "version", "OpenGL version to be used.", "4.1c", CVFLAG_NEEDSREFRESH );
 
 ncOpenGL _opengl;
 
@@ -95,8 +95,6 @@ void ncOpenGL::OnResize( int w, int h ) {
         This crashes on window resize.
     */
     _renderer.UpdateFramebufferObject( w, h );
-
-	_core.Print( LOG_INFO, "( renderer: %ix%i window: %ix%i ).\n", _renderer.renderWidth, _renderer.renderHeight, _renderer.windowWidth, _renderer.windowHeight );
 }
 
 /*

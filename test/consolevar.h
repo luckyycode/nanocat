@@ -13,23 +13,23 @@
 #include "ncstring.h"
 
 // Maximum console variable space to be allocated.
-#define MAX_CVARS                               1024
+#define MAX_CVARS   1024
 
-#define CVAR_NONE                               1               // No protection.
-#define CVAR_READONLY                           2               // Read only.
-#define CVAR_NEEDSREFRESH                            8               // Applies only after map/graphics/game restart.
-#define CVAR_LOCKED                             16              // No changes allowed.
-// You need to be gentle with it.
-#define CVAR_SYS                                32              // System var.
-#define CVAR_CHEAT                              64              // Cheat var.
+#define CONSOLEVAR_NAMELEN  64
+#define CONSOLEVAR_DESCLEN  64
+#define CONSOLEVAR_GROUPLEN     16
 
-#define CONSOLEVAR_NAMELEN 64
-#define CONSOLEVAR_DESCLEN 64
-#define CONSOLEVAR_GROUPLEN 16
+#define MAX_CVAR_LEN            512
+#define MAX_CVAR_STRING_LEN     256
 
-#define MAX_CVAR_LEN                            512
-#define MAX_CVAR_STRING_LEN                     256
-
+enum CVFlag {
+    CVFLAG_NONE = 1,            // No protection.
+    CVFLAG_READONLY = 2,        // Read only.
+    CVFLAG_NEEDSREFRESH = 4,    // Needs restart to apply.
+    CVFLAG_LOCKED = 8,          // Locked. No changes allowed.
+    CVFLAG_SYS = 16,            // System one.
+    CVFLAG_KID = 32             // Cheats.
+};
 
 class ConsoleVariable {
 public:
@@ -39,7 +39,7 @@ public:
     }
     
     ConsoleVariable() { }
-    ConsoleVariable( const char *group, const char *name, const char *desc, const char *value, int flags );
+    ConsoleVariable( const char *group, const char *name, const char *desc, const char *value, CVFlag flags );
     ConsoleVariable( const char *name, const char *value );
     
     void Lock( void );
@@ -48,6 +48,7 @@ public:
     void        Set( const char *value );
     
     const char  *GetString( void );
+    const char  *GetDefaultValue( void );
     int         GetInteger( void );
     bool        GetBool( void );
     float       GetFloat( void );

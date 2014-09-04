@@ -26,7 +26,7 @@ char *ncStringHelper::Copy( char *d, const char *s ) {
         _core.Error( ERC_FATAL, "ncStringHelper::Copy failed, source is null." );
     }
     
-    char *saved = d;
+    char *dest = d;
     
     while( *s ) {
         *d++ = *s++;
@@ -34,7 +34,7 @@ char *ncStringHelper::Copy( char *d, const char *s ) {
     
     *d = 0;
     
-    return saved;
+    return dest;
 }
 
 /*
@@ -69,8 +69,7 @@ void ncStringHelper::SafeCopy( char *dest, const char *src, unsigned long size )
 /*
     Safe copy character array.
 */
-void ncStringHelper::SPrintf( char *dest,
-                    ulong size, const char *fmt, ...) {
+void ncStringHelper::SPrintf( char *dest, ulong size, const char *fmt, ...) {
     
     int len;
     va_list	argptr;

@@ -17,6 +17,7 @@
 #include "camera.h"
 #include "system.h"
 #include "input.h" // For console input.
+#include "gmath.h" // Colors.
 
 ncGameConsole _gconsole;
 
@@ -69,7 +70,6 @@ void ncGameConsole::Render( void )
             _font.Print( COLOR_WHITE, 10, 15, 10, "Nanocat, %s", _core.GetVersionString() );
         }
         else {
-           
             _font.Print( COLOR_GREEN, 10, 45, 10, "look: x: %4.2f y: %4.2f z: %4.2f", _camera.g_vLook.x, _camera.g_vLook.y, _camera.g_vLook.z );
             _font.Print( COLOR_GREEN, 10, 35, 10, "eye: x: %4.2f y: %4.2f z: %4.2f", _camera.g_vEye.x, _camera.g_vEye.y, _camera.g_vEye.z );
         }

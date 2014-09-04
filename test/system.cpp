@@ -13,14 +13,14 @@
 #include "files.h"
 #include "ncstring.h"
 
-ConsoleVariable    system_gpu("sys", "gpu", "Graphics device name.", "Unknown", CVAR_SYS);
-ConsoleVariable    system_glversion("sys", "glversion", "OpenGL version.", "0", CVAR_SYS);
-ConsoleVariable    system_glslversion("sys", "glslversion", "OpenGL shading language version", "0", CVAR_SYS);
-ConsoleVariable    system_minmemory("sys", "minmemory", "Minimum system memory required.", "256", CVAR_SYS);
-ConsoleVariable    system_cpucores("sys", "cpucores", "Processor cores count.", "1", CVAR_SYS);
-ConsoleVariable    system_cpuspeed("sys", "cpuspeed", "Processor clock speed.", "0", CVAR_SYS);
-ConsoleVariable    system_physmem("sys", "physmem", "Physical memory available.", "0", CVAR_SYS);
-ConsoleVariable    system_virtmem("sys", "virtmem", "Virtual memory available.", "0", CVAR_SYS);
+ConsoleVariable    system_gpu("sys", "gpu", "Graphics device name.", "Unknown", CVFLAG_SYS);
+ConsoleVariable    system_glversion("sys", "glversion", "OpenGL version.", "0", CVFLAG_SYS);
+ConsoleVariable    system_glslversion("sys", "glslversion", "OpenGL shading language version", "0", CVFLAG_SYS);
+ConsoleVariable    system_minmemory("sys", "minmemory", "Minimum system memory required.", "256", CVFLAG_SYS);
+ConsoleVariable    system_cpucores("sys", "cpucores", "Processor cores count.", "1", CVFLAG_SYS);
+ConsoleVariable    system_cpuspeed("sys", "cpuspeed", "Processor clock speed.", "0", CVFLAG_SYS);
+ConsoleVariable    system_physmem("sys", "physmem", "Physical memory available.", "0", CVFLAG_SYS);
+ConsoleVariable    system_virtmem("sys", "virtmem", "Virtual memory available.", "0", CVFLAG_SYS);
 
 ncSystem _system;
 

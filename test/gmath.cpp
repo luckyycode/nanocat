@@ -21,6 +21,9 @@ void gamemath_init( void ) {
     // Nothing to initialize for now, lol.
 }
 
+/*
+    Matrix4x4 stuff.
+*/
 void ncMatrix4::Identity( void ) {
     m[0] = 1.0f; m[4] = 0.0f; m[8] = 0.0f; m[12] = 0.0f;
     m[1] = 0.0f; m[5] = 1.0f; m[9] = 0.0f; m[13] = 0.0f;
@@ -212,30 +215,29 @@ ncMatrix4 ncMatrix4::operator+(const ncMatrix4 &v) const {
 
 /*
     Multiply two matrices.
-    This one is too big.
 */
 ncMatrix4 ncMatrix4::operator*( const ncMatrix4 &v ) const {
     ncMatrix4 result;
     
-    result.m[0]  = (m[0] * v.m[0]) + (m[4]*v.m[1]) + (m[8]*v.m[2]) + (m[12]*v.m[3]);
-    result.m[1]  = (m[1] * v.m[0]) + (m[5]*v.m[1]) + (m[9]*v.m[2]) + (m[13]*v.m[3]);
-    result.m[2]  = (m[2] * v.m[0]) + (m[6]*v.m[1]) + (m[10]*v.m[2]) + (m[14]*v.m[3]);
-    result.m[3]  = (m[3] * v.m[0]) + (m[7]*v.m[1]) + (m[11]*v.m[2]) + (m[15]*v.m[3]);
+    result.m[0]  = (m[0] * v.m[0]) + (m[4] * v.m[1]) + (m[8] * v.m[2]) + (m[12] * v.m[3]);
+    result.m[1]  = (m[1] * v.m[0]) + (m[5] * v.m[1]) + (m[9] * v.m[2]) + (m[13] * v.m[3]);
+    result.m[2]  = (m[2] * v.m[0]) + (m[6] * v.m[1]) + (m[10] * v.m[2]) + (m[14] * v.m[3]);
+    result.m[3]  = (m[3] * v.m[0]) + (m[7] * v.m[1]) + (m[11] * v.m[2]) + (m[15] * v.m[3]);
     
-    result.m[4]  = (m[0] * v.m[4]) + (m[4]*v.m[5]) + (m[8]*v.m[6]) + (m[12]*v.m[7]);
-    result.m[5]  = (m[1] * v.m[4]) + (m[5]*v.m[5]) + (m[9]*v.m[6]) + (m[13]*v.m[7]);
-    result.m[6]  = (m[2] * v.m[4]) + (m[6]*v.m[5]) + (m[10]*v.m[6]) + (m[14]*v.m[7]);
-    result.m[7]  = (m[3] * v.m[4]) + (m[7]*v.m[5]) + (m[11]*v.m[6]) + (m[15]*v.m[7]);
+    result.m[4]  = (m[0] * v.m[4]) + (m[4] * v.m[5]) + (m[8] * v.m[6]) + (m[12] * v.m[7]);
+    result.m[5]  = (m[1] * v.m[4]) + (m[5] * v.m[5]) + (m[9] * v.m[6]) + (m[13] * v.m[7]);
+    result.m[6]  = (m[2] * v.m[4]) + (m[6] * v.m[5]) + (m[10] * v.m[6]) + (m[14] * v.m[7]);
+    result.m[7]  = (m[3] * v.m[4]) + (m[7] * v.m[5]) + (m[11] * v.m[6]) + (m[15] * v.m[7]);
     
-    result.m[8]  = (m[0] * v.m[8]) + (m[4]*v.m[9]) + (m[8]*v.m[10]) + (m[12]*v.m[11]);
-    result.m[9]  = (m[1] * v.m[8]) + (m[5]*v.m[9]) + (m[9]*v.m[10]) + (m[13]*v.m[11]);
-    result.m[10] = (m[2] * v.m[8]) + (m[6]*v.m[9]) + (m[10]*v.m[10]) + (m[14]*v.m[11]);
-    result.m[11] = (m[3] * v.m[8]) + (m[7]*v.m[9]) + (m[11]*v.m[10]) + (m[15]*v.m[11]);
+    result.m[8]  = (m[0] * v.m[8]) + (m[4] * v.m[9]) + (m[8] * v.m[10]) + (m[12] * v.m[11]);
+    result.m[9]  = (m[1] * v.m[8]) + (m[5] * v.m[9]) + (m[9] * v.m[10]) + (m[13] * v.m[11]);
+    result.m[10] = (m[2] * v.m[8]) + (m[6] * v.m[9]) + (m[10] * v.m[10]) + (m[14] * v.m[11]);
+    result.m[11] = (m[3] * v.m[8]) + (m[7] * v.m[9]) + (m[11] * v.m[10]) + (m[15] * v.m[11]);
     
-    result.m[12] = (m[0] * v.m[12]) + (m[4]*v.m[13]) + (m[8]*v.m[14]) + (m[12]*v.m[15]);
-    result.m[13] = (m[1] * v.m[12]) + (m[5]*v.m[13]) + (m[9]*v.m[14]) + (m[13]*v.m[15]);
-    result.m[14] = (m[2] * v.m[12]) + (m[6]*v.m[13]) + (m[10]*v.m[14]) + (m[14]*v.m[15]);
-    result.m[15] = (m[3] * v.m[12]) + (m[7]*v.m[13]) + (m[11]*v.m[14]) + (m[15]*v.m[15]);
+    result.m[12] = (m[0] * v.m[12]) + (m[4] * v.m[13]) + (m[8] * v.m[14]) + (m[12] * v.m[15]);
+    result.m[13] = (m[1] * v.m[12]) + (m[5] * v.m[13]) + (m[9] * v.m[14]) + (m[13] * v.m[15]);
+    result.m[14] = (m[2] * v.m[12]) + (m[6] * v.m[13]) + (m[10] * v.m[14]) + (m[14] * v.m[15]);
+    result.m[15] = (m[3] * v.m[12]) + (m[7] * v.m[13]) + (m[11] * v.m[14]) + (m[15] * v.m[15]);
     
     return result;
 }
@@ -396,7 +398,7 @@ void ncMatrix4::Transpose( void ) {
 
 /*
  
-    Vector.
+    Vector stuff.
  
 */
 
@@ -433,8 +435,7 @@ ncVec3 ncVec3::operator*( const float v ) const {
     return vResult;
 }
 
-float ncVec3_Dot( ncVec3 v1,
-               ncVec3 v2 ) {
+float ncVec3_Dot( ncVec3 v1, ncVec3 v2 ) {
     return( v1.x * v2.x + v1.y * v2.y + v1.z * v2.z  );
 }
 
@@ -462,18 +463,6 @@ void ncVec3::Cross( ncVec3 v1, ncVec3 v2 ) {
     x = v1.y * v2.z - v1.z * v2.y;
     y = v1.z * v2.x - v1.x * v2.z;
     z = v1.x * v2.y - v1.y * v2.x;
-}
-
-ncVec3 vec3_cross( ncVec3 v1,
-                ncVec3 v2 ) {
-    
-    ncVec3 vCrossProduct;
-    
-    vCrossProduct.x = v1.y * v2.z - v1.z * v2.y;
-    vCrossProduct.y = v1.z * v2.x - v1.x * v2.z;
-    vCrossProduct.z = v1.x * v2.y - v1.y * v2.x;
-    
-    return vCrossProduct;
 }
 
 void ncVec3::Normalize( void ) {

@@ -15,10 +15,10 @@
 #include "systemshared.h"
 #include "camera.h"
 
-ConsoleVariable  clientgame_mousesensivity("input", "mousesens", "Mouse sensivity", "0.001", CVAR_NONE);
-ConsoleVariable  clientgame_invertmouse("input", "invertmouse", "Mouse invertion", "0", CVAR_NONE);
+ConsoleVariable  clientgame_mousesensivity("input", "mousesens", "Mouse sensivity", "0.001", CVFLAG_NONE);
+ConsoleVariable  clientgame_invertmouse("input", "invertmouse", "Mouse invertion", "0", CVFLAG_NONE);
 
-ConsoleVariable  dev_showcursorpos("dev", "showcursorpos", "Show cursor position?", "0", CVAR_NONE);
+ConsoleVariable  dev_showcursorpos("dev", "showcursorpos", "Show cursor position?", "0", CVFLAG_NONE);
 
 ncMouse _imouse;
 ncInput _input;

@@ -13,11 +13,8 @@
 #include "gmath.h"
 #include "shader.h"
 
-#define FONT_SIZE 0.0625f
-#define FONT_WIDTH 1.0
-#define FONT_HEIGHT 1.0
 #define FONT_VERTICES 1024
-#define FONT_CHARACTER_SET_SKIP 32
+#define FONT_CHARACTERSKIP 32
 
 class ncCoreFontRenderer {
 public:
@@ -35,5 +32,10 @@ public:
 };
 
 extern ncCoreFontRenderer _font;
+
+extern ConsoleVariable font_size;
+extern ConsoleVariable font_width;
+extern ConsoleVariable font_height;
+extern ConsoleVariable font_charskip;
 
 #endif

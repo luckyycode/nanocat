@@ -13,11 +13,11 @@
 #include "client.h"
 #include "ncstring.h"
 
-ConsoleVariable    network_port("net", "port", "Network port", "4004", CVAR_NEEDSREFRESH);
-ConsoleVariable    network_ip("net", "ip", "Network IP address.", "0.0.0.0", CVAR_NEEDSREFRESH);
-ConsoleVariable    network_active("net", "active", "Is network active?", "0", CVAR_NEEDSREFRESH);
-ConsoleVariable    network_addrtype("net", "addrtype", "Address type.", "0", CVAR_NEEDSREFRESH);
-ConsoleVariable    network_localip("net", "localip", "Local IP address.", "0.0.0.0", CVAR_NEEDSREFRESH);
+ConsoleVariable    network_port("net", "port", "Network port", "4004", CVFLAG_NEEDSREFRESH);
+ConsoleVariable    network_ip("net", "ip", "Network IP address.", "0.0.0.0", CVFLAG_NEEDSREFRESH);
+ConsoleVariable    network_active("net", "active", "Is network active?", "0", CVFLAG_NEEDSREFRESH);
+ConsoleVariable    network_addrtype("net", "addrtype", "Address type.", "0", CVFLAG_NEEDSREFRESH);
+ConsoleVariable    network_localip("net", "localip", "Local IP address.", "0.0.0.0", CVFLAG_NEEDSREFRESH);
 
 ncNetwork _netmanager;
 
@@ -91,7 +91,7 @@ void ncNetwork::Initialize( void ) {
     
     flags = fcntl(n_socket, F_GETFL);
     flags |= O_NONBLOCK;
-    fcntl(n_socket, F_SETFL, flags);
+    fcntl( n_socket, F_SETFL, flags );
 
     if( ioctl (n_socket, FIONBIO, &g_allow) == -1 ) {
         _core.Error( ERC_NETWORK, "ioctl failed to make socket to non-blocking mode.\n");
@@ -111,7 +111,7 @@ void ncNetwork::Initialize( void ) {
         memset( &n_sv, 0, sizeof(struct sockaddr_in) );
         
         n_sv.sin_family = AF_INET;
-        n_sv.sin_port = htons(port);
+        n_sv.sin_port = htons( port );
         
         switch( network_addrtype.GetInteger() ) {
             case 0: // Any.
@@ -171,7 +171,7 @@ bool ncNetwork::Frame( void ) {
         return false;
 
     if( !n_socket ) {
-        _core.Error( ERC_NETWORK, "Function network_getpackets could not find active socket." );
+        _core.Error( ERC_NETWORK, "ncNetwork::Frame - missing socket." );
         return false;
     }
     
@@ -196,6 +196,7 @@ bool ncNetwork::Frame( void ) {
         return false;
     }
 
+    // Protocol.
     if ( data[0] != (byte) ( PROTOCOL_ID >> 24 ) ||
         data[1] != (byte) ( ( PROTOCOL_ID >> 16 ) & 0xFF ) ||
         data[2] != (byte) ( ( PROTOCOL_ID >> 8 ) & 0xFF ) ||
@@ -213,7 +214,7 @@ bool ncNetwork::Frame( void ) {
     network_message_buffer[bytes] = 0;
     
     // Assign data packet.
-    Assign( &remoteEP, network_message_buffer );       // server/client process
+    Assign( &remoteEP, network_message_buffer );       // Server/client process.
 
     network_message_buffer[bytes] = 0;
     bytes = 0;
@@ -255,6 +256,7 @@ void ncNetwork::Shutdown( void ) {
     close( n_socket );
 
 #ifdef _WIN32
+    // Windows needs sockets to be closed.
     WSACleanup();
 #endif
 
@@ -282,12 +284,12 @@ void ncNetwork::Assign( netdata_t *from, byte *buffer ) {
 */
 void ncNetwork::SendPacket( unsigned long len, const void *data, netdata_t *from ) {
     int ret;
-    byte packet[len+4];
+    byte packet[len + 4];
 
-    packet[0] = (byte) ( PROTOCOL_ID >> 24 );
-    packet[1] = (byte) ( ( PROTOCOL_ID >> 16 ) & 0xFF );
-    packet[2] = (byte) ( ( PROTOCOL_ID >> 8 ) & 0xFF );
-    packet[3] = (byte) ( ( PROTOCOL_ID ) & 0xFF );
+    packet[0] = (byte)( PROTOCOL_ID >> 24 );
+    packet[1] = (byte)( ( PROTOCOL_ID >> 16 ) & 0xFF );
+    packet[2] = (byte)( ( PROTOCOL_ID >> 8 ) & 0xFF );
+    packet[3] = (byte)( ( PROTOCOL_ID ) & 0xFF );
     
     memcpy( &packet[4], data, len );
 
@@ -322,7 +324,7 @@ void ncNetwork::PrintOutOfBand( netdata_t *adr, const char *format, ... ) {
     Send out of band.
 */
 void ncNetwork::PrintOutOfBandData( netdata_t *adr, Byte *format, int len ) {
-    Byte		string[MAX_SERVER_COMMAND*2];
+    Byte		string[MAX_SERVER_COMMAND * 2];
     int			i;
     ncBitMessage   msg;
 

@@ -35,26 +35,26 @@
 ncServer _server;
 
 // Maximum clients on server.
-ConsoleVariable  server_maxclients( "sv", "maxclients", "Maximum server clients.", "512", CVAR_NEEDSREFRESH );
+ConsoleVariable  server_maxclients( "server", "maxclients", "Maximum server clients.", "512", CVFLAG_NEEDSREFRESH );
 // Server public name.
-ConsoleVariable  server_hostname( "sv", "name", "Server name.", DEFAULT_SERVER_NAME, CVAR_NONE );
+ConsoleVariable  server_hostname( "server", "name", "Server name.", DEFAULT_SERVER_NAME, CVFLAG_NONE );
 // Is server running?
-ConsoleVariable  server_running( "sv", "running", "Is server running?", "0", CVAR_NONE );
+ConsoleVariable  server_running( "server", "running", "Is server running?", "0", CVFLAG_NONE );
 // Cheats enabled?
-ConsoleVariable  server_cheats( "sv", "cheats", "Server cheats enabled?", "1", CVAR_NEEDSREFRESH );
+ConsoleVariable  server_cheats( "server", "cheats", "Server cheats enabled?", "1", CVFLAG_NEEDSREFRESH );
 // Server framerate.
-ConsoleVariable  server_fps( "sv", "fps", "Server framerate.", "10", CVAR_NONE );
+ConsoleVariable  server_fps( "server", "fps", "Server framerate.", "10", CVFLAG_NONE );
 // Name which is going to be used in chat.
-ConsoleVariable  server_sayname( "sv", "sayname", "Server name to be used in chat.", "Friskies", CVAR_NEEDSREFRESH );
+ConsoleVariable  server_sayname( "server", "sayname", "Server name to be used in chat.", "Friskies", CVFLAG_NEEDSREFRESH );
 // Default bot name.
-ConsoleVariable  server_botname( "sv", "botname", "Server bot name.", "Whiskas", CVAR_NONE );
+ConsoleVariable  server_botname( "server", "botname", "Server bot name.", "Whiskas", CVFLAG_NONE );
 // Is server dedicated?
-ConsoleVariable  server_dedi( "sv", "dedicated", "Is server dedicated?", "0", CVAR_NONE );
+ConsoleVariable  server_dedi( "server", "dedicated", "Is server dedicated?", "0", CVFLAG_NONE );
 // In-active client timeout.
-ConsoleVariable  server_clienttimeout( "sv", "clienttimeout", "Server client timeout.", "30", CVAR_NONE );
+ConsoleVariable  server_clienttimeout( "server", "clienttimeout", "Server client timeout.", "30", CVFLAG_NONE );
 // Status print per x seconds
-ConsoleVariable  server_statusperiod( "sv", "statusprint", "Print server status per X seconds.", "30", CVAR_NONE );
-// ConsoleVariable server_cutebots( "sv", "cutebots", "Smiling and nice bots.", "1", CVAR_CHEAT );
+ConsoleVariable  server_statusperiod( "server", "statusprint", "Print server status per X seconds.", "30", CVFLAG_NONE );
+// ConsoleVariable server_cutebots( "server", "cutebots", "Smiling and nice bots.", "1", CVFLAG_KID );
 
 /*
     Lazy functions.
@@ -111,7 +111,7 @@ void ncServer::Initialize( void ) {
     zeromem( Response, sizeof(response_t) );
 
     // Execute server file.
-    _gconsole.Execute( "exec server.cfg" );
+    _gconsole.Execute( "readconfig server.nconf" );
 
     // Check server console variables.
     CheckParams();
@@ -159,7 +159,7 @@ void ncServer::CreateSession( void ) {
     _core.Print( LOG_INFO, "Creating server session..\n" );
 
     // Default server configuration.
-    _gconsole.Execute( "exec server.cfg" );
+    _gconsole.Execute( "readconfig server.nconf" );
 
     _core.Print( LOG_INFO, "Server name: %s\n", server_hostname.GetString() );
 

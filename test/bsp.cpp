@@ -23,6 +23,7 @@
 */
 
 const ncVec3 bsp_position = ncVec3( 0.0, -10.0, 0.0 );
+
 ncBSP _bspmngr;
 
 /*
@@ -56,27 +57,27 @@ void ncBSP::Unload( void ) {
     
     InUse = false;
 
-    leafCount = 0;
-    lightmapCount = 0;
-    meshCount = 0;
-    nodeCount = 0;
-    patchCount = 0;
-    planeCount = 0;
-    polygonCount = 0;
+    leafCount       = 0;
+    lightmapCount   = 0;
+    meshCount       = 0;
+    nodeCount       = 0;
+    patchCount      = 0;
+    planeCount      = 0;
+    polygonCount    = 0;
     decalTextureCount = 0;
-    facesCount = 0;
-    vertexCount = 0;
+    facesCount      = 0;
+    vertexCount     = 0;
 
-    if( vertices ) free( vertices );
-    if( patches ) free( patches );
-    if( meshFaces ) free( meshFaces );
-    if( polygonFaces ) free( polygonFaces );
-    if( decalTextures ) free( decalTextures );
-    if( lightmapTextures ) free( lightmapTextures );
-    if( leaves ) free( leaves );
-    if( leafFaces ) free( leafFaces );
-    if( planes ) free( planes );
-    if( nodes ) free( nodes );
+    if( vertices )          free( vertices );
+    if( patches )           free( patches );
+    if( meshFaces )         free( meshFaces );
+    if( polygonFaces )      free( polygonFaces );
+    if( decalTextures )     free( decalTextures );
+    if( lightmapTextures )  free( lightmapTextures );
+    if( leaves )            free( leaves );
+    if( leafFaces )         free( leafFaces );
+    if( planes )            free( planes );
+    if( nodes )             free( nodes );
 }
 
 /*
@@ -85,7 +86,7 @@ void ncBSP::Unload( void ) {
 bool ncBSP::Load( const char *filename ) {
 
     if( !Initialized ) {
-        _core.Print( LOG_WARN, "Loading map while static world is not initialized yet.\n" );
+        _core.Print( LOG_WARN, "ncBSP::Load - Loading map while static world is not initialized yet.\n" );
         return false;
     }
 
@@ -98,7 +99,7 @@ bool ncBSP::Load( const char *filename ) {
 
     t1 = _system.Milliseconds();
 
-	g_file  = fopen( _stringhelper.STR("%s/%s", filesystem_path.GetString(), filename ), "rb" );
+	g_file = fopen( _stringhelper.STR("%s/%s", filesystem_path.GetString(), filename ), "rb" );
 
 	if( !g_file ) {
         _core.Print( LOG_INFO, "Could not find %s/%s map file.\n", filesystem_path.GetString(), filename );
@@ -278,28 +279,29 @@ bool ncBSP::LoadMeshes( FILE *file ) {
 }
 
 bool ncBSP::LoadVertices( FILE *file ) {
+    
+    bsploadvertex_t *vertexData;
+    
 	vertexCount = header.dirEntry[SW_VERTICES].length / sizeof(bsploadvertex_t);
     
     _core.Print( LOG_DEVELOPER, "Loading vertex data.. ( %i vertices )\n", vertexCount );
-
-	bsploadvertex_t *loadVertices = (bsploadvertex_t*)malloc( sizeof(bsploadvertex_t) * vertexCount );
     
-	if( !loadVertices ) {
+    vertexData = (bsploadvertex_t*)malloc( sizeof(bsploadvertex_t) * vertexCount );
+	if( !vertexData ) {
         _core.Print( LOG_DEVELOPER, ".. Failed to allocate memory for %i load vertices.\n", vertexCount );
         _bspmngr.Unload();
+        
 		return false;
 	}
 
     
-    
-    
 	fseek( file, header.dirEntry[SW_VERTICES].offset, SEEK_SET );
-	fread( loadVertices, header.dirEntry[SW_VERTICES].length, 1, file );
+	fread( vertexData, header.dirEntry[SW_VERTICES].length, 1, file );
 
 	vertices = (bspvertex_t*)malloc( sizeof(bspvertex_t) * vertexCount );
 
 	if( !vertices ) {
-        _core.Print( LOG_DEVELOPER, ".. Failed to allocate memory for %i vertices.\n", vertexCount );
+        _core.Print( LOG_ERROR, ".. Failed to allocate memory for %i vertices.\n", vertexCount );
         _bspmngr.Unload();
 		return false;
 	}
@@ -309,9 +311,9 @@ bool ncBSP::LoadVertices( FILE *file ) {
 	for( i = 0 ; i < vertexCount; i++ ) {
         
 		// Invert Z.
-        vertices[i].position.x = loadVertices[i].position.x;
-        vertices[i].position.y = loadVertices[i].position.z;
-        vertices[i].position.z = -loadVertices[i].position.y;
+        vertices[i].position.x = vertexData[i].position.x;
+        vertices[i].position.y = vertexData[i].position.z;
+        vertices[i].position.z = -vertexData[i].position.y;
 
 		// Scale.
         vertices[i].position.x /= MAX_BSP_SCALE;
@@ -319,50 +321,53 @@ bool ncBSP::LoadVertices( FILE *file ) {
         vertices[i].position.z /= MAX_BSP_SCALE;
         
 		// Texture coordinates.
-		vertices[i].decal.x = loadVertices[i].decal.x;
-		vertices[i].decal.y = -loadVertices[i].decal.y;
+		vertices[i].decal.x = vertexData[i].decal.x;
+		vertices[i].decal.y = -vertexData[i].decal.y;
 
 		// Light map texture coordinates.
-		vertices[i].light.x = loadVertices[i].light.x;
-		vertices[i].light.y = loadVertices[i].light.y;
+		vertices[i].light.x = vertexData[i].light.x;
+		vertices[i].light.y = vertexData[i].light.y;
         
         // Normals.
-        vertices[i].normal.x = loadVertices[i].normal.x;
-        vertices[i].normal.y = loadVertices[i].normal.y;
-        vertices[i].normal.z = loadVertices[i].normal.z;
+        vertices[i].normal.x = vertexData[i].normal.x;
+        vertices[i].normal.y = vertexData[i].normal.y;
+        vertices[i].normal.z = vertexData[i].normal.z;
 	}
 
-	if( loadVertices )
-		free( loadVertices );
-
+    if( vertexData )
+		free( vertexData );
+    else
+        _core.Error( ERC_FATAL, "ncBSP::LoadVertices: Unexpected error." );
     
-    
-	loadVertices = NULL;
+	vertexData = NULL;
 
 	return true;
 }
 
 bool ncBSP::LoadFaces( FILE *file ) {
+    
+    bsploadface_t *faceData;
+    
 	facesCount = header.dirEntry[SW_FACES].length / sizeof(bsploadface_t);
     
     _core.Print( LOG_DEVELOPER, "Loading mesh faces.. ( %i faces )\n", facesCount );
 
-	bsploadface_t *loadFaces = (bsploadface_t*)malloc( sizeof(bsploadface_t) * facesCount );
-    
-	if( !loadFaces ) {
+	faceData = (bsploadface_t*)malloc( sizeof(bsploadface_t) * facesCount );
+	if( !faceData ) {
         _core.Print( LOG_DEVELOPER, ".. Failed to allocate memory for %i load faces. \n", facesCount );
         _bspmngr.Unload();
 		return false;
 	}
 
 	fseek( file, header.dirEntry[SW_FACES].offset, SEEK_SET );
-	fread( loadFaces, header.dirEntry[SW_FACES].length, 1, file );
+	fread( faceData, header.dirEntry[SW_FACES].length, 1, file );
 
 	bspDirectory = (bspfacedirentry_t*)malloc( sizeof(bspfacedirentry_t) * facesCount );
     
 	if( !bspDirectory ) {
         _core.Print( LOG_DEVELOPER, ".. Failed to allocate memory for %i face entries!\n", facesCount );
         _bspmngr.Unload();
+        
 		return false;
 	}
 
@@ -371,35 +376,35 @@ bool ncBSP::LoadFaces( FILE *file ) {
 
     int i;
 	for( i = 0; i < facesCount; i++ ) {
-		if( loadFaces[i].type == SW_POLYGON )
+		if( faceData[i].type == SW_POLYGON )
 			polygonCount++;
 
-		if( loadFaces[i].type == SW_PATCH )
+		if( faceData[i].type == SW_PATCH )
 			patchCount++;
 
-		if( loadFaces[i].type == SW_MESH )
+		if( faceData[i].type == SW_MESH )
 			meshCount++;
 	}
 
-    _core.Print( LOG_DEVELOPER, "%i polygons, %i patches, %i meshes\n", polygonCount, patchCount, meshCount );
+    _core.Print( LOG_DEVELOPER, "We got %i polygons, %i patches, %i meshes\n", polygonCount, patchCount, meshCount );
 
 	polygonFaces = (bsppolyface_t*)malloc( sizeof(bsppolyface_t) * polygonCount );
     
 	if( !polygonFaces ) {
-        _core.Print( LOG_DEVELOPER, ".. failed to allocate memory for %i polygon faces.\n", polygonCount );
+        _core.Print( LOG_ERROR, ".. failed to allocate memory for %i polygon faces.\n", polygonCount );
         _bspmngr.Unload();
 		return false;
 	}
 
 	int currentFace = 0;
 	for( i = 0; i < facesCount; i++ ) {
-		if( loadFaces[i].type != SW_POLYGON )
+		if( faceData[i].type != SW_POLYGON )
 			continue;
 
-		polygonFaces[currentFace].firstVertexIndex = loadFaces[i].firstVertexIndex;
-		polygonFaces[currentFace].vertexCount = loadFaces[i].vertexCount;
-		polygonFaces[currentFace].textureIndex = loadFaces[i].texture;
-		polygonFaces[currentFace].lightmapIndex = loadFaces[i].lightmapIndex;
+		polygonFaces[currentFace].firstVertexIndex = faceData[i].firstVertexIndex;
+		polygonFaces[currentFace].vertexCount = faceData[i].vertexCount;
+		polygonFaces[currentFace].textureIndex = faceData[i].texture;
+		polygonFaces[currentFace].lightmapIndex = faceData[i].lightmapIndex;
 
 		bspDirectory[i].faceType = SW_POLYGON;
 		bspDirectory[i].typeFaceNumber = currentFace;
@@ -409,7 +414,7 @@ bool ncBSP::LoadFaces( FILE *file ) {
 
 	meshFaces = (bspmeshface_t*)malloc( sizeof(bspmeshface_t) * meshCount );
 	if( !meshFaces ) {
-        _core.Print( LOG_DEVELOPER, ".. failed to allocate memory for %i mesh faces.\n", meshCount );
+        _core.Print( LOG_ERROR, ".. Failed to allocate memory for %i mesh faces.\n", meshCount );
         _bspmngr.Unload();
 		return false;
 	}
@@ -417,15 +422,15 @@ bool ncBSP::LoadFaces( FILE *file ) {
 	int currentMeshFace = 0;
 
 	for( i = 0; i < facesCount; ++i ) {
-		if( loadFaces[i].type != SW_MESH ) // Skip if it isn't mesh face.
+		if( faceData[i].type != SW_MESH )
 			continue;
 
-		meshFaces[currentMeshFace].firstVertexIndex = loadFaces[i].firstVertexIndex;
-		meshFaces[currentMeshFace].vertexCount = loadFaces[i].vertexCount;
-		meshFaces[currentMeshFace].textureIndex = loadFaces[i].texture;
-		meshFaces[currentMeshFace].lightmapIndex = loadFaces[i].lightmapIndex;
-		meshFaces[currentMeshFace].firstMeshIndex = loadFaces[i].firstMeshIndex;
-		meshFaces[currentMeshFace].numMeshIndices = loadFaces[i].numMeshIndices;
+		meshFaces[currentMeshFace].firstVertexIndex = faceData[i].firstVertexIndex;
+		meshFaces[currentMeshFace].vertexCount = faceData[i].vertexCount;
+		meshFaces[currentMeshFace].textureIndex = faceData[i].texture;
+		meshFaces[currentMeshFace].lightmapIndex = faceData[i].lightmapIndex;
+		meshFaces[currentMeshFace].firstMeshIndex = faceData[i].firstMeshIndex;
+		meshFaces[currentMeshFace].numMeshIndices = faceData[i].numMeshIndices;
 
 		bspDirectory[i].faceType = SW_MESH;
 		bspDirectory[i].typeFaceNumber = currentMeshFace;
@@ -435,30 +440,28 @@ bool ncBSP::LoadFaces( FILE *file ) {
 
 	patches = (bsppatch_t*)malloc( sizeof(bsppatch_t) * patchCount );
     
-    
 	if( !patches ) {
-        _core.Print( LOG_DEVELOPER, ".. Failed to allocate memory for %i patches.\n", patchCount );
+        _core.Print( LOG_ERROR, "..Failed to allocate memory for %i patch faces.\n", patchCount );
         Unload();
         
 		return false;
 	}
 
     
-    
 // Oh goosh this is bad.
 #ifdef USE_TESSELATION
 	int currentPatch = 0;
     
 	for( i = 0; i < facesCount; ++i ) {
-		if(loadFaces[i].type != SW_PATCH)
+		if(faceData[i].type != SW_PATCH)
 			continue;
 
-		patches[currentPatch].textureIndex = loadFaces[i].texture;
-		patches[currentPatch].lightmapIndex = loadFaces[i].lightmapIndex;
-		patches[currentPatch].width = loadFaces[i].patchSize[0];
-		patches[currentPatch].height = loadFaces[i].patchSize[1];
+		patches[currentPatch].textureIndex = faceData[i].texture;
+		patches[currentPatch].lightmapIndex = faceData[i].lightmapIndex;
+		patches[currentPatch].width = faceData[i].patchSize[0];
+		patches[currentPatch].height = faceData[i].patchSize[1];
         
-        _core.Print( LOG_NONE, "w: %i h: %i\n", (loadFaces[i].patchSize[0]-1)/2, (loadFaces[i].patchSize[1]-1)/2 );
+        _core.Print( LOG_NONE, "w: %i h: %i\n", (faceData[i].patchSize[0]-1)/2, (faceData[i].patchSize[1]-1)/2 );
 
 		bspDirectory[i].faceType = SW_PATCH;
 		bspDirectory[i].typeFaceNumber = currentPatch;
@@ -488,7 +491,7 @@ bool ncBSP::LoadFaces( FILE *file ) {
                     for(int point=0; point<3; ++point)
                     {
                         patches[currentPatch].quadraticPatches[y*patchCountWide+x].
-                        controlPoints[row*3+point]=vertices[loadFaces[i].firstVertexIndex+
+                        controlPoints[row*3+point]=vertices[faceData[i].firstVertexIndex+
                                                             (y*2*patches[currentPatch].width+x*2)+
                                                             row*patches[currentPatch].width+point];
                     }
@@ -507,23 +510,27 @@ bool ncBSP::LoadFaces( FILE *file ) {
     
 #endif
     
-	if(loadFaces)
-		free( loadFaces );
-
-	loadFaces = NULL;
+    if( faceData )
+		free( faceData );
+    else
+        _core.Error( ERC_FATAL, "ncBSP::LoadFaces - Unexpected error." );
+    
+	faceData = NULL;
 
 	return true;
 }
 
 bool ncBSP::LoadTextures( FILE *file ) {
+    
+    bsploadtexture_t *g_loadTextures;
+    
 	decalTextureCount = header.dirEntry[SW_TEXTURES].length / sizeof(bsploadtexture_t);
     
     _core.Print( LOG_DEVELOPER, "Loading material entries.. ( %i entries )\n", decalTextureCount );
 
-	bsploadtexture_t *g_loadTextures = (bsploadtexture_t*)malloc( sizeof(bsploadtexture_t) * decalTextureCount );
-    
+	g_loadTextures = (bsploadtexture_t*)malloc( sizeof(bsploadtexture_t) * decalTextureCount );
 	if( !g_loadTextures ) {
-        _core.Print( LOG_DEVELOPER, ".. failed to allocate memory for %i materials.\n", decalTextureCount );
+        _core.Print( LOG_ERROR, ".. Failed to allocate memory for %i materials.\n", decalTextureCount );
         Unload();
         
 		return false;
@@ -532,13 +539,14 @@ bool ncBSP::LoadTextures( FILE *file ) {
 	fseek( file, header.dirEntry[SW_TEXTURES].offset, SEEK_SET );
 	fread( g_loadTextures, 1, header.dirEntry[SW_TEXTURES].length, file );
 
-	decalTextures = (uint*)malloc( sizeof(GLuint) * decalTextureCount );
+	decalTextures = (uint*)malloc( sizeof(uint) * decalTextureCount );
 	if( !decalTextures ) {
-        _core.Print( LOG_DEVELOPER, ".. failed to allocate memory for %i materials.\n", decalTextureCount );
+        _core.Print( LOG_ERROR, ".. Failed to allocate memory for %i materials.\n", decalTextureCount );
         Unload();
 		return false;
 	}
 
+    // Temp!!!
     ncMaterial textureImage = _materials.Find( "brick" );
 
     int i;
@@ -556,42 +564,45 @@ bool ncBSP::LoadTextures( FILE *file ) {
 
 #define LIGHTMAP_SIZE 128
 bool ncBSP::LoadLightmaps( FILE * file ) {
-
+    
+    bsploadlightmap_t *g_loadLightmaps;
+    
 	lightmapCount = header.dirEntry[SW_LIGHTMAPS].length / sizeof(bsploadlightmap_t);
     
     _core.Print( LOG_DEVELOPER, "Loading lightmaps.. ( %i lightmaps ) \n", lightmapCount );
-
-	bsploadlightmap_t *g_loadLightmaps = (bsploadlightmap_t*)malloc( sizeof(bsploadlightmap_t) * lightmapCount );
     
+	g_loadLightmaps = (bsploadlightmap_t*)malloc( sizeof(bsploadlightmap_t) * lightmapCount );
 	if( !g_loadLightmaps ) {
-        _core.Print( LOG_DEVELOPER, ".. failed to allocate memory for %i load lightmaps.\n", lightmapCount );
+        _core.Print( LOG_ERROR, ".. Failed to allocate memory for %i load lightmaps.\n", lightmapCount );
         _bspmngr.Unload();
+        
 		return false;
 	}
-
-    
     
 	fseek(file, header.dirEntry[SW_LIGHTMAPS].offset, SEEK_SET);
 	fread(g_loadLightmaps, 1, header.dirEntry[SW_LIGHTMAPS].length, file);
 
-	lightmapTextures = (GLuint*)malloc( sizeof(GLuint) * lightmapCount );
-    
+	lightmapTextures = (uint*)malloc( sizeof(uint) * lightmapCount );
     
 	if( !lightmapTextures ) {
-        _core.Print( LOG_DEVELOPER, ".. failed to allocate memory for %i lightmaps.\n", lightmapCount );
+        _core.Print( LOG_ERROR, ".. failed to allocate memory for %i lightmaps.\n", lightmapCount );
         _bspmngr.Unload();
+        
 		return false;
 	}
 
 	glGenTextures( lightmapCount, lightmapTextures );
 
-    
 	float gamma = render_lightmapgamma.GetFloat();
 	int i, j;
     
 	for( i = 0; i < lightmapCount; i++ ) {
 		for( j = 0; j < 128 * 128; j++ ) {
-			float r, g, b;
+            
+            float r;
+            float g;
+            float b;
+            
 			r = g_loadLightmaps[i].lightmapData[j * 3 + 0];
 			g = g_loadLightmaps[i].lightmapData[j * 3 + 1];
 			b = g_loadLightmaps[i].lightmapData[j * 3 + 2];
@@ -645,8 +656,7 @@ bool ncBSP::LoadLightmaps( FILE * file ) {
 	glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT );
 	glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT );
 
-    glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA8,
-                 1.0, 1.0, 0, GL_RGB, GL_FLOAT, white_tex );
+    glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA8, 1.0, 1.0, 0, GL_RGB, GL_FLOAT, white_tex );
 
     glGenerateMipmap( GL_TEXTURE_2D );
     
@@ -654,57 +664,57 @@ bool ncBSP::LoadLightmaps( FILE * file ) {
     
 	if( g_loadLightmaps )
 		free( g_loadLightmaps );
-
+    else
+        _core.Error( ERC_FATAL, "ncBSP::LoadLightmaps - Unexpected error." );
+    
 	g_loadLightmaps = NULL;
 
 	return true;
 }
 
-bool ncBSP::LoadData(FILE * file) {
+bool ncBSP::LoadData( FILE *file ) {
+    bsploadleaf_t *leafData;
+    
 	leafCount = header.dirEntry[SW_LEAVES].length / sizeof(bsploadleaf_t);
     
     _core.Print( LOG_DEVELOPER, "Loading map data..\n" );
-
-	bsploadleaf_t *loadLeaves = (bsploadleaf_t*)malloc( sizeof(bsploadleaf_t) * leafCount );
     
-    
-	if( !loadLeaves ) {
+	leafData = (bsploadleaf_t*)malloc( sizeof(bsploadleaf_t) * leafCount );
+	if( !leafData ) {
         
-        _core.Print( LOG_DEVELOPER, ".. failed to allocate memory for %i load leaves..\n", leafCount );
+        _core.Print( LOG_ERROR, ".. Failed to allocate memory for %i load leaves..\n", leafCount );
         Unload();
         
 		return false;
 	}
 
 	leaves = (bspleaf_t*)malloc( sizeof(bspleaf_t) * leafCount );
-    
 	if(!leaves) {
-        
-        _core.Print( LOG_DEVELOPER, ".. failed to allocate memory for %i leaves.\n", leafCount );
+        _core.Print( LOG_ERROR, ".. Failed to allocate memory for %i leaves.\n", leafCount );
         Unload();
         
 		return false;
 	}
 
 	fseek( file, header.dirEntry[SW_LEAVES].offset, SEEK_SET );
-	fread( loadLeaves, 1, header.dirEntry[SW_LEAVES].length, file );
+	fread( leafData, 1, header.dirEntry[SW_LEAVES].length, file );
 
 	int i, j;
 	for( i = 0; i < leafCount; i++ ) {
         
-		leaves[i].cluster = loadLeaves[i].cluster;
-		leaves[i].firstLeafFace = loadLeaves[i].firstLeafFace;
-		leaves[i].numFaces = loadLeaves[i].numFaces;
+		leaves[i].cluster = leafData[i].cluster;
+		leaves[i].firstLeafFace = leafData[i].firstLeafFace;
+		leaves[i].numFaces = leafData[i].numFaces;
 
-        // Bounding box.
-        leaves[i].boundingBoxVertices[0] = ncVec3( (float)loadLeaves[i].mins[0], (float)loadLeaves[i].mins[2],-(float)loadLeaves[i].mins[1] );
-        leaves[i].boundingBoxVertices[1] = ncVec3( (float)loadLeaves[i].mins[0], (float)loadLeaves[i].mins[2],-(float)loadLeaves[i].maxs[1] );
-        leaves[i].boundingBoxVertices[2] = ncVec3( (float)loadLeaves[i].mins[0], (float)loadLeaves[i].maxs[2],-(float)loadLeaves[i].mins[1] );
-        leaves[i].boundingBoxVertices[3] = ncVec3( (float)loadLeaves[i].mins[0], (float)loadLeaves[i].maxs[2],-(float)loadLeaves[i].maxs[1] );
-        leaves[i].boundingBoxVertices[4] = ncVec3( (float)loadLeaves[i].maxs[0], (float)loadLeaves[i].mins[2],-(float)loadLeaves[i].mins[1] );
-        leaves[i].boundingBoxVertices[5] = ncVec3( (float)loadLeaves[i].maxs[0], (float)loadLeaves[i].mins[2],-(float)loadLeaves[i].maxs[1] );
-        leaves[i].boundingBoxVertices[6] = ncVec3( (float)loadLeaves[i].maxs[0], (float)loadLeaves[i].maxs[2],-(float)loadLeaves[i].mins[1] );
-        leaves[i].boundingBoxVertices[7] = ncVec3( (float)loadLeaves[i].maxs[0], (float)loadLeaves[i].maxs[2],-(float)loadLeaves[i].maxs[1] );
+        // Build a bounding box.
+        leaves[i].boundingBoxVertices[0] = ncVec3( (float)leafData[i].mins[0], (float)leafData[i].mins[2],-(float)leafData[i].mins[1] );
+        leaves[i].boundingBoxVertices[1] = ncVec3( (float)leafData[i].mins[0], (float)leafData[i].mins[2],-(float)leafData[i].maxs[1] );
+        leaves[i].boundingBoxVertices[2] = ncVec3( (float)leafData[i].mins[0], (float)leafData[i].maxs[2],-(float)leafData[i].mins[1] );
+        leaves[i].boundingBoxVertices[3] = ncVec3( (float)leafData[i].mins[0], (float)leafData[i].maxs[2],-(float)leafData[i].maxs[1] );
+        leaves[i].boundingBoxVertices[4] = ncVec3( (float)leafData[i].maxs[0], (float)leafData[i].mins[2],-(float)leafData[i].mins[1] );
+        leaves[i].boundingBoxVertices[5] = ncVec3( (float)leafData[i].maxs[0], (float)leafData[i].mins[2],-(float)leafData[i].maxs[1] );
+        leaves[i].boundingBoxVertices[6] = ncVec3( (float)leafData[i].maxs[0], (float)leafData[i].maxs[2],-(float)leafData[i].mins[1] );
+        leaves[i].boundingBoxVertices[7] = ncVec3( (float)leafData[i].maxs[0], (float)leafData[i].maxs[2],-(float)leafData[i].maxs[1] );
         
         for( j = 0; j < 8; j++ ) {
             leaves[i].boundingBoxVertices[j].x /= MAX_BSP_SCALE;
@@ -720,9 +730,8 @@ bool ncBSP::LoadData(FILE * file) {
 	leafFaces = (int*)malloc( sizeof(int) * numLeafFaces );
     
 	if( !leafFaces ) {
-        
         _core.Print( LOG_DEVELOPER, ".. failed to allocate memory for %i leaf faces.\n", numLeafFaces );
-        _bspmngr.Unload();
+        Unload();
         
 		return false;
 	}
@@ -736,8 +745,9 @@ bool ncBSP::LoadData(FILE * file) {
 
 	planes = (ncPlane*)malloc( sizeof(ncPlane) * planeCount );
 	if( !planes ){
-        _core.Print( LOG_DEVELOPER, ".. failed to allocate memory for %i planes.\n", planeCount );
-        _bspmngr.Unload();
+        _core.Print( LOG_ERROR, ".. Failed to allocate memory for %i planes.\n", planeCount );
+        Unload();
+        
 		return false;
 	}
 
@@ -759,8 +769,9 @@ bool ncBSP::LoadData(FILE * file) {
 
 	nodes = (bspnode_t*)malloc( sizeof(bspnode_t) * nodeCount );
     if( !nodes ) {
-        _core.Print( LOG_DEVELOPER, ".. failed to allocate memory for %i nodes.\n", nodeCount );
-        _bspmngr.Unload();
+        _core.Print( LOG_ERROR, ".. Failed to allocate memory for %i nodes.\n", nodeCount );
+        Unload();
+        
 		return false;
 	}
 
@@ -772,20 +783,22 @@ bool ncBSP::LoadData(FILE * file) {
 
 	int bitsetSize = visibilityData.numClusters * visibilityData.bytesPerCluster;
 
-	visibilityData.bitset = (GLubyte*)malloc( sizeof(GLubyte) * bitsetSize );
+	visibilityData.bitset = (Byte*)malloc( sizeof(Byte) * bitsetSize );
     
 	if( !visibilityData.bitset ) {
-        _core.Print( LOG_DEVELOPER, ".. failed to allocate memory for visibility data.\n" );
+        _core.Print( LOG_ERROR, ".. Failed to allocate memory for visibility data.\n" );
         _bspmngr.Unload();
 		return false;
 	}
 
 	fread( visibilityData.bitset, 1, bitsetSize, file );
 
-	if( loadLeaves )
-		free( loadLeaves );
+	if( leafData )
+		free( leafData );
+    else
+        _core.Error( ERC_FATAL, "ncBSP::LoadData - Unexpected error." );
 
-	loadLeaves = NULL;
+	leafData = NULL;
 
 	return true;
 }

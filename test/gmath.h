@@ -155,12 +155,6 @@ bool Frustum_IsBoxInside( ncVec3 *points );
 bool Frustum_IsPointInside( const ncVec3 point );
 void Frustum_Update( void );
 
-// Default colors. ( R G B A )
-extern ncVec4 COLOR_RED;
-extern ncVec4 COLOR_WHITE;
-extern ncVec4 COLOR_BLUE;
-extern ncVec4 COLOR_GREEN;
-
 enum frustumplane_t {
     LEFT_PLANE = 0,
     RIGHT_PLANE,
@@ -200,7 +194,6 @@ public:
 
 extern ncFrustum _frustum;
 
-
 int Math_Sign( int x );
 float Math_Cotangent( float angle );
 float Math_Vec3Distance( ncVec3 s1, ncVec3 s2 );
@@ -222,5 +215,16 @@ T Math_Clamp(T value, T min, T max) {
     else
         return value;
 }
+
+const ncVec4 COLOR_RED = ncVec4( 1.0f, 0.0f, 0.0f, 1.0f );
+const ncVec4 COLOR_WHITE = ncVec4( 1.0f, 1.0f, 1.0f, 1.0f );
+const ncVec4 COLOR_BLUE = ncVec4( 0.0f, 0.0f, 1.0f, 1.0f );
+const ncVec4 COLOR_GREEN = ncVec4( 0.0f, 1.0f, 0.0f, 1.0f );
+
+const ncVec3 VECTOR_UP = ncVec3( 0.0f, 1.0f, 0.0f );
+const ncVec3 VECTOR_ZERO = ncVec3( 0.0f, 0.0f, 0.0f );
+const ncVec3 VECTOR_BACK = ncVec3( 0.0f, 0.0f, -1.0f );
+const ncVec3 VECTOR_DOWN = ncVec3( 0.0f, -1.0f, 0.0f );
+const ncVec3 VECTOR_RIGHT = ncVec3( 1.0f, 0.0f, 0.0f );
 
 #endif

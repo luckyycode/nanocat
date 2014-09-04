@@ -32,7 +32,7 @@ void ncAssetManager::Load( assettype_t type, const char *name ) {
         return;
 
     if( !name ) {
-        _core.Error( ERC_ASSET, "AssetLoad: empty asset name given." );
+        _core.Error( ERC_ASSET, "ncAssetLoader:Load - Empty asset name given." );
         return;
     }
 
@@ -51,7 +51,7 @@ void ncAssetManager::Load( assettype_t type, const char *name ) {
             break;
 
         default:
-            _core.Error( ERC_ASSET, "AssetLoad: unknown asset type given." );
+            _core.Error( ERC_ASSET, "ncAssetLoader::Load - Unknown asset type given." );
             break;
     }
 }
@@ -70,12 +70,13 @@ void ncAssetManager::FindShader( const char *name, ncGLShader *shader ) {
         }
     }
 
-    _core.Print( LOG_WARN, "Could not find \"%s\", trying to load it.\n", name );
+    _core.Print( LOG_WARN, "FindShader: Could not find \"%s\" shader, trying to load it...\n", name );
+    
+    // Well, load it now.
     Load( ASSET_SHADER, name );
 
     for( i = 0; i <  _shaderManager.shaderCount; i++ ) {
         if( !strcmp( _shaderManager.shaders[i].s_name, name ) ) {
-            //_core.Print("found %s (index: %i)\n", shader, i );
             *shader = _shaderManager.shaders[i];
             return;
         }

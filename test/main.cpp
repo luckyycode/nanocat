@@ -264,7 +264,7 @@ int WINAPI WinMain(	HINSTANCE	hInstance,				// Instance
     core_preload( _cwd );                    // We need to initialize some core stuff.
     render_loadvars();                           // Load renderer console variables.
 
-    console_exec("exec config");            // Load some settings.
+    console_exec("readconfig config");            // Load some settings.
 
     _cmain.use_graphics = server_dediGetInteger() ? false : true;
     if( _cmain.use_graphics ) {

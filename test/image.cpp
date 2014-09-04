@@ -18,7 +18,7 @@ ncImageLoader _image;
 /*
     Write image.
 */
-bool ncImageLoader::CreateImage( byte *data, imagetype_t type, const char *filename ) {
+bool ncImageLoader::CreateImage( int width, int height, byte *data, imagetype_t type, const char *filename ) {
     
     switch( type ){
         case BMP_IMAGE: {
@@ -30,8 +30,8 @@ bool ncImageLoader::CreateImage( byte *data, imagetype_t type, const char *filen
                     return false;
                 }
             
-                int w = render_modeWidth.GetInteger();
-                int h = render_modeHeight.GetInteger();
+                int w = width;
+                int h = height;
                 int i;
             
                 int filesize = 54 + 3 * w * h;

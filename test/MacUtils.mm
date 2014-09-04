@@ -9,7 +9,7 @@
 #import <Foundation/Foundation.h>
 #import "MacUtils.h"
 
-@implementation ncMacUtils
+@implementation ncMacUtils : NSObject 
 
 /*
  Another system stuff.

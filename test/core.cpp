@@ -30,10 +30,10 @@
 
 Core _core;
 
-ConsoleVariable      version("core", "version", "Game version", "Unknown", CVAR_NEEDSREFRESH);
-ConsoleVariable      core_maxfps("core", "maxfps", "Maximum game framerate.", "125", CVAR_NEEDSREFRESH);
-ConsoleVariable      timescale("core", "timescale", "Time scale.", "1.0", CVAR_CHEAT);
-ConsoleVariable      log_verbose("log", "verbose", "Show more detailed log?", "1", CVAR_NONE);
+ConsoleVariable      version("core", "version", "Game version", "6q", CVFLAG_NEEDSREFRESH);
+ConsoleVariable      core_maxfps("core", "maxfps", "Maximum game framerate.", "90", CVFLAG_NEEDSREFRESH);
+ConsoleVariable      timescale("core", "timescale", "Time scale.", "1.0", CVFLAG_KID);
+ConsoleVariable      log_verbose("log", "verbose", "Show more detailed log?", "1", CVFLAG_NONE);
 
 /*
     Lazy functions. 
@@ -58,7 +58,6 @@ static void lazyError( void ){
     _clientgame.Error();
 }
 
-
 void temp_tokenize( void ) {
     uint32 TestWords[4] = { 0xfeedc0de, 0x1337d05e, 0xdeadbeef, 0x1337c0de };
     _core.Print( LOG_INFO, "%x %x\n", TestWords[0], TestWords[1] );
@@ -72,7 +71,7 @@ static void lazyConsoleClear( void ) {
     _gconsole.Clear();
 }
 
-void trapConnectA() {
+void lazyConnectA() {
     _client.LoopbackConnect();
 }
 
@@ -112,12 +111,12 @@ void Core::Preload( const char *execpath ) {
     _system.Initialize();
 
     // Common commands.
-    _commandManager.Add( "local", trapConnectA );
+    _commandManager.Add( "local", lazyConnectA );
     _commandManager.Add( "clear", lazyConsoleClear );
     _commandManager.Add( "error", lazyError );
     _commandManager.Add( "quit", lazyShutdown );
     _commandManager.Add( "disconnect", lazyDisconnect );
-    _commandManager.Add( "exec", lazyReadConfig );
+    _commandManager.Add( "readconfig", lazyReadConfig );
     _commandManager.Add( "?", lazyPrinthelp );
     _commandManager.Add( "help", lazyPrinthelp );
     _commandManager.Add( "t", temp_tokenize );
@@ -131,7 +130,6 @@ void Core::Printhelp( void ) {
     _core.Print( LOG_NONE, "\n" );
     _core.Print( LOG_NONE, "Server running: %s\n", server_running.GetInteger() ? "Yes" : "No" );
 }
-
 
 /*
     Game core, load only on application launch!
@@ -150,7 +148,7 @@ void Core::Initialize( void )
     // Notify us.
     _core.Print( LOG_NONE, "\n" );
     _core.Print( LOG_INFO, "Loading core...\n" );
-    _core.Print( LOG_INFO, "os: %s, version: %s, build date: %s\n", _osname, _version, _date );
+    _core.Print( LOG_INFO, "OS: %s, Version: %s, Build date: %s\n", _osname, _version, _date );
 
     // Developer stuff.
     _commandManager.Add( "cm", model_convert ); // Model converation tool.
@@ -174,7 +172,7 @@ void Core::Initialize( void )
     _server.Initialize();
     
     // Default parameters.
-    _gconsole.Execute("exec config.cfg");
+    _gconsole.Execute("readconfig config.nconf");
 
     // Ok!
     Initialized = true; t2 = _system.Milliseconds();
@@ -252,11 +250,11 @@ void Core::Frame( void ) {
     _netmanager.Frame();
 
     // Server and client framing.
-    _server.Frame(msec);
-    _client.Frame(msec);
+    _server.Frame( msec );
+    _client.Frame( msec );
 
     // Render our world!
-    _renderer.Render(msec);
+    _renderer.Render( msec );
 }
 
 /*

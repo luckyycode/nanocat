@@ -21,67 +21,60 @@
 #include "input.h"
 #include "system.h"
 
+// Main beautiful game renderer.
+
 ncRenderer _renderer;
 
 GLuint  vao;
 GLuint  vertexBuffer, uvBuffer;
-
+GLuint FramebufferName = 0;
+GLuint depthTexture;
 
 int eye_width = 640;
 int eye_height = 800;
 
-ConsoleVariable  render_updatepvs("render", "pvs", "Update visibility data?", "1", CVAR_NEEDSREFRESH);
+ConsoleVariable  render_fullscreen("render", "fullscreen", "Fullscreen mode.", "0", CVFLAG_NEEDSREFRESH);
 
-ConsoleVariable  render_fullscreen("render", "fullscreen", "Fullscreen mode.", "0", CVAR_NEEDSREFRESH);
+ConsoleVariable  render_fog("fog", "enabled", "Is fog enabled?", "1", CVFLAG_NEEDSREFRESH);
+ConsoleVariable  render_fog_maxdist("fog", "maxdist", "Fog maximum distance.", "150.0", CVFLAG_NONE);
+ConsoleVariable  render_fog_mindist("fog", "mindist", "Fog minimum distance.", "50.0", CVFLAG_NONE);
 
-ConsoleVariable  render_fog("fog", "enabled", "Is fog enabled?", "1", CVAR_NEEDSREFRESH);
-ConsoleVariable  render_fog_maxdist("fog", "maxdist", "Fog maximum distance.", "150.0", CVAR_NONE);
-ConsoleVariable  render_fog_mindist("fog", "mindist", "Fog minimum distance.", "50.0", CVAR_NONE);
+ConsoleVariable  render_fog_colorR("fog", "red", "Fog red color.", "1.0", CVFLAG_NEEDSREFRESH);
+ConsoleVariable  render_fog_colorG("fog", "green", "Fog green color.", "1.0", CVFLAG_NEEDSREFRESH);
+ConsoleVariable  render_fog_colorB("fog", "blue", "Fog blue color.", "1.0", CVFLAG_NEEDSREFRESH);
 
-ConsoleVariable  render_fog_colorR("fog", "red", "Fog red color.", "1.0", CVAR_NEEDSREFRESH);
-ConsoleVariable  render_fog_colorG("fog", "green", "Fog green color.", "1.0", CVAR_NEEDSREFRESH);
-ConsoleVariable  render_fog_colorB("fog", "blue", "Fog blue color.", "1.0", CVAR_NEEDSREFRESH);
+ConsoleVariable  render_wireframe("render", "wireframe", "Wireframe mode.", "0", CVFLAG_NONE);
 
-ConsoleVariable  render_wireframe("render", "wireframe", "Wireframe mode.", "0", CVAR_NONE);
+ConsoleVariable  render_normalmap("env", "normalmap", "Is normal mapping enabled?", "1", CVFLAG_NEEDSREFRESH);
+ConsoleVariable  render_multisampling("render", "msaa", "Is multisampling enabled?", "0", CVFLAG_NEEDSREFRESH);
 
-ConsoleVariable  render_normalmap("env", "normalmap", "Is normal mapping enabled?", "1", CVAR_NEEDSREFRESH);
-ConsoleVariable  render_multisampling("render", "msaa", "Is multisampling enabled?", "0", CVAR_NEEDSREFRESH);
+ConsoleVariable  render_refractions("env", "refractions", "Is refraction mapping enabled?", "1", CVFLAG_NEEDSREFRESH);
+ConsoleVariable  render_reflections("env", "reflections", "Is reflection mapping enabled?", "1", CVFLAG_NEEDSREFRESH);
 
-ConsoleVariable  render_refractions("env", "refractions", "Is refraction mapping enabled?", "1", CVAR_NEEDSREFRESH);
-ConsoleVariable  render_reflections("env", "reflections", "Is reflection mapping enabled?", "1", CVAR_NEEDSREFRESH);
+ConsoleVariable  render_sky("render", "sky", "Render sky?", "1", CVFLAG_NONE);
+ConsoleVariable  render_water("render", "water", "Render water?", "1", CVFLAG_NONE);
 
-ConsoleVariable  render_sky("render", "sky", "Render sky?", "1", CVAR_NONE);
-ConsoleVariable  render_water("render", "water", "Render water?", "1", CVAR_NONE);
+ConsoleVariable  render_fontspacing("font", "spacing", "Font symbol spacing.", "0.625", CVFLAG_NONE);
 
-ConsoleVariable  render_fontspacing("font", "spacing", "Font symbol spacing.", "0.625", CVAR_NONE);
+ConsoleVariable  render_vsync("render", "vsync", "Vertical sync enabled?", "1", CVFLAG_NEEDSREFRESH);
 
-ConsoleVariable  render_vsync("render", "vsync", "Vertical sync enabled?", "1", CVAR_NEEDSREFRESH);
+ConsoleVariable  render_modeWidth("render", "width", "Rendering width.", "1280", CVFLAG_NEEDSREFRESH);
+ConsoleVariable  render_modeHeight("render", "height", "Rendering height.", "800", CVFLAG_NEEDSREFRESH);
 
-ConsoleVariable  render_modeWidth("render", "width", "Rendering width.", "1280", CVAR_NEEDSREFRESH);
-ConsoleVariable  render_modeHeight("render", "height", "Rendering height.", "800", CVAR_NEEDSREFRESH);
+ConsoleVariable  render_curvetesselation("bsp", "curvetes", "Curve tesselation.", "7", CVFLAG_NEEDSREFRESH);
+ConsoleVariable  render_calculatevisdata("render", "pvs", "Calculate visibility data?", "1", CVFLAG_NEEDSREFRESH);
+ConsoleVariable  render_lightmapgamma("bsp", "lightmapgamma", "Lightmap gamma.", "2.5", CVFLAG_NEEDSREFRESH);
+ConsoleVariable  render_updatepvs("render", "pvs", "Update visibility data?", "1", CVFLAG_NEEDSREFRESH);
 
-ConsoleVariable  render_curvetesselation("bsp", "curvetes", "Curve tesselation.", "7", CVAR_NEEDSREFRESH);
-ConsoleVariable  render_calculatevisdata("render", "pvs", "Calculate visibility data?", "1", CVAR_NEEDSREFRESH);
-ConsoleVariable  render_lightmapgamma("bsp", "lightmapgamma", "Lightmap gamma.", "2.5", CVAR_NEEDSREFRESH);
-
-ConsoleVariable  render_usescreenfx("render", "sfx", "Use screen effects?", "1", CVAR_NEEDSREFRESH);
-ConsoleVariable  render_dof("render", "dof", "Is Depth of Field enabled?", "1", CVAR_NEEDSREFRESH);
-ConsoleVariable  render_lensanamorph("render", "lens", "Lens effects enabled?", "1", CVAR_NEEDSREFRESH);
-
-// Main beautiful game renderer.
-
+ConsoleVariable  render_usescreenfx("render", "sfx", "Use screen effects?", "1", CVFLAG_NEEDSREFRESH);
+ConsoleVariable  render_dof("render", "dof", "Is Depth of Field enabled?", "1", CVFLAG_NEEDSREFRESH);
+ConsoleVariable  render_lensanamorph("render", "lens", "Lens effects enabled?", "1", CVFLAG_NEEDSREFRESH);
 
 ncFramebuffer _waterreflection;
 ncFramebuffer _waterrefraction;
 ncFramebuffer _scene;
 
-ncVec4 COLOR_RED = ncVec4( 1.0f, 0.0f, 0.0f, 1.0f );
-ncVec4 COLOR_WHITE = ncVec4( 1.0f, 1.0f, 1.0f, 1.0f );
-ncVec4 COLOR_BLUE = ncVec4( 0.0f, 0.0f, 1.0f, 1.0f );
-ncVec4 COLOR_GREEN = ncVec4( 0.0f, 1.0f, 0.0f, 1.0f );
-
-ncVec3 defaultVector;
-
+// Left, Right, Full.
 ncFramebuffer _scene_adv[3];
 
 //shader_t grass;
@@ -212,8 +205,7 @@ void ncRenderer::UpdateViewMatrix( void ) {
     _camera.ViewMatrix.m[14] =  ncVec3_Dot(_camera.g_vLook, _camera.g_vEye);
     _camera.ViewMatrix.m[15] =  1.0f;
 }
-GLuint FramebufferName = 0;
-GLuint depthTexture;
+
 /*
     Precache ( setup ) some stuff after pre-load.
 */
@@ -224,26 +216,16 @@ void ncRenderer::Precache( void ) {
     _camera.g_vLook = ncVec3( -10.5f, -0.5f, -0.5f );
     _camera.g_vUp = ncVec3( 1.0f, 1.0f, 0.0f );
     _camera.g_vRight = ncVec3( 1.0f, 0.0f, 0.0f );
-    defaultVector = ncVec3( 0.0f, 1.0f, 0.0f );
     
     _camera.ViewMatrix.Identity();
     _camera.RotationMatrix.Identity();
     _camera.ProjectionMatrix.Identity();
 
-    
     _assetmanager.FindShader( "passthru", &sceneShader );
     
-    /*static const GLfloat g_quad_vertex_buffer_data[] = {
-        -1.0f, -1.0f, 0.0f,
-        1.0f, -1.0f, 0.0f,
-        -1.0f,  1.0f, 0.0f,
-        -1.0f,  1.0f, 0.0f,
-        1.0f, -1.0f, 0.0f,
-        1.0f,  1.0f, 0.0f,
-    };*/
     static float g_vertex_buffer_data[3][6][3]=
     {
-        // centre eye
+        // Full view.
         {
             { -1.0f, -1.0f, 0.0f, },
             {  1.0f, -1.0f, 0.0f, },
@@ -253,7 +235,7 @@ void ncRenderer::Precache( void ) {
             { 1.0f,   1.0f, 0.0f, }
         },
         
-        // left eye
+        // Left eye.
         {
             { -1.0f, -1.0f, 0.0f, },
             {  0.0f, -1.0f, 0.0f, },
@@ -263,7 +245,7 @@ void ncRenderer::Precache( void ) {
             { 0.0f,  -1.0f, 0.0f, },
         },
         
-        // right eye
+        // Right eye.
         {
             {  0.0f, -1.0f, 0.0f, },
             {  1.0f, -1.0f, 0.0f, },
@@ -276,7 +258,7 @@ void ncRenderer::Precache( void ) {
     
     static float g_uv_buffer_data[3][6][2] =
     {
-        // center eye
+        // Full view.
         {
             { 0.0f, 0.0f, },
             { 1.0f, 0.0f, },
@@ -284,10 +266,9 @@ void ncRenderer::Precache( void ) {
             { 0.0f, 1.0f, },
             { 1.0f, 0.0f, },
             { 1.0f, 1.0f, },
-           
         },
         
-        // left eye
+        // Left eye.
         {
             { 0.0f, 0.0f, },
             { 0.5f, 0.0f, },
@@ -297,7 +278,7 @@ void ncRenderer::Precache( void ) {
             { 0.5f, 0.0f, },
         },
         
-        // right eye
+        // Right eye.
         {
             { 0.5f, 0.0f, },
             { 1.0f, 0.0f, },
@@ -375,7 +356,6 @@ void ncRenderer::Precache( void ) {
     
     glBindVertexArray( 0 );
     
-    
     lens_texture = _materials.Find("lensdirt").texture.tex_id;
     
     scene_texture = glGetUniformLocation(sceneShader.shader_id, "renderedTexture");
@@ -389,9 +369,9 @@ void ncRenderer::Precache( void ) {
     height_id = glGetUniformLocation(sceneShader.shader_id, "height");
     usedof_id = glGetUniformLocation(sceneShader.shader_id, "use_dof" );
     
-    glUniform1i(scene_texture, 0);
-    glUniform1i(depth_texture, 1);
-    glUniform1i(lensdirt_texture, 2);
+    glUniform1i( scene_texture, 0 );
+    glUniform1i( depth_texture, 1 );
+    glUniform1i( lensdirt_texture, 2 );
     
     glUniform1f( width_id, (float)_renderer.windowWidth );
     glUniform1f( height_id, (float)_renderer.windowHeight );
@@ -430,12 +410,13 @@ void ncRenderer::Precache( void ) {
 
 /*
  
- Initialize renderer stuff here.
- It's different from OpenGL load ( gl_init ).
+    Initialize renderer stuff here.
+    Called from ncOpenGL.
  
 */
 
 void ncRenderer::Initialize( void ) {
+    
     if( !_core.UseGraphics ) {
         _core.Print( LOG_DEVELOPER, "Ignoring renderer load, I am dedicated server!\n" );
         return;
@@ -453,7 +434,7 @@ void ncRenderer::Initialize( void ) {
     
     State  = RENDER_IDLE;
     
-    _shaderManager.Initialize();                                    // Initialize shader system.
+    _shaderManager.Initialize(); // Initialize shader system.
     
     // Load shaders first because some another assets may require them.
     _assetmanager.Load( ASSET_SHADER, "oculusvr" );
@@ -463,26 +444,26 @@ void ncRenderer::Initialize( void ) {
     _assetmanager.Load( ASSET_SHADER, "water" );
     _assetmanager.Load( ASSET_SHADER, "level" );
     
-    _materials.Initialize();                                       // Initialize materials and load textures.
+    _materials.Initialize();  // Initialize materials and load textures.
     
     _assetmanager.Load( ASSET_MATERIAL, "main" );
     
-    _modelLoader.Initialize();                                           // Load all models & precache 'em.
-    _font.Initialize();                                           // Load fonts.
-    _gamewater.Initialize();                                        // Initialize water.
-    _bspmngr.Initialize();                                           // Initialize static world.
+    _modelLoader.Initialize();      // Load all models & precache 'em.
+    _font.Initialize();             // Load fonts.
+    _gamewater.Initialize();        // Initialize water.
+    _bspmngr.Initialize();          // Initialize static world.
     
-    UpdateFramebufferObject( renderWidth, renderHeight );             // Initialize FBO stuff.
+    UpdateFramebufferObject( renderWidth, renderHeight );   // Initialize FBO stuff.
     
     _commandManager.Add( "glrefresh", lazyRefreshGraphics );
     _commandManager.Add( "ss", lazyScreenshot );
     
-    g_err = glGetError();                                   // Check for some errors.
+    g_err = glGetError();   // Check for some errors.
     if ( g_err != GL_NO_ERROR ) {
         _core.Print( LOG_WARN, "Last OpenGL warning after renderer initialization: 0x%x\n", g_err );
     }
     
-    Precache();                                           // Precache some stuff. :>
+    Precache();             // Precache some stuff. :>
     
     t2 = _system.Milliseconds();
     _core.Print( LOG_INFO, "Renderer took %.1f ms to load.\n", t2 - t1 );
@@ -579,7 +560,7 @@ void ncRenderer::UpdateFramebufferObject( int w, int h ) {
                &_scene.render,
                &_scene.depthtex, w, h);
     
-    // Advanced scene.
+    // Advanced scenes.
     // Used for VR.
     int i;
     for( i = 0; i < 3; i++ ) {
@@ -669,8 +650,6 @@ void ncRenderer::RenderWorld( int msec, eye_t eye ) {
     RenderGrass();
 }
 
-
-
 /*
     Update view matrix rotation.
 */
@@ -693,7 +672,7 @@ void ncRenderer::UpdateMatrixRotation( void ) {
         }
         
         if( nXDiff != 0 ){
-            _camera.RotationMatrix.Rotate( -(float)nXDiff / 3.0f, defaultVector );
+            _camera.RotationMatrix.Rotate( -(float)nXDiff / 3.0f, VECTOR_UP );
             
             Matrix4_TransformVector( &_camera.RotationMatrix, &_camera.g_vLook );
             Matrix4_TransformVector( &_camera.RotationMatrix, &_camera.g_vUp );
@@ -760,15 +739,15 @@ void ncRenderer::RenderBeautifulWater( void ) {
 /*
     Render to texture
 */
-
-
 void ncRenderer::PreRender( void ) {
     if( !Initialized )
         return;
     
+    // Update matrix view.
     UpdateMatrixRotation();
     UpdateViewMatrix();
     
+    // Update bounding box.
     Frustum_Update();
     
     // Beautiful water.
@@ -795,7 +774,6 @@ void ncRenderer::RenderToShader( eye_t eye ) {
     
     glBindRenderbuffer( GL_RENDERBUFFER, 0 );
     glBindFramebuffer( GL_FRAMEBUFFER, 0 );
-    
     
     float rx = 0.5f;
     float ry = 0.0f;
@@ -976,7 +954,7 @@ void ncRenderer::MakeScreenshot( void ) {
     glPixelStorei( GL_PACK_SWAP_BYTES, 1 );
     glReadPixels( 0, 0, render_modeWidth.GetInteger(), render_modeHeight.GetInteger(), GL_BGR, GL_UNSIGNED_BYTE, data );
     
-    _image.CreateImage( data, BMP_IMAGE, "screenshot" );
+    _image.CreateImage( renderWidth, renderHeight, data, BMP_IMAGE, "screenshot" );
     free( data );
 }
 

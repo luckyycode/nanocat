@@ -10,6 +10,8 @@
 #ifndef ncstring_h
 #define ncstring_h
 
+
+// Main string class.
 class ncStringHelper {
 public:
     void        SafeCopy( char *dest, const char *src, unsigned long size );

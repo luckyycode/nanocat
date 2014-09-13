@@ -33,8 +33,6 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 
-
-
 const char  *GetSystemVersion();
 const char  *GetBundlePath();
 

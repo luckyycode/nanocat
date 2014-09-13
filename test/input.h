@@ -20,8 +20,8 @@ public:
 class ncInput {
 public:
     void Initialize( void );
-    void OnKeyPress( uint key );
-    void OnKeyUp( unsigned int key );
+    void OnKeyPress( char key );
+    void OnKeyUp( char key );
     void OnMouseMove( int x, int y );
     void OnMouseDown( int x, int y );
     void OnMouseUp( int x, int y );
@@ -33,7 +33,7 @@ extern ncInput _input;
 extern ncMouse _imouse;
 
 // DEVELOPER
-extern ConsoleVariable       dev_showcursorpos;                         // Show cursor position on screen.
+extern ncConsoleVariable       dev_showcursorpos;                         // Show cursor position on screen.
 
 
 #endif

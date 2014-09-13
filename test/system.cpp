@@ -7,20 +7,21 @@
 //  Copyright (c) 2014 Neko Vision. All rights reserved.
 //
 
-#include "system.h"
-#include "network.h"
-#include "console.h"
-#include "files.h"
-#include "ncstring.h"
+#include "System.h"
+#include "Network.h"
+#include "Console.h"
+#include "FileSystem.h"
+#include "NCString.h"
+#include "Core.h"
 
-ConsoleVariable    system_gpu("sys", "gpu", "Graphics device name.", "Unknown", CVFLAG_SYS);
-ConsoleVariable    system_glversion("sys", "glversion", "OpenGL version.", "0", CVFLAG_SYS);
-ConsoleVariable    system_glslversion("sys", "glslversion", "OpenGL shading language version", "0", CVFLAG_SYS);
-ConsoleVariable    system_minmemory("sys", "minmemory", "Minimum system memory required.", "256", CVFLAG_SYS);
-ConsoleVariable    system_cpucores("sys", "cpucores", "Processor cores count.", "1", CVFLAG_SYS);
-ConsoleVariable    system_cpuspeed("sys", "cpuspeed", "Processor clock speed.", "0", CVFLAG_SYS);
-ConsoleVariable    system_physmem("sys", "physmem", "Physical memory available.", "0", CVFLAG_SYS);
-ConsoleVariable    system_virtmem("sys", "virtmem", "Virtual memory available.", "0", CVFLAG_SYS);
+ncConsoleVariable    system_gpu("sys", "gpu", "Graphics device name.", "Unknown", CVFLAG_SYS);
+ncConsoleVariable    system_glversion("sys", "glversion", "OpenGL version.", "0", CVFLAG_SYS);
+ncConsoleVariable    system_glslversion("sys", "glslversion", "OpenGL shading language version", "0", CVFLAG_SYS);
+ncConsoleVariable    system_minmemory("sys", "minmemory", "Minimum system memory required.", "256", CVFLAG_SYS);
+ncConsoleVariable    system_cpucores("sys", "cpucores", "Processor cores count.", "1", CVFLAG_SYS);
+ncConsoleVariable    system_cpuspeed("sys", "cpuspeed", "Processor clock speed.", "0", CVFLAG_SYS);
+ncConsoleVariable    system_physmem("sys", "physmem", "Physical memory available.", "0", CVFLAG_SYS);
+ncConsoleVariable    system_virtmem("sys", "virtmem", "Virtual memory available.", "0", CVFLAG_SYS);
 
 ncSystem _system;
 
@@ -190,16 +191,16 @@ ulong systemTime = 0;
 int curtime;
 
 int ncSystem::Milliseconds( void ) {
-    struct timeval tp;
+    struct timeval Current;
     
-    gettimeofday( &tp, NULL );
+    gettimeofday( &Current, NULL );
     
     if ( !systemTime ) {
-        systemTime = tp.tv_sec;
-        return tp.tv_usec / 1000;
+        systemTime = Current.tv_sec;
+        return Current.tv_usec / 1000;
     }
     
-    curtime = (int)(tp.tv_sec - systemTime) * 1000 + tp.tv_usec / 1000;
+    curtime = (int)(Current.tv_sec - systemTime) * 1000 + Current.tv_usec / 1000;
     
     return curtime;
 }

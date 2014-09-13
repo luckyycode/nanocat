@@ -24,6 +24,20 @@ public:
     char        *Copy(char *d, const char *s);
 };
 
+class ncString {
+    friend class ncStringHelper;
+    
+public:
+    ncString( const char *text );
+    
+    void CopyTo( ncString *to );
+    void CopyFrom( ncString *to );
+    
+    ncString operator=(const char *s) const;
+    
+    const char *Owner;
+};
+
 extern ncStringHelper _stringhelper;
 
 #endif

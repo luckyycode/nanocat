@@ -10,7 +10,7 @@
 #ifndef system_h
 #define system_h
 
-#include "core.h"
+#include "Core.h"
 
 class ncSystem {
 public:
@@ -36,8 +36,8 @@ extern ncSystem _system;
 
 
 // SYSTEM
-extern ConsoleVariable       system_gpu;                                // System GPU name.
-extern ConsoleVariable       system_glversion;                          // OpenGL version.
-extern ConsoleVariable       system_glslversion;                        // GLSL version.
+extern ncConsoleVariable       system_gpu;                                // System GPU name.
+extern ncConsoleVariable       system_glversion;                          // OpenGL version.
+extern ncConsoleVariable       system_glslversion;                        // GLSL version.
 
 #endif

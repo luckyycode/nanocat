@@ -266,7 +266,7 @@ int WINAPI WinMain(	HINSTANCE	hInstance,				// Instance
 
     console_exec("readconfig config");            // Load some settings.
 
-    _cmain.use_graphics = server_dediGetInteger() ? false : true;
+    _cmain.use_graphics = Server_DedicatedGetInteger() ? false : true;
     if( _cmain.use_graphics ) {
         // ----------------------------------------------------------------------------------------
         // Register the window class
@@ -422,7 +422,7 @@ int WINAPI WinMain(	HINSTANCE	hInstance,				// Instance
     while (!_quit)
     {
         // Windows messages.
-        if ( PeekMessage(&msg, NULL, 0, 0, PM_REMOVE) ) // Nao, console goes here too, && !server_dediGetInteger() )
+        if ( PeekMessage(&msg, NULL, 0, 0, PM_REMOVE) ) // Nao, console goes here too, && !Server_DedicatedGetInteger() )
         {
             // handle and dispatch messages
             if (msg.message == WM_QUIT) {

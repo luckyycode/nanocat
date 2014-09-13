@@ -7,28 +7,28 @@
 //  Copyright (c) 2014 Neko Vision. All rights reserved.
 //
 
-#include "core.h"
-#include "shader.h"
-#include "assetmanager.h"
-#include "material.h"
-#include "corefont.h"
-#include "renderer.h"
-#include "gl.h"
-#include "gmath.h"
+#include "Core.h"
+#include "SystemShared.h"
+#include "AssetManager.h"
+#include "MaterialLoader.h"
+#include "CoreFont.h"
+#include "Renderer.h"
+#include "OpenGL.h"
+#include "GameMath.h"
 
 // Font manager.
 ncCoreFontRenderer _font;
 
 // Settings.
-ConsoleVariable font_size( "font", "size", "Font size.", "0.0625", CVFLAG_NONE );
-ConsoleVariable font_width( "font", "width", "Font character width.", "1.0", CVFLAG_NONE );
-ConsoleVariable font_height( "font", "height", "Font character height.", "1.0", CVFLAG_NONE );
-ConsoleVariable font_charskip( "font", "skip", "Font character skip size.", "32", CVFLAG_NONE );
+ncConsoleVariable Font_Size( "font", "size", "Font size.", "0.0625", CVFLAG_NONE );
+ncConsoleVariable Font_Width( "font", "width", "Font character width.", "1.0", CVFLAG_NONE );
+ncConsoleVariable Font_Height( "font", "height", "Font character height.", "1.0", CVFLAG_NONE );
+ncConsoleVariable Font_Skip( "font", "skip", "Font character skip size.", "32", CVFLAG_NONE );
 
 /*
     Print text somewhere on screen.
 */
-void ncCoreFontRenderer::Print( ncVec4 color, int x, int y, int size, const char *msg, ... ) {
+void ncCoreFontRenderer::Print2D( ncVec4 color, int x, int y, int size, const char *msg, ... ) {
 
     if( !_opengl.Initialized && !_renderer.Initialized )
         return;
@@ -55,20 +55,20 @@ void ncCoreFontRenderer::Print( ncVec4 color, int x, int y, int size, const char
         // Too much calculations in a loop!?!?!
         
         
-        float fheight = font_height.GetFloat();
-        float fwidth = font_width.GetFloat();
+        float fheight = Font_Height.GetFloat();
+        float fwidth = Font_Width.GetFloat();
 
         ncVec2 vertex_up_left    = ncVec2( x + i * size - 5.0, y - size - fheight );
 		ncVec2 vertex_up_right   = ncVec2( x + i * size + size + fwidth - 5.0, y - size - fheight );
 		ncVec2 vertex_down_right = ncVec2( x + i * size + size + fwidth - 5.0, y );
 		ncVec2 vertex_down_left  = ncVec2( x + i * size - 5.0, y );
 
-        char character = text [i] - FONT_CHARACTERSKIP;
+        char character = text[i] - FONT_CHARACTERSKIP;
 
 		float uv_x = ( character % 16 ) / 16.0f;
 		float uv_y = ( character / 16 ) / 16.0f;
 
-        float size = font_size.GetFloat();
+        float size = Font_Size.GetFloat();
         
 		ncVec2 uv_up_left    = ncVec2( uv_x, 1 - uv_y - size );
 		ncVec2 uv_up_right   = ncVec2( uv_x + size, 1 - uv_y - size );

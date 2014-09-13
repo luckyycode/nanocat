@@ -61,22 +61,10 @@
     #define MAX_PATH            256
 
     /*      Default Mac key codes.      */
-    #define KEY_F1              122
-    #define KEY_F2              120
-    #define KEY_F3              99
-    #define KEY_F4              118
-    #define KEY_F5              96
-    #define KEY_F6              97
-    #define KEY_F7              98
-    #define KEY_F8              100
-    #define KEY_F9              101
-    #define KEY_F10             109
-    #define KEY_F11             110
-    #define KEY_F12             111
 
-    #define KEY_ENTER           36
+    #define KEY_ENTER           13
     #define KEY_SPACE           49
-    #define KEY_BACKSPACE       51
+    #define KEY_BACKSPACE       127
     #define KEY_TILDE           50
     #define KEY_ESCAPE          53
 
@@ -99,31 +87,6 @@
     #pragma once
 
     #include "SharedWin.h"
-
-    /*      Default Windows key codes.      */
-    #define KEY_F1              112
-    #define KEY_F2              113
-    #define KEY_F3              114
-    #define KEY_F4              115
-    #define KEY_F5              116
-    #define KEY_F6              117
-    #define KEY_F7              118
-    #define KEY_F8              119
-    #define KEY_F9              120
-    #define KEY_F10             121
-    #define KEY_F11             122
-    #define KEY_F12             123
-
-    #define KEY_ENTER           13
-    #define KEY_SPACE           32
-    #define KEY_BACKSPACE       8
-    #define KEY_TILDE           226
-    #define KEY_ESCAPE          27
-
-    #define KEY_ARROW_UP        38
-    #define KEY_ARROW_DOWN      40
-    #define KEY_ARROW_LEFT      37
-    #define KEY_ARROW_RIGHT     39
 
     #define _osname             "Win"
 
@@ -167,7 +130,6 @@
  |                    |                    |
  
  I love you all, lazy ones.  */
-
 #define ulong  unsigned long
 #define uint   unsigned int
 #define byte   unsigned char
@@ -185,8 +147,11 @@ typedef unsigned char Byte;
 #define ERROR_REPORT                            ""
 
 // System stuff.
-#define _version                                "6q"
-#define _date                                   __DATE__
+#define _version                                "7k"
+
+#define CORE_VERSION_MAJOR                      7
+#define CORE_VERSION_MINOR                      1
+#define CORE_VERSION_MM                         7.1
 
 // Default directory & file names.
 #define DEFAULT_EXEC_PATH                       "Debug"
@@ -219,10 +184,6 @@ typedef unsigned char Byte;
 
 // System
 void            win_resize( int w, int h );
-
-// Utilities.
-void            model_obj2sm( const char *filename );
-void            model_convert( void );
 
 #endif
 

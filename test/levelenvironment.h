@@ -14,6 +14,9 @@ class ncLevelEnvironment {
 public:
     void Initialize( void );
     void Prepare( void );
+    
+    // Temp ( maybe )
+    void PassShader( uint *id );
 };
 
 extern ncLevelEnvironment _levelenvironment;

@@ -50,6 +50,7 @@ uniform sampler2D uLensColor;
 uniform int aFX;
 uniform int use_lensanam;
 uniform int use_dof;
+uniform int ovr;
 
 in vec2 UV;
 in vec4 fragPos;
@@ -307,29 +308,31 @@ bool validate(vec2 tc, int left_eye) {
 
 // Main
 void main(){
-
-
-    //vec2 TEXCOORD = (fragPos.xy/fragPos.w)*0.5+0.5;
-    //TEXCOORD = clamp(TEXCOORD,0.002,0.998);
-    
     vec4 ChromAbParam = vec4(0.996000, -0.004000, 1.014000,0.000000);
 
-    vec2 tc = HmdWarp(UV);
-
+    vec2 tc = vec2(0.0);
+    if( ovr == 0 ) {
+    	tc = UV;//HmdWarp(UV);
+    } else {
+		tc = HmdWarp(UV);
+    }
+     
+	vec2 TEXCOORD = tc;
+	
 	vec2 theta = (UV - LensCenter) * ScaleIn; // Scales to [-1, 1]
     float rSq = theta.x * theta.x + theta.y * theta.y;
    	vec2 theta1 = theta * (HmdWarpParam.x + HmdWarpParam.y * rSq + HmdWarpParam.z * rSq * rSq + HmdWarpParam.w * rSq * rSq * rSq);
-    vec2 tcs = LensCenter + Scale * theta1;
-	vec2 TEXCOORD = tc;
+	
     vec2 thetaBlue = theta1 * (ChromAbParam.z + ChromAbParam.w * rSq);
-    vec2 tcBlue = LensCenter + Scale * thetaBlue;
+    vec2 tcBlue = TEXCOORD;
 
-   float blue = texture(renderedTexture, tcBlue).b;
-   vec2 tcGreen = LensCenter + Scale * theta1;
-   float green = texture(renderedTexture, tcGreen).g;
-   vec2 thetaRed = theta1 * (ChromAbParam.x + ChromAbParam.y * rSq);
-   vec2 tcRed = LensCenter + Scale * thetaRed;
-   float red = texture(renderedTexture, tcRed).r;
+   	float blue = texture(renderedTexture, tcBlue).b;
+  	vec2 tcGreen = TEXCOORD;
+  	float green = texture(renderedTexture, tcGreen).g;
+  	vec2 thetaRed = theta1 * (ChromAbParam.x + ChromAbParam.y * rSq);
+    vec2 tcRed = TEXCOORD;
+  	 
+ 	 float red = texture(renderedTexture, tcRed).r;
 
 	vec4 outColor = vec4(red, green, blue, 1.0);
     
@@ -414,19 +417,24 @@ void main(){
 
     colorB /= s2;  
 	
-    vec4 cleanRender = texture( renderedTexture, UV );
-	
+    vec4 cleanRender = texture( renderedTexture, TEXCOORD );	
     vec3 lensAnamorph = use_lensanam == 1 ? anamorph * vec3(0.1, 0.0, 1.0) * 2.5 : vec3(0.0);
 	vec4 dofFX = use_dof == 1 ? vec4( colorB, 1.0 ) : cleanRender;
 	vec4 lensFX = vec4(((result+lensAnamorph) * (dust*0.8+0.2)) , 1.0);
 
     vec4 fxRender = vec4(g_anamorph, 1.0) +  dofFX + lensFX;
-
-    if (any(bvec2(clamp(tc, ScreenCenter-vec2(0.50,0.5), ScreenCenter+vec2(0.50,0.5))-tc))) 
-       color = vec4(0.0, 0.0, 0.0, 1.0);
-    else
-       color = outColor;  
-        
+	
+	if( ovr == 1 ) {
+  	  	if (any(bvec2(clamp(tc, ScreenCenter-vec2(0.50,0.5), ScreenCenter+vec2(0.50,0.5))-tc))) 
+    	 	  color = vec4(0.0, 0.0, 0.0, 1.0);
+  		else
+  	   		  color = vec4(colorB, 1.0);  
+    } 
+    else {
+    	color = vec4(colorB, 1.0);
+    }
+    //color = outColor;
     //color = aFX == 0 ? cleanRender : fxRender;
+    //color = vec4(colorB, 1.0);
 }
 "

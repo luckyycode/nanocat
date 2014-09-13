@@ -1,12 +1,15 @@
 "
 layout(location = 0) in vec3 vertexPosition_modelspace;
 layout(location = 1) in vec2 UV;
+layout(location = 2) in vec3 vertexNormals;
 
 uniform mat4 ModelMatrix;
 uniform mat4 ProjMatrix;
+out vec3 Normal0;  
+out vec4 ModelViewMatrix;
 
 out vec4 TP, FUV; // Texture pos, Fixed UV
-
+out vec3 worldPos;
 mat3 m3( mat4 m )
 {
 	mat3 result;
@@ -30,8 +33,11 @@ void main() {
 	  vec3 pos = vec3(vertexPosition_modelspace);
 
     mat4 InversedModel = inverse(ModelMatrix);
+    ModelViewMatrix = ModelMatrix * vec4(vertexPosition_modelspace, 1.0);
     TP = ProjMatrix * ModelMatrix * vec4(vertexPosition_modelspace, 1.0);
     FUV = vec4(UV, 1.0, 1.0);
+	worldPos = vec3(ModelMatrix*vec4(vertexPosition_modelspace, 1.0));
+	Normal0     = (ModelMatrix * vec4(vertexNormals, 0.0)).xyz; 
 
     gl_Position = ProjMatrix * ModelMatrix * vec4(vertexPosition_modelspace, 1.0);
 }
@@ -41,11 +47,98 @@ uniform float time; // time in seconds
 
 uniform sampler2D decal;
 
-in vec4 TP, FUV;
+in vec4 TP, FUV, ModelViewMatrix;
 out vec4 color;
+
+in vec3 Normal0, worldPos; 
+uniform vec3 cameraPos;
+
+
+struct BaseLight                                                                    
+{                                                                                   
+    vec3 Color;                                                                     
+    float AmbientIntensity;                                                         
+    float DiffuseIntensity;                                                         
+};                                                                                  
+                                                                                    
+struct DirectionalLight                                                             
+{                                                                                   
+    BaseLight Base;                                                                 
+    vec3 Direction;                                                                 
+};                                                                                  
+                                                                                    
+struct Attenuation                                                                  
+{                                                                                   
+    float Constant;                                                                 
+    float Linear;                                                                   
+    float Exp;                                                                      
+};                                                                                  
+                                                                                    
+struct PointLight                                                                           
+{                                                                                           
+    BaseLight Base;                                                                         
+    vec3 Position;                                                                          
+    Attenuation Atten;                                                                      
+};                                                                                          
+  int gNumPointLights = 2;                                                                
+uniform DirectionalLight gDirectionalLight;                                                 
+uniform PointLight gPointLights[3];                                                                                                      
+float gMatSpecularIntensity = .9;                                                        
+float gSpecularPower = .7;
+
+  
+  vec4 CalcLightInternal(BaseLight Light, vec3 LightDirection, vec3 Normal)                   
+{                                                                                           
+    vec4 AmbientColor = vec4(Light.Color, 1.0f) * Light.AmbientIntensity;                   
+    float DiffuseFactor = dot(Normal, -LightDirection);                                     
+    vec4 DiffuseColor  = vec4(0, 0, 0, 0);                                                  
+    vec4 SpecularColor = vec4(0, 0, 0, 0);                                                  
+                                                                                            
+   if (DiffuseFactor > 0) {                                                                
+        DiffuseColor = vec4(Light.Color, 1.0f) * Light.DiffuseIntensity * DiffuseFactor;    
+                                                                                            
+        vec3 VertexToEye = normalize(cameraPos - worldPos);                             
+        vec3 LightReflect = normalize(reflect(LightDirection, Normal));                     
+        float SpecularFactor = dot(VertexToEye, LightReflect);                              
+        SpecularFactor = pow(SpecularFactor, gSpecularPower);                               
+        if (SpecularFactor > 0) {                                                           
+            SpecularColor = vec4(Light.Color, 1.0f) *                                       
+                            gMatSpecularIntensity * SpecularFactor;                         
+        }                                                                                   
+    }                                                                                       
+                                                                                     
+    return (AmbientColor + DiffuseColor + SpecularColor);                                   
+} 
+
+                                                                                     
+vec4 CalcDirectionalLight(vec3 n)                                                      
+{                                                                                           
+    return CalcLightInternal(gDirectionalLight.Base, gDirectionalLight.Direction, n); 
+}                                                                                           
+                                                                                            
+vec4 CalcPointLight(int Index, vec3 Normal)                                                 
+{                                                                                           
+    vec3 LightDirection = ModelViewMatrix.xyz - gPointLights[Index].Position;                         
+    float Distance = length(LightDirection);                                                
+    LightDirection = normalize(LightDirection);                                             
+                                                                                            
+    vec4 Colors = CalcLightInternal(gPointLights[Index].Base, LightDirection, Normal);       
+    float sas =  gPointLights[Index].Atten.Constant +                               
+                         gPointLights[Index].Atten.Linear * Distance +                      
+                         gPointLights[Index].Atten.Exp * Distance * Distance;               
+                                                                                            
+    return Colors / sas;//vec4(Colors.r/sas, Colors.g/sas, Colors.b/sas, Colors.a/sas);                                                          
+}    
 
 void main() {
 
-  color = texture(decal, FUV.xy);
+	vec3 Normala = normalize(Normal0);                                                       
+    vec4 TotalLight = CalcDirectionalLight(Normala);                                         
+                                                                                            
+    for ( int i = 0 ; i < gNumPointLights; i++ ) {                       
+        TotalLight += CalcPointLight(i, Normala);                                          
+    } 
+
+ 	 color = texture(decal, FUV.xy) * TotalLight;
 }
 "

@@ -10,7 +10,7 @@
 #ifndef console_h
 #define console_h
 
-#include "systemshared.h"
+#include "SystemShared.h"
 
 // Maximum *in-game* console log lines to render.
 #define MAX_CONSOLE_LOG_LINES                   36
@@ -32,7 +32,7 @@ public:
     void Render( void );
     void SetPrefix( const char *prefix );
     void Clear( void );
-    void KeyInput( uint key );
+    void KeyInput( char key );
     void Initialize( void );
     void PrintExternal( const char *msg );
     

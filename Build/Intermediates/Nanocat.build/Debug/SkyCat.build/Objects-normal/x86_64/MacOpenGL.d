@@ -1,17 +1,16 @@
 dependencies: /Users/nekocode/Desktop/nanocat/test/MacOpenGL.mm \
   /Users/nekocode/Desktop/nanocat/test/MacUtils.h \
   /Users/nekocode/Desktop/nanocat/test/MacOpenGL.h \
-  /Users/nekocode/Desktop/nanocat/test/core.h \
-  /Users/nekocode/Desktop/nanocat/test/consolevar.h \
-  /Users/nekocode/Desktop/nanocat/test/ncstring.h \
-  /Users/nekocode/Desktop/nanocat/test/console.h \
-  /Users/nekocode/Desktop/nanocat/test/systemshared.h \
+  /Users/nekocode/Desktop/nanocat/test/Core.h \
+  /Users/nekocode/Desktop/nanocat/test/ConsoleVariable.h \
+  /Users/nekocode/Desktop/nanocat/test/Console.h \
+  /Users/nekocode/Desktop/nanocat/test/SystemShared.h \
   /Users/nekocode/Desktop/nanocat/test/SharedMac.h \
-  /Users/nekocode/Desktop/nanocat/test/input.h \
-  /Users/nekocode/Desktop/nanocat/test/renderer.h \
-  /Users/nekocode/Desktop/nanocat/test/shader.h \
-  /Users/nekocode/Desktop/nanocat/test/gl.h \
-  /Users/nekocode/Desktop/nanocat/test/server.h \
-  /Users/nekocode/Desktop/nanocat/test/network.h \
-  /Users/nekocode/Desktop/nanocat/test/bitset.h \
-  /Users/nekocode/Desktop/nanocat/test/gmath.h
+  /Users/nekocode/Desktop/nanocat/test/Input.h \
+  /Users/nekocode/Desktop/nanocat/test/Renderer.h \
+  /Users/nekocode/Desktop/nanocat/test/ShaderLoader.h \
+  /Users/nekocode/Desktop/nanocat/test/OpenGL.h \
+  /Users/nekocode/Desktop/nanocat/test/MultiplayerServer.h \
+  /Users/nekocode/Desktop/nanocat/test/Network.h \
+  /Users/nekocode/Desktop/nanocat/test/ncBitMessage.h \
+  /Users/nekocode/Desktop/nanocat/test/GameMath.h

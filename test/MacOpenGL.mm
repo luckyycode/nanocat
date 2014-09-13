@@ -2,12 +2,12 @@
 #import     "MacUtils.h"
 #import     "MacOpenGL.h"
 
-#include    "core.h"
-#include    "console.h"
-#include    "input.h"
-#include    "renderer.h"
-#include    "gl.h"
-#include    "server.h"
+#include    "Core.h"
+#include    "Console.h"
+#include    "Input.h"
+#include    "Renderer.h"
+#include    "OpenGL.h"
+#include    "MultiplayerServer.h"
 
 @interface glView (InternalMethods)
 
@@ -29,7 +29,7 @@
     
     _gconsole.Execute( "readconfig config.nconf" );     // Load some settings
     
-    _core.UseGraphics = server_dedi.GetInteger() ? false : true;
+    _core.UseGraphics = Server_Dedicated.GetInteger() ? false : true;
     
     _core.Print( LOG_INFO, "Initializing OpenGL context\n" );
     
@@ -134,11 +134,9 @@
     CGLGetParameter( cglContext, kCGLCPGPUVertexProcessing, &vs_supported );
 
     // Wtf..?
-    passedthru = ( fs_supported != 0) && (vs_supported != 0 );
+    passedthru = ( fs_supported != 0 ) && (vs_supported != 0 );
     
-    if( passedthru )
-        _core.Print( LOG_DEVELOPER, "Success!\n" );
-    else {
+    if( !passedthru ) {
         _core.Error( ERC_GL, "Fragment or vertex shaders aren't supported." );
         return nil;
     }
@@ -195,11 +193,11 @@
 }
 
 -(void)keyUp:(NSEvent*)event {
-    _input.OnKeyUp( [event keyCode] );
+    _input.OnKeyUp( [[event characters] UTF8String][0] );
 }
 
 -(void)keyDown:(NSEvent*)event {
-    _input.OnKeyPress( [event keyCode] );
+    _input.OnKeyPress( [[event characters] UTF8String][0] );
 }
 
 /*
@@ -250,6 +248,8 @@ static CVReturn m_displaycallback(CVDisplayLinkRef displayLink, const CVTimeStam
 }
 
 - (void)dealloc {
+    [[self window] release];
+    [[self window] dealloc];
     CVDisplayLinkRelease(m_displayLink);
     [super dealloc];
 }

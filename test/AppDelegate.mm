@@ -6,16 +6,18 @@
 //  Copyright (c) 2014 Neko Vision. All rights reserved.
 //
 
-#import "init.h"
-#import "core.h"
-#import "gl.h"
-#import "renderer.h"
+#import "AppDelegate.h"
+#import "Core.h"
+#import "OpenGL.h"
+#import "Renderer.h"
 
 @implementation AppDelegate
 
 - (void)applicationDidFinishLaunching:(NSNotification *)aNotification {
+    
     _opengl.Initialized = true;
     _opengl.OnResize( render_modeWidth.GetInteger(), render_modeHeight.GetInteger() );
+    
     _core.Loaded();
 }
 

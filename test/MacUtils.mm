@@ -8,13 +8,13 @@
 
 #import <Foundation/Foundation.h>
 #import "MacUtils.h"
+#import <Cocoa/Cocoa.h>
 
-@implementation ncMacUtils : NSObject 
+@implementation ncMacUtils : NSObject
 
 /*
- Another system stuff.
+    Another system stuff.
 */
-
 void SetCursorPos( int x, int y ) {
     CGPoint point;
     point.x = x;
@@ -24,7 +24,7 @@ void SetCursorPos( int x, int y ) {
 }
 
 /*
- Popup window.
+    Popup window.
 */
 void MassageBox( const char *msg ) {
     NSString    *message;
@@ -32,35 +32,35 @@ void MassageBox( const char *msg ) {
     message = [NSString stringWithFormat:@"%s", msg];
     
     // Ignore this damned warning.
-    //NSRunAlertPanel( @"Nanocat Error.", (const char*)message, nil, nil, nil );
-    //NSAlert *alert = [[[NSAlert alloc] init] autorelease];
+
+    //NSAlert *alert = [[NSAlert alloc] init];
     //[alert setMessageText:[NSString stringWithFormat:@"%@", message]];
+    //[alert setDelegate:self];
     //[alert runModal];
 }
 
 /*
- Since it won't work properly,
- we need to write custom path finder.
+    Since it won't work properly,
+    we need to write custom path finder.
 */
 const char *GetBundlePath() {
     const char        *fs_path;
     
-    NSString *bundlePath = [[NSBundle mainBundle] resourcePath];
-    NSString *secondParentPath = [[bundlePath stringByDeletingLastPathComponent] stringByDeletingLastPathComponent];
-    NSString *thirdParentPath = [[secondParentPath stringByDeletingLastPathComponent] stringByDeletingLastPathComponent];
-    NSString *s = thirdParentPath;
+        NSString *bundlePath = [[NSBundle mainBundle] resourcePath];
+        NSString *secondParentPath = [[bundlePath stringByDeletingLastPathComponent] stringByDeletingLastPathComponent];
+        NSString *thirdParentPath = [[secondParentPath stringByDeletingLastPathComponent] stringByDeletingLastPathComponent];
+
+        fs_path = [thirdParentPath UTF8String];
     
-    fs_path = [s UTF8String];           // fixme: is it good?
-    
-    return fs_path;
+        return fs_path;
 }
 
 /*
- Current Mac version running.
+    Current Mac version running.
 */
 const char *GetSystemVersion() {
-    NSString * operatingSystemVersionString = [[NSProcessInfo processInfo] operatingSystemVersionString];
-    return [operatingSystemVersionString UTF8String];
+        NSString *operatingSystemVersionString = [[NSProcessInfo processInfo] operatingSystemVersionString];
+        return [operatingSystemVersionString UTF8String];
 }
 
 @end

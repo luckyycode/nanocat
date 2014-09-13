@@ -7,13 +7,13 @@
 //  Copyright (c) 2014 Neko Vision. All rights reserved.
 //
 
-#include "core.h"
-#include "assetmanager.h"
-#include "shader.h"
-#include "camera.h"
-#include "material.h"
-#include "renderer.h"
-#include "world.h"
+#include "Core.h"
+#include "AssetManager.h"
+#include "ShaderLoader.h"
+#include "Camera.h"
+#include "MaterialLoader.h"
+#include "Renderer.h"
+#include "GameWorld.h"
 
 ncGameWater _gamewater;
 ncGameWorld _gameworld;
@@ -37,7 +37,7 @@ GLuint      waterVBO;
 GLuint      waterNVBO;
 GLuint      waterUVVBO;
 
-ConsoleVariable    water_distance("water", "distance", "Distance to be rendered.", "1000", CVFLAG_NEEDSREFRESH);
+ncConsoleVariable    water_distance("water", "distance", "Water distance to render.", "1000", CVFLAG_NEEDSREFRESH);
 
 const float normal_water_data[] = {
     0.0f, 0.0f, 1.0f,
@@ -73,7 +73,7 @@ void ncGameWater::Spawn( ncVec3 position, float size ) {
 */
 void ncGameWater::Initialize( void ) {
     if( Initialized ) {
-        _core.Print( LOG_WARN, "GFXWater already created, ignoring.\n" );
+        _core.Print( LOG_WARN, "GFXWater already initialized, ignoring.\n" );
         return;
     }
 
@@ -126,7 +126,7 @@ void ncGameWater::Remove( void ) {
 /*
     Render our water.
 */
-void ncGameWater::Render( eye_t eye ) {
+void ncGameWater::Render( ncSceneEye eye ) {
     
     ncMatrix4 model, pos;
     ncVec3 position = ncVec3( 0.0f, (-GFX_WATER_SCALE * 1.0f) + 4.0f, 0.0f );
@@ -150,7 +150,7 @@ void ncGameWater::Render( eye_t eye ) {
     ls.Translate( offset );
     rs.Translate( minus_offset );
     
-    pos = EYE_LEFT ? ls * pos : rs * pos;
+    pos = eye == EYE_LEFT ? ls * pos : rs * pos;
     
     glUseProgram(water_shader.shader_id);
     

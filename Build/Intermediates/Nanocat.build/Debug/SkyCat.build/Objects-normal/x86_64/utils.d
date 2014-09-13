@@ -1,14 +1,15 @@
-dependencies: /Users/nekocode/Desktop/nanocat/test/utils.cpp \
-  /Users/nekocode/Desktop/nanocat/test/core.h \
-  /Users/nekocode/Desktop/nanocat/test/consolevar.h \
-  /Users/nekocode/Desktop/nanocat/test/ncstring.h \
-  /Users/nekocode/Desktop/nanocat/test/command.h \
-  /Users/nekocode/Desktop/nanocat/test/files.h \
-  /Users/nekocode/Desktop/nanocat/test/systemshared.h \
+dependencies: /Users/nekocode/Desktop/nanocat/test/Utils.cpp \
+  /Users/nekocode/Desktop/nanocat/test/Core.h \
+  /Users/nekocode/Desktop/nanocat/test/ConsoleVariable.h \
+  /Users/nekocode/Desktop/nanocat/test/ConsoleCommand.h \
+  /Users/nekocode/Desktop/nanocat/test/FileSystem.h \
+  /Users/nekocode/Desktop/nanocat/test/SystemShared.h \
   /Users/nekocode/Desktop/nanocat/test/SharedMac.h \
-  /Users/nekocode/Desktop/nanocat/test/model.h \
-  /Users/nekocode/Desktop/nanocat/test/shader.h \
-  /Users/nekocode/Desktop/nanocat/test/material.h \
-  /Users/nekocode/Desktop/nanocat/test/image.h \
-  /Users/nekocode/Desktop/nanocat/test/gmath.h \
-  /Users/nekocode/Desktop/nanocat/test/renderer.h
+  /Users/nekocode/Desktop/nanocat/test/NCString.h \
+  /Users/nekocode/Desktop/nanocat/test/Models.h \
+  /Users/nekocode/Desktop/nanocat/test/ShaderLoader.h \
+  /Users/nekocode/Desktop/nanocat/test/MaterialLoader.h \
+  /Users/nekocode/Desktop/nanocat/test/ImageManager.h \
+  /Users/nekocode/Desktop/nanocat/test/GameMath.h \
+  /Users/nekocode/Desktop/nanocat/test/Renderer.h \
+  /Users/nekocode/Desktop/nanocat/test/Utils.h

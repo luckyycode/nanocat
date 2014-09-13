@@ -10,8 +10,8 @@
 #ifndef corefont_h
 #define corefont_h
 
-#include "gmath.h"
-#include "shader.h"
+#include "GameMath.h"
+#include "ShaderLoader.h"
 
 #define FONT_VERTICES 1024
 #define FONT_CHARACTERSKIP 32
@@ -19,7 +19,7 @@
 class ncCoreFontRenderer {
 public:
     void Initialize( void );
-    void Print( ncVec4 color, int x, int y, int size, const char *msg, ... );
+    void Print2D( ncVec4 color, int x, int y, int size, const char *msg, ... );
     
     uint VBO;
     uint UV;
@@ -33,9 +33,9 @@ public:
 
 extern ncCoreFontRenderer _font;
 
-extern ConsoleVariable font_size;
-extern ConsoleVariable font_width;
-extern ConsoleVariable font_height;
-extern ConsoleVariable font_charskip;
+extern ncConsoleVariable Font_Size;
+extern ncConsoleVariable Font_Width;
+extern ncConsoleVariable Font_Height;
+extern ncConsoleVariable Font_Skip;
 
 #endif

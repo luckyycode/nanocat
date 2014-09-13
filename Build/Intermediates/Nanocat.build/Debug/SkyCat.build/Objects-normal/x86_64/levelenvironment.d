@@ -1,13 +1,13 @@
-dependencies: /Users/nekocode/Desktop/nanocat/test/levelenvironment.cpp \
-  /Users/nekocode/Desktop/nanocat/test/bsp.h \
-  /Users/nekocode/Desktop/nanocat/test/shader.h \
-  /Users/nekocode/Desktop/nanocat/test/systemshared.h \
+dependencies: /Users/nekocode/Desktop/nanocat/test/LevelEnvironment.cpp \
+  /Users/nekocode/Desktop/nanocat/test/ncBSP.h \
+  /Users/nekocode/Desktop/nanocat/test/ShaderLoader.h \
+  /Users/nekocode/Desktop/nanocat/test/SystemShared.h \
   /Users/nekocode/Desktop/nanocat/test/SharedMac.h \
-  /Users/nekocode/Desktop/nanocat/test/bitset.h \
-  /Users/nekocode/Desktop/nanocat/test/files.h \
-  /Users/nekocode/Desktop/nanocat/test/consolevar.h \
-  /Users/nekocode/Desktop/nanocat/test/ncstring.h \
-  /Users/nekocode/Desktop/nanocat/test/gmath.h \
-  /Users/nekocode/Desktop/nanocat/test/renderer.h \
-  /Users/nekocode/Desktop/nanocat/test/core.h \
-  /Users/nekocode/Desktop/nanocat/test/levelenvironment.h
+  /Users/nekocode/Desktop/nanocat/test/ncBitMessage.h \
+  /Users/nekocode/Desktop/nanocat/test/FileSystem.h \
+  /Users/nekocode/Desktop/nanocat/test/ConsoleVariable.h \
+  /Users/nekocode/Desktop/nanocat/test/GameMath.h \
+  /Users/nekocode/Desktop/nanocat/test/Renderer.h \
+  /Users/nekocode/Desktop/nanocat/test/Core.h \
+  /Users/nekocode/Desktop/nanocat/test/NCString.h \
+  /Users/nekocode/Desktop/nanocat/test/LevelEnvironment.h

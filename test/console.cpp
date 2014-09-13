@@ -1,23 +1,23 @@
 //
 //  Nanocat engine.
 //
-//  Game console.
+//  Game console..
 //
 //  Created by Neko Vision on 03/01/2014.
 //  Copyright (c) 2014 Neko Vision. All rights reserved.
 //
 
 
-#include "client.h"
-#include "core.h"
-#include "command.h"
-#include "console.h"
-#include "files.h"
-#include "corefont.h"
-#include "camera.h"
-#include "system.h"
-#include "input.h" // For console input.
-#include "gmath.h" // Colors.
+#include "MultiplayerClient.h"
+#include "Core.h"
+#include "ConsoleCommand.h"
+#include "Console.h"
+#include "FileSystem.h"
+#include "CoreFont.h"
+#include "Camera.h"
+#include "System.h"
+#include "Input.h" // For console input.
+#include "GameMath.h" // Colors.
 
 ncGameConsole _gconsole;
 
@@ -67,21 +67,23 @@ void ncGameConsole::Render( void )
 
     if( !IsShown() ) {
         if( !IsUIShown() ) {
-            _font.Print( COLOR_WHITE, 10, 15, 10, "Nanocat, %s", _core.GetVersionString() );
+            _font.Print2D( COLOR_WHITE, 10, 15, 10, "Nanocat, %s", _core.GetVersionString() );
         }
         else {
-            _font.Print( COLOR_GREEN, 10, 45, 10, "look: x: %4.2f y: %4.2f z: %4.2f", _camera.g_vLook.x, _camera.g_vLook.y, _camera.g_vLook.z );
-            _font.Print( COLOR_GREEN, 10, 35, 10, "eye: x: %4.2f y: %4.2f z: %4.2f", _camera.g_vEye.x, _camera.g_vEye.y, _camera.g_vEye.z );
+            _font.Print2D( COLOR_GREEN, 10, 45, 10, "look: x: %4.2f y: %4.2f z: %4.2f", _camera.g_vLook.x, _camera.g_vLook.y, _camera.g_vLook.z );
+            _font.Print2D( COLOR_GREEN, 10, 35, 10, "eye: x: %4.2f y: %4.2f z: %4.2f", _camera.g_vEye.x, _camera.g_vEye.y, _camera.g_vEye.z );
         }
     }
     else {
         // Version > buffer
-        _font.Print( COLOR_RED, 10, 70, 8, "%s > %s", Prefix, Buffer );
+        _font.Print2D( COLOR_RED, 10, 70, 8, "%s > %s", Prefix, Buffer );
 
         // Console log.
         for( i = 0; i < logCount; i++ ) {
+            // Causes strange symbol on line end.
             strtok( Log[i + 1], "\n" );
-            _font.Print( COLOR_WHITE, 10, 470 - ( i * CONSOLE_LINE_SKIP ), 8, "%s", Log[i + 1] );
+            
+            _font.Print2D( COLOR_WHITE, 10, 470 - ( i * CONSOLE_LINE_SKIP ), 8, "%s", Log[i + 1] );
         }
     }
 }
@@ -92,7 +94,8 @@ void ncGameConsole::Render( void )
 void ncGameConsole::SetPrefix( const char *prefix ) {
     if( !prefix ) {
         _core.Print( LOG_WARN, "Empty console prefix set.\n" );
-        Prefix = ">";
+        Prefix = "Nanocat";
+        
         return;
     }
 
@@ -106,7 +109,7 @@ void ncGameConsole::Clear( void ) {
     int h, j;
 
     // Write a log piece to the log file.
-    if( filesystem_logging.GetInteger() )
+    if( Filesystem_Logging.GetInteger() )
         for( j = 0; j < logFill; j++ )
             _filesystem.WriteLog( Log[j] );
 
@@ -147,25 +150,29 @@ void ncGameConsole::Initialize( void ) {
 
 }
 
-void ncGameConsole::KeyInput( uint key ) {
+void ncGameConsole::KeyInput( char key ) {
     
     // Console visibility.
     if( isShown ){
-        Buffer[charFill]  = _input.GetKeyFromNum(key);
-        
-        if( key == KEY_BACKSPACE )
-        {
-            charFill--;
-            Buffer[charFill] = '\0';
+        if( key != KEY_ENTER ) {
+            Buffer[charFill]  = key;//_input.GetKeyFromNum(key);
+            
+            if( key == KEY_BACKSPACE ) {
+                charFill--;
+                Buffer[charFill] = '\0';
+                
+                if( charFill < 0 )
+                    charFill = 0;
+            }
+            else charFill++;
         }
-        else charFill++;
     }
     else charFill = 0;
     
     
     switch( key ) {
         // Show/hide console.
-        case KEY_TILDE:
+        case '~':
             isShown = !isShown;
             zeromem( Buffer, MAX_COMMAND_SIZE );
             break;

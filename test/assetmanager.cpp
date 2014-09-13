@@ -1,17 +1,17 @@
 //
 //  Nanocat engine.
 //
-//  Main game asset manager.
+//  Main game asset manager..
 //
 //  Created by Neko Vision on 1/22/14.
 //  Copyright (c) 2014 Neko Vision. All rights reserved.
 //
 
-#include "assetmanager.h"
-#include "model.h"
-#include "core.h"
-#include "material.h"
-#include "server.h"
+#include "AssetManager.h"
+#include "Models.h"
+#include "Core.h"
+#include "MaterialLoader.h"
+#include "MultiplayerServer.h"
 
 ncAssetManager _assetmanager;
 
@@ -19,16 +19,16 @@ ncAssetManager _assetmanager;
     Initialize asset system.
 */
 void ncAssetManager::Initialize( void ) {
-
+    _core.Print( LOG_INFO, "Asset manager initializing...\n" );
 }
 
 /*
     Load chosen asset.
 */
-void ncAssetManager::Load( assettype_t type, const char *name ) {
+void ncAssetManager::Load( AssetType type, const char *name ) {
 
-    // wtf
-    if( server_dedi.GetInteger() )
+    // wtf, probably wrong place to do this.
+    if( Server_Dedicated.GetInteger() )
         return;
 
     if( !name ) {
@@ -81,16 +81,21 @@ void ncAssetManager::FindShader( const char *name, ncGLShader *shader ) {
             return;
         }
     }
+    
+    // No way.
+    _core.Error( ERC_ASSET, "ncAssetManager::FindShader - Couldn't find %s shader.\n", name );
 }
 
 
 /*
     Check if chosen asset exists.
 */
-bool ncAssetManager::Exists( assettype_t type, char *name ) {
-    if( !name )
+bool ncAssetManager::Exists( AssetType type, char *name ) {
+    if( !name ) {
+        _core.Print( LOG_WARN, "ncAssetManager::Exists - empty name given.\n" );
         return false;
-
+    }
+    
     int i;
 
     switch( type ) {
@@ -112,6 +117,9 @@ bool ncAssetManager::Exists( assettype_t type, char *name ) {
         case ASSET_SOUND:
             
             break;
+        default:
+            _core.Print( LOG_WARN, "ncAssetManager::Exists - unknown asset type given.\n" );
+            return false;
     }
 
     return false;

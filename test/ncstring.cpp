@@ -7,14 +7,17 @@
 //  Copyright (c) 2014 Neko Vision. All rights reserved.
 //
 
-#include "core.h"
-#include "ncstring.h"
-#include "systemshared.h"
+#include "Core.h"
+#include "NCString.h"
+#include "SystemShared.h"
 
 ncStringHelper _stringhelper;
+ncString::ncString( const char *text ) {
+    this->Owner = text;
+}
 
 /*
-    Copy string to destination.
+    Copy string to destination..
 */
 char *ncStringHelper::Copy( char *d, const char *s ) {
     
@@ -111,7 +114,9 @@ const char *ncStringHelper::STR( const char *msg, ... ) {
     char        text[MAX_SPRINTF_BUFFER];
     
     va_start( argptr, msg );
+    
     vsnprintf( text, sizeof(text), msg, argptr );
+    
     va_end( argptr );
     
     // Fix-me.

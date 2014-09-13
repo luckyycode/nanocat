@@ -1,24 +1,23 @@
 //
 //  Nanocat engine.
 //
-//  Game input.
+//  Game input..
 //
 //  Created by Neko Vision on 1/1/14.
 //  Copyright (c) 2014 Neko Vision. All rights reserved.
 //
 
-#include "core.h"
-#include "system.h"
-#include "console.h"
-#include "input.h"
-#include "camera.h"
-#include "systemshared.h"
-#include "camera.h"
+#include "Core.h"
+#include "System.h"
+#include "Console.h"
+#include "Input.h"
+#include "Camera.h"
+#include "SystemShared.h"
 
-ConsoleVariable  clientgame_mousesensivity("input", "mousesens", "Mouse sensivity", "0.001", CVFLAG_NONE);
-ConsoleVariable  clientgame_invertmouse("input", "invertmouse", "Mouse invertion", "0", CVFLAG_NONE);
+ncConsoleVariable  clientgame_mousesensivity("input", "mousesens", "Mouse sensivity", "0.001", CVFLAG_NONE);
+ncConsoleVariable  clientgame_invertmouse("input", "invertmouse", "Mouse invertion", "0", CVFLAG_NONE);
 
-ConsoleVariable  dev_showcursorpos("dev", "showcursorpos", "Show cursor position?", "0", CVFLAG_NONE);
+ncConsoleVariable  dev_showcursorpos("dev", "showcursorpos", "Show cursor position?", "0", CVFLAG_NONE);
 
 ncMouse _imouse;
 ncInput _input;
@@ -33,16 +32,14 @@ void ncInput::Initialize( void ) {
     _imouse.y = 0.0f;
     _imouse.Holding = false;
 
-    _camera.deltaMove     = 0;
-
-    _core.Print( LOG_DEVELOPER, "Input initialized.\n" );
+    _camera.Initialize();
 }
 
 /*
         Key press handle.
 */
 
-void ncInput::OnKeyPress( uint key )
+void ncInput::OnKeyPress( char key )
 {
     // Game console.
     _gconsole.KeyInput( key );
@@ -52,11 +49,11 @@ void ncInput::OnKeyPress( uint key )
 
     switch( key ) {
             
-        case KEY_F2:
+        case 'r':
             _gconsole.Execute( "glrefresh" );
             break;
             
-        case KEY_ESCAPE:
+        case '3':
             _system.Quit("User quit.");
         break;
 
@@ -66,7 +63,7 @@ void ncInput::OnKeyPress( uint key )
 /*
     Handles key release.
 */
-void ncInput::OnKeyUp( unsigned int key ) {
+void ncInput::OnKeyUp( char key ) {
     _camera.deltaMove = 0;
 }
 

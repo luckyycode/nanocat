@@ -1,7 +1,7 @@
 //
 //  Nanocat engine.
 //
-//  Asset manager.
+//  Asset manager..
 //
 //  Created by Neko Code on 8/27/14.
 //  Copyright (c) 2014 Neko Vision. All rights reserved.
@@ -10,9 +10,9 @@
 #ifndef assetmanager_h
 #define assetmanager_h
 
-#include "shader.h"
+#include "ShaderLoader.h"
 
-enum assettype_t {
+enum AssetType {
     ASSET_MODEL,
     ASSET_SOUND,
     ASSET_SHADER,
@@ -24,9 +24,9 @@ class ncAssetManager {
 public:
     
     void Initialize( void );
-    void Load( assettype_t type, const char *name );
+    void Load( AssetType type, const char *name );
     void FindShader( const char *name, ncGLShader *shader );
-    bool Exists( assettype_t type, char *name );
+    bool Exists( AssetType type, char *name );
 };
 
 extern ncAssetManager _assetmanager;

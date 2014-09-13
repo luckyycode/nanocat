@@ -1,25 +1,25 @@
 //
 //  Nanocat engine.
 //
-//  Main game renderer.
+//  Main game renderer..
 //
 //  Created by Neko Vision on 31/12/2013.
 //  Copyright (c) 2013 Neko Vision. All rights
 
-#include "bsp.h"
-#include "core.h"
-#include "assetmanager.h"
-#include "model.h"
-#include "command.h"
-#include "console.h"
-#include "camera.h"
-#include "renderer.h"
-#include "gl.h"
-#include "material.h"
-#include "corefont.h"
-#include "world.h"
-#include "input.h"
-#include "system.h"
+#include "ncBSP.h"
+#include "Core.h"
+#include "AssetManager.h"
+#include "Models.h"
+#include "ConsoleCommand.h"
+#include "Console.h"
+#include "Camera.h"
+#include "Renderer.h"
+#include "OpenGL.h"
+#include "MaterialLoader.h"
+#include "CoreFont.h"
+#include "GameWorld.h"
+#include "Input.h"
+#include "System.h"
 
 // Main beautiful game renderer.
 
@@ -33,42 +33,46 @@ GLuint depthTexture;
 int eye_width = 640;
 int eye_height = 800;
 
-ConsoleVariable  render_fullscreen("render", "fullscreen", "Fullscreen mode.", "0", CVFLAG_NEEDSREFRESH);
+ncConsoleVariable  render_fullscreen("render", "fullscreen", "Fullscreen mode.", "0", CVFLAG_NEEDSREFRESH);
 
-ConsoleVariable  render_fog("fog", "enabled", "Is fog enabled?", "1", CVFLAG_NEEDSREFRESH);
-ConsoleVariable  render_fog_maxdist("fog", "maxdist", "Fog maximum distance.", "150.0", CVFLAG_NONE);
-ConsoleVariable  render_fog_mindist("fog", "mindist", "Fog minimum distance.", "50.0", CVFLAG_NONE);
+ncConsoleVariable  render_fog("fog", "enabled", "Is fog enabled?", "1", CVFLAG_NEEDSREFRESH);
+ncConsoleVariable  render_fog_maxdist("fog", "maxdist", "Fog maximum distance.", "150.0", CVFLAG_NONE);
+ncConsoleVariable  render_fog_mindist("fog", "mindist", "Fog minimum distance.", "50.0", CVFLAG_NONE);
 
-ConsoleVariable  render_fog_colorR("fog", "red", "Fog red color.", "1.0", CVFLAG_NEEDSREFRESH);
-ConsoleVariable  render_fog_colorG("fog", "green", "Fog green color.", "1.0", CVFLAG_NEEDSREFRESH);
-ConsoleVariable  render_fog_colorB("fog", "blue", "Fog blue color.", "1.0", CVFLAG_NEEDSREFRESH);
+ncConsoleVariable  render_fog_colorR("fog", "red", "Fog red color.", "1.0", CVFLAG_NEEDSREFRESH);
+ncConsoleVariable  render_fog_colorG("fog", "green", "Fog green color.", "1.0", CVFLAG_NEEDSREFRESH);
+ncConsoleVariable  render_fog_colorB("fog", "blue", "Fog blue color.", "1.0", CVFLAG_NEEDSREFRESH);
 
-ConsoleVariable  render_wireframe("render", "wireframe", "Wireframe mode.", "0", CVFLAG_NONE);
+ncConsoleVariable  render_wireframe("render", "wireframe", "Wireframe mode.", "0", CVFLAG_NONE);
 
-ConsoleVariable  render_normalmap("env", "normalmap", "Is normal mapping enabled?", "1", CVFLAG_NEEDSREFRESH);
-ConsoleVariable  render_multisampling("render", "msaa", "Is multisampling enabled?", "0", CVFLAG_NEEDSREFRESH);
+ncConsoleVariable  render_normalmap("env", "normalmap", "Is normal mapping enabled?", "1", CVFLAG_NEEDSREFRESH);
+ncConsoleVariable  render_multisampling("render", "msaa", "Is multisampling enabled?", "0", CVFLAG_NEEDSREFRESH);
 
-ConsoleVariable  render_refractions("env", "refractions", "Is refraction mapping enabled?", "1", CVFLAG_NEEDSREFRESH);
-ConsoleVariable  render_reflections("env", "reflections", "Is reflection mapping enabled?", "1", CVFLAG_NEEDSREFRESH);
+ncConsoleVariable  render_refractions("env", "refractions", "Is refraction mapping enabled?", "1", CVFLAG_NEEDSREFRESH);
+ncConsoleVariable  render_reflections("env", "reflections", "Is reflection mapping enabled?", "1", CVFLAG_NEEDSREFRESH);
 
-ConsoleVariable  render_sky("render", "sky", "Render sky?", "1", CVFLAG_NONE);
-ConsoleVariable  render_water("render", "water", "Render water?", "1", CVFLAG_NONE);
+ncConsoleVariable  render_sky("render", "sky", "Render sky?", "1", CVFLAG_NONE);
+ncConsoleVariable  render_water("render", "water", "Render water?", "1", CVFLAG_NONE);
 
-ConsoleVariable  render_fontspacing("font", "spacing", "Font symbol spacing.", "0.625", CVFLAG_NONE);
+ncConsoleVariable  render_fontspacing("font", "spacing", "Font symbol spacing.", "0.625", CVFLAG_NONE);
 
-ConsoleVariable  render_vsync("render", "vsync", "Vertical sync enabled?", "1", CVFLAG_NEEDSREFRESH);
+ncConsoleVariable  render_vsync("render", "vsync", "Vertical sync enabled?", "1", CVFLAG_NEEDSREFRESH);
 
-ConsoleVariable  render_modeWidth("render", "width", "Rendering width.", "1280", CVFLAG_NEEDSREFRESH);
-ConsoleVariable  render_modeHeight("render", "height", "Rendering height.", "800", CVFLAG_NEEDSREFRESH);
+ncConsoleVariable  render_modeWidth("render", "width", "Rendering width.", "600", CVFLAG_NEEDSREFRESH);
+ncConsoleVariable  render_modeHeight("render", "height", "Rendering height.", "480", CVFLAG_NEEDSREFRESH);
 
-ConsoleVariable  render_curvetesselation("bsp", "curvetes", "Curve tesselation.", "7", CVFLAG_NEEDSREFRESH);
-ConsoleVariable  render_calculatevisdata("render", "pvs", "Calculate visibility data?", "1", CVFLAG_NEEDSREFRESH);
-ConsoleVariable  render_lightmapgamma("bsp", "lightmapgamma", "Lightmap gamma.", "2.5", CVFLAG_NEEDSREFRESH);
-ConsoleVariable  render_updatepvs("render", "pvs", "Update visibility data?", "1", CVFLAG_NEEDSREFRESH);
+ncConsoleVariable  render_curvetesselation("bsp", "curvetes", "Curve tesselation.", "7", CVFLAG_NEEDSREFRESH);
+ncConsoleVariable  render_calculatevisdata("render", "pvs", "Calculate visibility data?", "1", CVFLAG_NEEDSREFRESH);
+ncConsoleVariable  render_lightmapgamma("bsp", "lightmapgamma", "Lightmap gamma.", "2.5", CVFLAG_NEEDSREFRESH);
+ncConsoleVariable  render_updatepvs("render", "pvs", "Update visibility data?", "1", CVFLAG_NEEDSREFRESH);
 
-ConsoleVariable  render_usescreenfx("render", "sfx", "Use screen effects?", "1", CVFLAG_NEEDSREFRESH);
-ConsoleVariable  render_dof("render", "dof", "Is Depth of Field enabled?", "1", CVFLAG_NEEDSREFRESH);
-ConsoleVariable  render_lensanamorph("render", "lens", "Lens effects enabled?", "1", CVFLAG_NEEDSREFRESH);
+ncConsoleVariable  render_usescreenfx("render", "sfx", "Use screen effects?", "1", CVFLAG_NEEDSREFRESH);
+ncConsoleVariable  render_dof("render", "dof", "Is Depth of Field enabled?", "1", CVFLAG_NEEDSREFRESH);
+ncConsoleVariable  render_lensanamorph("render", "lens", "Lens effects enabled?", "1", CVFLAG_NEEDSREFRESH);
+
+
+// Uh oh, a bit of magic we got.
+ncConsoleVariable   render_ovr("render", "ovr", "Is Virtual reality mode turned on?", "0", CVFLAG_NEEDSREFRESH );
 
 ncFramebuffer _waterreflection;
 ncFramebuffer _waterrefraction;
@@ -139,6 +143,8 @@ void ncRenderer::PrecacheWorld( void ) {
 
     glBindVertexArray(0);
     glUseProgram(0);*/
+    
+
 }
 
 /*
@@ -367,7 +373,8 @@ void ncRenderer::Precache( void ) {
     time_id = glGetUniformLocation(sceneShader.shader_id, "time");
     width_id = glGetUniformLocation(sceneShader.shader_id, "width");
     height_id = glGetUniformLocation(sceneShader.shader_id, "height");
-    usedof_id = glGetUniformLocation(sceneShader.shader_id, "use_dof" );
+    usedof_id = glGetUniformLocation(sceneShader.shader_id, "use_dof");
+    ovr_id = glGetUniformLocation(sceneShader.shader_id, "ovr");
     
     glUniform1i( scene_texture, 0 );
     glUniform1i( depth_texture, 1 );
@@ -378,6 +385,7 @@ void ncRenderer::Precache( void ) {
     glUniform1i( usela_id, render_lensanamorph.GetInteger() );
     glUniform1i( usefx_id, render_usescreenfx.GetInteger() );
     glUniform1i( usedof_id, render_dof.GetInteger() );
+    glUniform1i( ovr_id, render_ovr.GetInteger() );
     
     glUseProgram(0);
     
@@ -632,7 +640,7 @@ void ncRenderer::RenderGrass( void ) {
 /*
     Just render the world. :)
 */
-void ncRenderer::RenderWorld( int msec, eye_t eye ) {
+void ncRenderer::RenderWorld( int msec, ncSceneEye eye ) {
     
     // Render static world.
     RenderBSP( false, eye );
@@ -754,7 +762,7 @@ void ncRenderer::PreRender( void ) {
     RenderBeautifulWater();
 }
 
-void ncRenderer::RenderToShader( eye_t eye ) {
+void ncRenderer::RenderToShader( ncSceneEye eye ) {
 
     // Scene buffer.
     glBindFramebuffer( GL_FRAMEBUFFER, _scene_adv[eye].frame );
@@ -845,7 +853,7 @@ void ncRenderer::RenderToShader( eye_t eye ) {
 /*
     BSP level rendering.
 */
-void ncRenderer::RenderBSP( int reflected, eye_t eye ) {
+void ncRenderer::RenderBSP( int reflected, ncSceneEye eye ) {
     _bspmngr.CalculateVisibleData( _camera.g_vEye );
     _bspmngr.Render( reflected, eye );
 }
@@ -870,8 +878,15 @@ void ncRenderer::Render( int msec ) {
     PreRender();
 
     // Here you can tell what you want to render.
-    RenderToShader( EYE_RIGHT );
-    RenderToShader( EYE_LEFT );
+    
+    if( render_ovr.GetInteger() ) {
+        RenderToShader( EYE_RIGHT );
+        RenderToShader( EYE_LEFT );
+    } else {
+        RenderToShader( EYE_FULL );
+    }
+    
+    //RenderToShader( EYE_FULL );
     
     // Console is moved out from *render to texture* since we don't care about its rendering,
     // it must be always shown correctly.
@@ -900,6 +915,7 @@ void ncRenderer::Refresh( void ) {
     glUniform1i( usela_id, render_lensanamorph.GetInteger() );
     glUniform1i( usefx_id, render_usescreenfx.GetInteger() );
     glUniform1i( usedof_id, render_dof.GetInteger() );
+    glUniform1i( ovr_id, render_ovr.GetInteger() );
     
     glUseProgram(0);
 }

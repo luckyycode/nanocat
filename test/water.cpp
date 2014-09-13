@@ -1,7 +1,7 @@
 //
 //  Nanocat engine.
 //
-//  Beautiful water creator & renderer.
+//  Beautiful water creator & renderer..
 //
 //  Created by Neko Vision on 2/8/14.
 //  Copyright (c) 2014 Neko Vision. All rights reserved.

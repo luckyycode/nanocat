@@ -1,7 +1,7 @@
 //
 //  Nanocat engine.
 //
-//  Game font renderer.
+//  Game font renderer..
 //
 //  Created by Neko Code on 8/29/14.
 //  Copyright (c) 2014 Neko Vision. All rights reserved.

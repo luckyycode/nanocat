@@ -1,7 +1,7 @@
 //
 //  Nanocat engine.
 //
-//  System manager.
+//  System manager..
 //
 //  Created by Neko Code on 8/27/14.
 //  Copyright (c) 2014 Neko Vision. All rights reserved.
@@ -10,9 +10,9 @@
 #ifndef network_h
 #define network_h
 
-#include "core.h"
-#include "systemshared.h"
-#include "bitset.h"
+#include "Core.h"
+#include "SystemShared.h"
+#include "ncBitMessage.h"
 
 #ifdef _WIN32
 #define WINSOCKET_STARTUP_CODE       0x0101
@@ -24,48 +24,47 @@
 // System network host name length.
 #define MAX_NET_HOSTNAME_LENGTH                 256             // Network host.
 
-// Network "bind" change limit.
 #define MAX_CLIENTS_NUM                         1024
 // Maximum bind change tries.
 #define MAX_BIND_CHANGE                         16
 
-// Max network packet length.
-#define MAX_PACKET_LEN                          1400
-
 // Last raw received message.
 extern byte network_message_buffer[MAX_UDP_PACKET];
 
-#define NS_INADDRSZ  4
-#define NS_IN6ADDRSZ 16
-#define NS_INT16SZ   2
-
-
-const int ASYNC_PROTOCOL_MINOR		= 41;
-const int ASYNC_PROTOCOL_MAJOR      = 2;
-const int ASYNC_PROTOCOL_VERSION	= ( ASYNC_PROTOCOL_MAJOR << 16 ) + ASYNC_PROTOCOL_MINOR;
-
+const int NETWORK_PROTOCOL_MINOR = 37;
+const int NETWORK_PROTOCOL_MAJOR = 13;
+const int NETWORK_PROTOCOL	= ( NETWORK_PROTOCOL_MAJOR << 16 ) + NETWORK_PROTOCOL_MINOR;
 
 /*
     Network address data.
 */
-struct netdata_t {
-    char                ip[32];
+
+#define MAX_IPADDRESS_NETDATALEN 32
+
+class ncNetdata {
+public:
     
-    int sc;     // Socket.
-    int port;
+    ncNetdata();
+    ncNetdata( struct sockaddr_in _socketaddr, unsigned int port, unsigned int socket );
     
-    struct sockaddr_in  sockaddress;
+    char IPAddress[MAX_IPADDRESS_NETDATALEN];
+    
+    int Socket;     // Socket.
+    int Port;
+    
+    struct sockaddr_in SockAddress;
 };
 
-struct netchannel_t {
+class ncNetchannel {
+public:
     int type;
-    netdata_t address;
+    ncNetdata address;
     
     int sequenceIn;
     int sequenceOut;
 };
 
-enum netaddress_t {
+enum ncNetAddressType {
     // Bot.
     ADDR_BOT,
     // Host user.
@@ -81,32 +80,32 @@ public:
     void Initialize( void );
     bool Frame( void );
     void Shutdown( void );
-    void Assign( netdata_t *from, byte *buffer );
-    void SendPacket( unsigned long len, const void *data, netdata_t *from );
-    void PrintOutOfBand( netdata_t *adr, const char *format, ... ) ;
-    void PrintOutOfBandData( netdata_t *adr, Byte *format, int len );
-    bool CompareAddress( netdata_t *t1, netdata_t *t2 );
-    bool IsLanAddress( netdata_t *adr );
-    bool Resolve( netdata_t *address, const char *host );
+    void Assign( ncNetdata *from, byte *buffer );
+    void SendPacket( unsigned long len, const void *data, ncNetdata *from );
+    void PrintOutOfBand( ncNetdata *adr, const char *format, ... ) ;
+    void PrintOutOfBandData( ncNetdata *adr, Byte *format, int len );
+    bool CompareAddress( ncNetdata *t1, ncNetdata *t2 );
+    bool IsLanAddress( ncNetdata *adr );
+    bool Resolve( ncNetdata *address, const char *host );
     
-    void CreateChannel( netchannel_t *chan, netdata_t *adr );
-    void SendMessageChannel( netchannel_t *chan, ncBitMessage *msg );
-    bool ProcessChannel( netchannel_t *chan, byte *packet );
+    void CreateChannel( ncNetchannel *chan, ncNetdata *adr );
+    void SendMessageChannel( ncNetchannel *chan, ncBitMessage *msg );
+    bool ProcessChannel( ncNetchannel *chan, byte *packet );
    
     int GetSocket( void );
     struct sockaddr_in GetSockAddr( void );
     
 private:
-    int                 n_socket;
-    struct sockaddr_in  n_sv, n_cl;
+    int                 NetworkSocket;
+    struct sockaddr_in  DataAddr, RecvAddr;
 };
 
 extern ncNetwork _netmanager;
 
 // NETWORK
-extern ConsoleVariable       network_port;                          // Network port.
-extern ConsoleVariable       network_ip;                            // Network ip address.
-extern ConsoleVariable       network_active;                        // Turn on/off networking.
-extern ConsoleVariable       network_localip;                       // Local Device IP Address.
-
+extern ncConsoleVariable       network_port;                          // Network port.
+extern ncConsoleVariable       network_ip;                            // Network ip address.
+extern ncConsoleVariable       network_active;                        // Turn on/off networking.
+extern ncConsoleVariable       network_localip;                       // Local Device IP Address.
+extern ncConsoleVariable        network_nonet;                        // Is internet connection available?
 #endif

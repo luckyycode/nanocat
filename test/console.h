@@ -1,7 +1,7 @@
 //
 //  Nanocat engine.
 //
-//  Console manager.
+//  Console manager..
 //
 //  Created by Neko Code on 8/28/14.
 //  Copyright (c) 2014 Neko Vision. All rights reserved.

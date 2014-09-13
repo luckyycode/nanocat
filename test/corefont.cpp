@@ -1,7 +1,7 @@
 //
 //  Nanocat engine.
 //
-//  Font loader and renderer. 
+//  Font loader and renderer..
 //
 //  Created by Neko Vision on 02/01/2014.
 //  Copyright (c) 2014 Neko Vision. All rights reserved.

@@ -1,74 +1,138 @@
 //
 //  Nanocat engine.
 //
-//  Game world environment.
+//  Game world environment..
 //
 //  Created by Neko Vision on 3/5/14.
 //  Copyright (c) 2014 Neko Vision. All rights reserved.
 //
 
-#include "bsp.h"
-#include "ncstring.h"
-#include "levelenvironment.h"
+#include "ncBSP.h"
+#include "NCString.h"
+#include "LevelEnvironment.h"
 
 ncLevelEnvironment _levelenvironment;
 
-typedef struct _light {
-    ncVec3 position;
-    ncVec3 color;
+struct ncBaseLight
+{
+    ncVec3 Color;
+    float AmbientIntensity;
+    float DiffuseIntensity;
     
-    float dotSize;
-} light_t;
-
-light_t _lights[4];
-
-void env_setlights( void ) {
-    int i;
-    
-    // Temp.
-    _lights[0].color.x = 0.8;
-    _lights[0].color.y = 0.4;
-    _lights[0].color.z = 0.3;
-    _lights[0].position.x = -11.0;
-    _lights[0].position.y = 50.0;
-    _lights[0].position.z = -11.0;
-    _lights[0].dotSize = 1.0;
-    
-    _lights[1].color.x = 0.8;
-    _lights[1].color.y = 0.4;
-    _lights[1].color.z = 0.3;
-    _lights[1].position.x = -367.0;
-    _lights[1].position.y = 27.0;
-    _lights[1].position.z = -5.0;
-    _lights[1].dotSize = 1.0;
-    
-    _lights[2].color.x = 0.8;
-    _lights[2].color.y = 0.4;
-    _lights[2].color.z = 0.3;
-    _lights[2].position.x = -102.0;
-    _lights[2].position.y = 1.33;
-    _lights[2].position.z = -97.0;
-    _lights[2].dotSize = 1.0;
-    
-    _lights[3].color.x = 0.8;
-    _lights[3].color.y = 0.4;
-    _lights[3].color.z = 0.3;
-    _lights[3].position.x = -24.0;
-    _lights[3].position.y = 37.0;
-    _lights[3].position.z = -215.0;
-    _lights[3].dotSize = 1.0;
-
-    glUseProgram( _bspmngr.bspShader.shader_id );
-    
-    for( i = 0; i < 3; i++ ) {
-        glUniform3f( glGetUniformLocation( _bspmngr.bspShader.shader_id, _stringhelper.STR("lights[%i].position", i) ), _lights[i].position.x, _lights[i].position.y, _lights[i].position.z );
-        glUniform3f( glGetUniformLocation( _bspmngr.bspShader.shader_id, _stringhelper.STR("lights[%i].diffuse", i) ), _lights[i].color.x, _lights[i].color.y, _lights[i].color.z );
+    ncBaseLight()
+    {
+        Color = ncVec3(0.0f, 0.0f, 0.0f);
+        AmbientIntensity = 0.0f;
+        DiffuseIntensity = 0.0f;
     }
+};
+
+struct ncDirectionalLight : public ncBaseLight
+{
+    ncVec3 Direction;
     
-    glUseProgram( 0 );
+    ncDirectionalLight()
+    {
+        Direction = ncVec3(0.0f, 0.0f, 0.0f);
+    }
+};
+
+struct ncPointLight : public ncBaseLight
+{
+    ncVec3 Position;
     
-}
+    struct
+    {
+        float Constant;
+        float Linear;
+        float Exp;
+    } Attenuation;
+    
+    ncPointLight()
+    {
+        Position = ncVec3(0.0f, 0.0f, 0.0f);
+        Attenuation.Constant = 1.0f;
+        Attenuation.Linear = 0.0f;
+        Attenuation.Exp = 0.0f;
+    }
+};
+
+
 
 void ncLevelEnvironment::Prepare( void ) {
-    env_setlights();
+    ncPointLight pl[2];
+    pl[0].DiffuseIntensity = 2.5f;
+    pl[0].Color = ncVec3(1.0f, 1.0f, 1.0f);
+    pl[0].Position = ncVec3(-5.0, 27.0, -5.0);
+    pl[0].Attenuation.Linear = 0.1f;
+    pl[1].DiffuseIntensity = 0.5f;
+    pl[1].Color = ncVec3(0.0f, 0.0f, 0.5f);
+    pl[1].Position = ncVec3(0.0f, -5.0f, 20.0f);
+    pl[1].Attenuation.Linear = 0.1f;
+    
+    glUseProgram( _bspmngr.bspShader.shader_id );
+    for( int i = 0; i < 2; i++ ) {
+        glUniform3f( glGetUniformLocation( _bspmngr.bspShader.shader_id, _stringhelper.STR("gPointLights[%d].Base.Color", i)), pl[i].Color.x, pl[i].Color.y, pl[i].Color.z );
+        
+        glUniform1f( glGetUniformLocation( _bspmngr.bspShader.shader_id, _stringhelper.STR("gPointLights[%d].Base.AmbientIntensity", i)), pl[i].AmbientIntensity );
+
+        glUniform3f( glGetUniformLocation( _bspmngr.bspShader.shader_id, _stringhelper.STR("gPointLights[%d].Position", i)), pl[i].Position.x, pl[i].Position.y, pl[i].Position.z );
+        
+        glUniform1f( glGetUniformLocation( _bspmngr.bspShader.shader_id, _stringhelper.STR("gPointLights[%d].Base.DiffuseIntensity", i)), pl[i].DiffuseIntensity );
+
+        glUniform1f( glGetUniformLocation( _bspmngr.bspShader.shader_id, _stringhelper.STR("gPointLights[%d].Atten.Constant", i)), pl[i].Attenuation.Constant );
+        
+        glUniform1f( glGetUniformLocation( _bspmngr.bspShader.shader_id, _stringhelper.STR("gPointLights[%d].Atten.Linear", i)), pl[i].Attenuation.Linear );
+        
+        glUniform1f( glGetUniformLocation( _bspmngr.bspShader.shader_id, _stringhelper.STR("gPointLights[%d].Atten.Exp", i)), pl[i].Attenuation.Exp );
+    }
+    
+    ncVec3 LightDir( 1.0f, -1.0f, 1.0f );
+    LightDir.Normalize();
+    
+    glUniform3f( glGetUniformLocation( _bspmngr.bspShader.shader_id, "gDirectionalLight.Direction"),  LightDir.x, LightDir.y, LightDir.z );
+    glUniform3f( glGetUniformLocation( _bspmngr.bspShader.shader_id, "gDirectionalLight.Base.Color"), 0.9f, 1.0f, 1.0f );
+    glUniform1f( glGetUniformLocation( _bspmngr.bspShader.shader_id, "gDirectionalLight.Base.AmbientIntensity"), 0.7f );
+    glUniform1f( glGetUniformLocation( _bspmngr.bspShader.shader_id, "gDirectionalLight.Base.DiffuseIntensity"), 0.001f );
+    
+    glUseProgram(0);
+}
+
+void ncLevelEnvironment::PassShader( uint *id ) {
+    ncPointLight pl[2];
+    pl[0].DiffuseIntensity = 2.5f;
+    pl[0].Color = ncVec3(1.0f, 1.0f, 1.0f);
+    pl[0].Position = ncVec3(-5.0, 27.0, -5.0);
+    pl[0].Attenuation.Linear = 0.1f;
+    pl[1].DiffuseIntensity = 0.5f;
+    pl[1].Color = ncVec3(0.0f, 0.0f, 0.5f);
+    pl[1].Position = ncVec3(0.0f, -5.0f, 20.0f);
+    pl[1].Attenuation.Linear = 0.1f;
+    
+    //glUseProgram( *id );
+    for( int i = 0; i < 2; i++ ) {
+        glUniform3f( glGetUniformLocation( *id, _stringhelper.STR("gPointLights[%d].Base.Color", i)), pl[i].Color.x, pl[i].Color.y, pl[i].Color.z );
+        
+        glUniform1f( glGetUniformLocation( *id, _stringhelper.STR("gPointLights[%d].Base.AmbientIntensity", i)), pl[i].AmbientIntensity );
+        
+        glUniform3f( glGetUniformLocation( *id, _stringhelper.STR("gPointLights[%d].Position", i)), pl[i].Position.x, pl[i].Position.y, pl[i].Position.z );
+        
+        glUniform1f( glGetUniformLocation( *id, _stringhelper.STR("gPointLights[%d].Base.DiffuseIntensity", i)), pl[i].DiffuseIntensity );
+        
+        glUniform1f( glGetUniformLocation( *id, _stringhelper.STR("gPointLights[%d].Atten.Constant", i)), pl[i].Attenuation.Constant );
+        
+        glUniform1f( glGetUniformLocation( *id, _stringhelper.STR("gPointLights[%d].Atten.Linear", i)), pl[i].Attenuation.Linear );
+        
+        glUniform1f( glGetUniformLocation( *id, _stringhelper.STR("gPointLights[%d].Atten.Exp", i)), pl[i].Attenuation.Exp );
+    }
+    
+    ncVec3 LightDir( 1.0f, -1.0f, 1.0f );
+    LightDir.Normalize();
+    
+    glUniform3f( glGetUniformLocation( _bspmngr.bspShader.shader_id, "gDirectionalLight.Direction"),  LightDir.x, LightDir.y, LightDir.z );
+    glUniform3f( glGetUniformLocation( _bspmngr.bspShader.shader_id, "gDirectionalLight.Base.Color"), 0.9f, 1.0f, 1.0f );
+    glUniform1f( glGetUniformLocation( _bspmngr.bspShader.shader_id, "gDirectionalLight.Base.AmbientIntensity"), 0.7f );
+    glUniform1f( glGetUniformLocation( _bspmngr.bspShader.shader_id, "gDirectionalLight.Base.DiffuseIntensity"), 0.001f );
+    
+    //glUseProgram(0);
 }

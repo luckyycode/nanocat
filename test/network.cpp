@@ -1,26 +1,30 @@
 //
 //  Nanocat engine.
 //
-//  Game network manager.
+//  Game network manager..
 //
 //  Created by Neko Vision on 11/08/2013.
 //  Copyright (c) 2013 Neko Vision. All rights reserved.
 //
 
 
-#include "network.h"
-#include "server.h"
-#include "client.h"
-#include "ncstring.h"
+#include "Network.h"
+#include "MultiplayerServer.h"
+#include "MultiplayerClient.h"
 
-ConsoleVariable    network_port("net", "port", "Network port", "4004", CVFLAG_NEEDSREFRESH);
-ConsoleVariable    network_ip("net", "ip", "Network IP address.", "0.0.0.0", CVFLAG_NEEDSREFRESH);
-ConsoleVariable    network_active("net", "active", "Is network active?", "0", CVFLAG_NEEDSREFRESH);
-ConsoleVariable    network_addrtype("net", "addrtype", "Address type.", "0", CVFLAG_NEEDSREFRESH);
-ConsoleVariable    network_localip("net", "localip", "Local IP address.", "0.0.0.0", CVFLAG_NEEDSREFRESH);
+#include "NCString.h"
+
+ncConsoleVariable    network_port( "net", "port", "Network port", "4004", CVFLAG_NEEDSREFRESH );
+ncConsoleVariable    network_ip( "net", "ip", "Network IP address.", "0.0.0.0", CVFLAG_NEEDSREFRESH );
+ncConsoleVariable    network_active( "net", "active", "Is network active?", "0", CVFLAG_NEEDSREFRESH );
+ncConsoleVariable    network_addrtype( "net", "addrtype", "Address type.", "0", CVFLAG_NEEDSREFRESH );
+ncConsoleVariable    network_localip( "net", "localip", "Local IP address.", "0.0.0.0", CVFLAG_NEEDSREFRESH );
+ncConsoleVariable    network_nonet( "net", "nonet", "Is internet connection available?", "0", CVFLAG_NEEDSREFRESH );
+
 
 ncNetwork _netmanager;
 
+// Last received message.
 byte network_message_buffer[MAX_UDP_PACKET];
 
 /*
@@ -29,20 +33,21 @@ byte network_message_buffer[MAX_UDP_PACKET];
 
 void ncNetwork::Initialize( void ) {
 
-    int                 port, i;
-    int                 flags;
-    int                 err;
-    bool                bound, g_allow;
-    struct hostent      *hp;
-    static char         n_hostname[MAX_NET_HOSTNAME_LENGTH];
+    int port, i;
+    int flags;
+    
+    bool bound, g_allow;
+    
+    struct hostent *hp;
+    static char n_hostname[MAX_NET_HOSTNAME_LENGTH];
 
     _core.Print( LOG_INFO, "Initializing network..\n" );
 
-    i       = 0;
-    bound   = false;
+    i = 0;
+    bound = false;
 
 #ifdef _WIN32
-    // We have to initialize winsock on Windows.
+    // We have to initialize socket on Windows.
     int  w;
     if( WSAStartup( WINSOCKET_STARTUP_CODE, &w ) != 0 ) {
         _core.Error( ERC_NETWORK, "Failed to initialize Windows socket. Initialization code: %s.\n", WINSOCKET_STARTUP_CODE );
@@ -51,12 +56,11 @@ void ncNetwork::Initialize( void ) {
 #endif
 
     _core.Print( LOG_INFO, "Creating network socket using udp protocol..\n" );
-    if( (n_socket = socket( AF_INET, SOCK_DGRAM, IPPROTO_UDP )) == - 1 ) {
-        err = errno;
-        _core.Error( ERC_NETWORK, "Could not initialize network socket.", err );
+    if( (NetworkSocket = socket( PF_INET, SOCK_DGRAM, IPPROTO_UDP )) == - 1 ) {
+        _core.Error( ERC_NETWORK, "Could not initialize network socket. %s", strerror( errno ) );
         return;
     }
-
+    
     // Get local data.
     if( gethostname( n_hostname, sizeof(n_hostname) ) == -1 ) {
         _core.Error( ERC_NETWORK, "ncNetwork::Init - Could not get host name.\n" );
@@ -65,6 +69,11 @@ void ncNetwork::Initialize( void ) {
     
     struct hostent *host = gethostbyname( n_hostname );
 
+    if( !host ) {
+        _core.Error( ERC_FATAL, "ncNetwork::Init - Couldn't get host by name. %s\n", strerror( errno ) );
+        return;
+    }
+    
     char *n_localIP;
     n_localIP = inet_ntoa( *(struct in_addr *)*host->h_addr_list );
     
@@ -73,7 +82,7 @@ void ncNetwork::Initialize( void ) {
     
     network_localip.Set( n_localIP );
     
-    memset( &n_sv, 0, sizeof(struct sockaddr_in) );
+    memset( &DataAddr, 0, sizeof(struct sockaddr_in) );
 
     port = network_port.GetInteger();
 
@@ -82,41 +91,43 @@ void ncNetwork::Initialize( void ) {
     
     long blockmode;
     blockmode = 1;
+    
     if( ioctlsocket( _network.socket, FIONBIO, &blockmode ) == -1 ) {
         _core.Error( ERC_NETWORK, "ioctl failed to make socket to non-blocking mode.\n");
         return;
     }
     
-#else
+#else // Mac, and another *nix systems.
     
-    flags = fcntl(n_socket, F_GETFL);
+    flags = fcntl( NetworkSocket, F_GETFL );
     flags |= O_NONBLOCK;
-    fcntl( n_socket, F_SETFL, flags );
+    fcntl( NetworkSocket, F_SETFL, flags );
 
-    if( ioctl (n_socket, FIONBIO, &g_allow) == -1 ) {
+    if( ioctl( NetworkSocket, FIONBIO, &g_allow ) == -1 ) {
         _core.Error( ERC_NETWORK, "ioctl failed to make socket to non-blocking mode.\n");
 		return;
 	}
     
 #endif
 
-	if( setsockopt( n_socket, SOL_SOCKET, SO_BROADCAST, (char *)&i, sizeof(i) ) == -1 ) {
+	if( setsockopt( NetworkSocket, SOL_SOCKET, SO_BROADCAST, (char *)&i, sizeof(i) ) == -1 ) {
         _core.Error( ERC_NETWORK, "Failed to setup socket broadcasting.\n" );
 		return;
 	}
 
     // Scan for available ports.
     _core.Print( LOG_INFO, "Binding socket with parameters..\n" );
+    
     while( true ) {
-        memset( &n_sv, 0, sizeof(struct sockaddr_in) );
+        memset( &DataAddr, 0, sizeof(struct sockaddr_in) );
         
-        n_sv.sin_family = AF_INET;
-        n_sv.sin_port = htons( port );
+        DataAddr.sin_family = AF_INET;
+        DataAddr.sin_port = htons( port );
         
         switch( network_addrtype.GetInteger() ) {
             case 0: // Any.
                 _core.Print( LOG_INFO, "Our network type is any.\n" );
-                n_sv.sin_addr.s_addr = INADDR_ANY;
+                DataAddr.sin_addr.s_addr = INADDR_ANY;
                 break;
             case 1: // Set automatically.
                 _core.Print( LOG_INFO, "Our network type is automatic.\n" );
@@ -127,15 +138,15 @@ void ncNetwork::Initialize( void ) {
                 }
                 
                 // Copy address data.
-                memcpy( (void *)&n_sv.sin_addr, hp->h_addr_list[0], hp->h_length );
+                memcpy( (void*)&DataAddr.sin_addr, hp->h_addr_list[0], hp->h_length );
                 break;
             case 2: // Manual
                 _core.Print( LOG_INFO, "Our network type is manual. Name: %s\n", network_ip.GetString() );
-                //inet_pton4_alt(network_ip->string, &(_network.sv.sin_addr));
+
                 break;
         }
         
-        if(bind(n_socket, (struct sockaddr *)&n_sv, sizeof(n_sv)) != 0) {
+        if(bind(NetworkSocket, (struct sockaddr *)&DataAddr, sizeof(DataAddr)) != 0) {
             _core.Print( LOG_WARN, "Bind failed, trying to change the port..\n" );
             
             port++;
@@ -147,11 +158,11 @@ void ncNetwork::Initialize( void ) {
         break;
     }
 
-    network_ip.Set( _stringhelper.STR( "%s", inet_ntoa(n_sv.sin_addr) ) );
+    network_ip.Set( _stringhelper.STR( "%s", inet_ntoa(DataAddr.sin_addr) ) );
     network_port.Set( _stringhelper.STR("%i", port) );
 
     if( network_addrtype.GetInteger() == 1 )
-        _core.Print( LOG_INFO, "Listening on '%s:%i'. \n", inet_ntoa(n_sv.sin_addr), port );
+        _core.Print( LOG_INFO, "Listening on '%s:%i'. \n", inet_ntoa(DataAddr.sin_addr), port );
     else
         _core.Print( LOG_INFO, "Listening on '%i' port. \n", port );
 
@@ -170,20 +181,33 @@ bool ncNetwork::Frame( void ) {
     if( !network_active.GetInteger() )
         return false;
 
-    if( !n_socket ) {
+    if( !NetworkSocket ) {
         _core.Error( ERC_NETWORK, "ncNetwork::Frame - missing socket." );
         return false;
     }
     
     int bytes;
+    int size;
 
-    byte data[MAX_UDP_PACKET + 4]; // Four for protocol identificator.
+    byte data[MAX_UDP_PACKET + 4];
 
-    netdata_t remoteEP;
+    ncNetdata remoteEP;
     socklen_t packet_len;
 
-    packet_len = sizeof(n_cl);
-    bytes = recvfrom( n_socket, &data, sizeof(data), 0, (struct sockaddr *)&n_cl, &packet_len );
+    packet_len = sizeof(RecvAddr);
+    size = sizeof(data);
+    bytes = recvfrom( NetworkSocket, &data, size, 0, (struct sockaddr *)&RecvAddr, (socklen_t*)&packet_len );
+    
+    if ( bytes == -1 ) {
+        if( errno == EWOULDBLOCK || errno == ECONNREFUSED )
+            return false;
+   
+        _core.Print( LOG_WARN, "ncNetwork::recvfrom() - %s\n", strerror( errno ) );
+        
+        return false;
+    }
+    
+    assert( bytes < size );
 
     if( bytes <= 0 )
         return false;
@@ -192,24 +216,24 @@ bool ncNetwork::Frame( void ) {
         return false;
 
     if( bytes >= MAX_UDP_PACKET ) {
-        _core.Print( LOG_WARN, "Too much data from %s\n", inet_ntoa( n_cl.sockaddr_in::sin_addr ) );
+        _core.Print( LOG_WARN, "Too much data from %s\n", inet_ntoa( RecvAddr.sockaddr_in::sin_addr ) );
         return false;
     }
 
     // Protocol.
-    if ( data[0] != (byte) ( PROTOCOL_ID >> 24 ) ||
-        data[1] != (byte) ( ( PROTOCOL_ID >> 16 ) & 0xFF ) ||
-        data[2] != (byte) ( ( PROTOCOL_ID >> 8 ) & 0xFF ) ||
-        data[3] != (byte) ( PROTOCOL_ID & 0xFF ) ) {
+    if ( data[0] != (Byte)( PROTOCOL_ID >> 24 ) ||
+        data[1] != (Byte)( ( PROTOCOL_ID >> 16 ) & 0xFF ) ||
+        data[2] != (Byte)( ( PROTOCOL_ID >> 8 ) & 0xFF ) ||
+        data[3] != (Byte)( PROTOCOL_ID & 0xFF ) ) {
         
-        _core.Print( LOG_WARN, "User from %s has wrong network protocolId and tried to connect.\n", inet_ntoa( n_cl.sockaddr_in::sin_addr) );
+        _core.Print( LOG_WARN, "User from %s has wrong network protocolId.\n", inet_ntoa( RecvAddr.sockaddr_in::sin_addr) );
         return false;
     }
     
     // Copy network message for further parsing and
     // cut first four bytes.
     memcpy( network_message_buffer, &data[4], bytes - 4 );
-    remoteEP.sockaddress = n_cl;
+    remoteEP.SockAddress = RecvAddr;
 
     network_message_buffer[bytes] = 0;
     
@@ -225,22 +249,23 @@ bool ncNetwork::Frame( void ) {
 /*
     Network channel
 */
-void ncNetwork::CreateChannel( netchannel_t *chan, netdata_t *adr ) {
-    chan->address.port = adr->port;
-    chan->address.sc = n_socket;
+void ncNetwork::CreateChannel( ncNetchannel *chan, ncNetdata *adr ) {
     
-    memcpy(&chan->address.sockaddress, &adr->sockaddress, sizeof(adr->sockaddress));
+    chan->address.Port = adr->Port;
+    chan->address.Socket = NetworkSocket;
+    
+    memcpy( &chan->address.SockAddress, &adr->SockAddress, sizeof(adr->SockAddress) );
 }
 
 /*
     Send message to chosen channel.
 */
-void ncNetwork::SendMessageChannel( netchannel_t *chan, ncBitMessage *msg ) {
+void ncNetwork::SendMessageChannel( ncNetchannel *chan, ncBitMessage *msg ) {
     SendPacket( msg->Size, msg->Data, &chan->address );
     chan->sequenceOut += 1;
 }
 
-bool ncNetwork::ProcessChannel( netchannel_t *chan, byte *packet ) {
+bool ncNetwork::ProcessChannel( ncNetchannel *chan, byte *packet ) {
     return true;
 }
 
@@ -252,8 +277,8 @@ void ncNetwork::Shutdown( void ) {
         return;
 
     // 2 - Disable receiving/sending
-    shutdown( n_socket, 2 );
-    close( n_socket );
+    shutdown( NetworkSocket, 2 );
+    close( NetworkSocket );
 
 #ifdef _WIN32
     // Windows needs sockets to be closed.
@@ -267,25 +292,26 @@ void ncNetwork::Shutdown( void ) {
 /*
     Network manager.
 */
-void ncNetwork::Assign( netdata_t *from, byte *buffer ) {
+void ncNetwork::Assign( ncNetdata *from, byte *buffer ) {
     
     if( !network_active.GetInteger() )
         return;
 
-    if( server_running.GetInteger() )
+    if( Server_Active.GetInteger() )
         _server.Process( from, buffer );
 
-    if( client_running.GetInteger() )
+    if( Client_Running.GetInteger() )
         _client.Process( from, buffer );
 }
 
 /*
     Send packet.
 */
-void ncNetwork::SendPacket( unsigned long len, const void *data, netdata_t *from ) {
+void ncNetwork::SendPacket( unsigned long len, const void *data, ncNetdata *from ) {
     int ret;
     byte packet[len + 4];
 
+    // First four bytes - protocol.
     packet[0] = (byte)( PROTOCOL_ID >> 24 );
     packet[1] = (byte)( ( PROTOCOL_ID >> 16 ) & 0xFF );
     packet[2] = (byte)( ( PROTOCOL_ID >> 8 ) & 0xFF );
@@ -293,16 +319,16 @@ void ncNetwork::SendPacket( unsigned long len, const void *data, netdata_t *from
     
     memcpy( &packet[4], data, len );
 
-    ret = sendto( n_socket, packet, len + 4, 0, (struct sockaddr *)&from->sockaddress, sizeof(from->sockaddress) );
+    ret = sendto( NetworkSocket, packet, len + 4, 0, (struct sockaddr *)&from->SockAddress, sizeof(from->SockAddress) );
     
     if( ret == -1 )
-        _core.Print( LOG_ERROR, "Could not send packet to %s\n", inet_ntoa(from->sockaddress.sin_addr) );
+        _core.Print( LOG_ERROR, "Could not send packet to %s\n", inet_ntoa(from->SockAddress.sin_addr) );
 }
 
 /*
     Print Out Of band message.
 */
-void ncNetwork::PrintOutOfBand( netdata_t *adr, const char *format, ... ) {
+void ncNetwork::PrintOutOfBand( ncNetdata *adr, const char *format, ... ) {
 	va_list		argptr;
 	char		string[1024];
 
@@ -323,7 +349,7 @@ void ncNetwork::PrintOutOfBand( netdata_t *adr, const char *format, ... ) {
 /*
     Send out of band.
 */
-void ncNetwork::PrintOutOfBandData( netdata_t *adr, Byte *format, int len ) {
+void ncNetwork::PrintOutOfBandData( ncNetdata *adr, Byte *format, int len ) {
     Byte		string[MAX_SERVER_COMMAND * 2];
     int			i;
     ncBitMessage   msg;
@@ -348,29 +374,29 @@ void ncNetwork::PrintOutOfBandData( netdata_t *adr, Byte *format, int len ) {
 /*
     Compare socket addresses.
 */
-bool ncNetwork::CompareAddress( netdata_t *t1, netdata_t *t2 ) {
+bool ncNetwork::CompareAddress( ncNetdata *t1, ncNetdata *t2 ) {
 #ifdef _WIN32
-    return t1->sockaddress.sin_addr.S_un.S_addr == t2->sockaddress.sin_addr.S_un.S_addr;
+    return t1->SockAddress.sin_addr.S_un.S_addr == t2->SockAddress.sin_addr.S_un.S_addr;
 #else
-    return t1->sockaddress.sin_addr.s_addr == t2->sockaddress.sin_addr.s_addr;
+    return t1->SockAddress.sin_addr.s_addr == t2->SockAddress.sin_addr.s_addr;
 #endif
 }
 
 /*
     Check if address is on local machine.
 */
-bool ncNetwork::IsLanAddress( netdata_t *adr ) {
+bool ncNetwork::IsLanAddress( ncNetdata *adr ) {
     //
     // This is VERY ugly - FIXME
     //
-    if(adr->ip[0] == '1' &&
-       adr->ip[1] == '2' &&
-       adr->ip[2] == '7' &&
-       adr->ip[3] == '.' &&
-       adr->ip[4] == '0' &&
-       adr->ip[5] == '.' &&
-       adr->ip[6] == '0' &&
-       adr->ip[7] == '.')
+    if(adr->IPAddress[0] == '1' &&
+       adr->IPAddress[1] == '2' &&
+       adr->IPAddress[2] == '7' &&
+       adr->IPAddress[3] == '.' &&
+       adr->IPAddress[4] == '0' &&
+       adr->IPAddress[5] == '.' &&
+       adr->IPAddress[6] == '0' &&
+       adr->IPAddress[7] == '.')
     {
         return true;
     }
@@ -381,7 +407,7 @@ bool ncNetwork::IsLanAddress( netdata_t *adr ) {
 /*
     Resolve address.
 */
-bool ncNetwork::Resolve( netdata_t *address, const char *host ) {
+bool ncNetwork::Resolve( ncNetdata *address, const char *host ) {
     _core.Print( LOG_INFO, "ncNetwork::Resolve - %s\n", host );
     
     struct hostent *hn;
@@ -406,8 +432,11 @@ bool ncNetwork::Resolve( netdata_t *address, const char *host ) {
     }
     else
     {
-        _core.Print( LOG_INFO, "ncNetwork::Resolve - resolved as '%s'\n", inet_ntoa (*((struct in_addr *) hn->h_addr_list[0])) );
-        memcpy( (void *)&address->sockaddress.sin_addr, hn->h_addr_list[0], hn->h_length );
+        _core.Print( LOG_INFO, "ncNetwork::Resolve - Resolved as '%s'\n", inet_ntoa (*((struct in_addr *) hn->h_addr_list[0])) );
+        memcpy( (void *)&address->SockAddress.sin_addr, hn->h_addr_list[0], hn->h_length );
+        _stringhelper.Copy( address->IPAddress, inet_ntoa ( *((struct in_addr *) hn->h_addr_list[0]) ) );
+        //address->port = -1; // Not assigned yet.
+        
         return true;
     }
 
@@ -416,62 +445,23 @@ bool ncNetwork::Resolve( netdata_t *address, const char *host ) {
 }
 
 int ncNetwork::GetSocket() {
-    if( !n_socket )
-        return 0;
+    if( !NetworkSocket )
+        return -1;
     
-    return n_socket;
+    return NetworkSocket;
 }
 
 struct sockaddr_in ncNetwork::GetSockAddr() {
-    return n_sv;
+    return DataAddr;
 }
 
+ncNetdata::ncNetdata( void ) {
+    this->Port = -1;
+    this->Socket = -1;
+}
 
-/*
-    Helper function.
-*/
-int inet_pton4_alt( const char *src, char *dst ) {
-    uint8_t tmp[NS_INADDRSZ], *tp;
-    
-    int saw_digit = 0;
-    int octets = 0;
-    *(tp = tmp) = 0;
-    
-    int ch;
-    while ((ch = *src++) != '\0')
-    {
-        if (ch >= '0' && ch <= '9')
-        {
-            uint32_t n = *tp * 10 + (ch - '0');
-            
-            if (saw_digit && *tp == 0)
-                return 0;
-            
-            if (n > 255)
-                return 0;
-            
-            *tp = n;
-            if (!saw_digit)
-            {
-                if (++octets > 4)
-                    return 0;
-                saw_digit = 1;
-            }
-        }
-        else if (ch == '.' && saw_digit)
-        {
-            if (octets == 4)
-                return 0;
-            *++tp = 0;
-            saw_digit = 0;
-        }
-        else
-            return 0;
-    }
-    if (octets < 4)
-        return 0;
-    
-    memcpy(dst, tmp, NS_INADDRSZ);
-    
-    return 1;
+ncNetdata::ncNetdata( struct sockaddr_in _sockaddress, unsigned int port, unsigned int socket ) {
+    this->SockAddress = _sockaddress;
+    this->Port = port;
+    this->Socket = socket;
 }

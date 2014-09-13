@@ -1,7 +1,7 @@
 //
 //  Nanocat engine.
 //
-//  Common headers and defines.
+//  Common headers and defines..
 //
 //  Created by Neko Vision on 24/07/2014.
 //  Copyright (c) 2013 Neko Vision. All rights reserved.

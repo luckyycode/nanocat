@@ -1,39 +1,34 @@
 //
 //  Nanocat engine.
 //
-//  Game core.
+//  Game core..
 //
 //  Created by Neko Vision on 10/08/2013.
 //  Copyright (c) 2013 Neko Vision. All rights reserved.
 //
 
-#include "core.h"
-#include "server.h"
-#include "client.h"
-#include "system.h"
-#include "network.h"
-#include "command.h"
-#include "console.h"
-#include "input.h"
-#include "renderer.h"
-#include "files.h"
-#include "ncstring.h"
-#include "gl.h"
-#include "clientgame.h"
+#include "Core.h"
+#include "MultiplayerServer.h"
+#include "MultiplayerClient.h"
+#include "System.h"
+#include "Network.h"
+#include "ConsoleCommand.h"
+#include "Console.h"
+#include "Input.h"
+#include "Renderer.h"
+#include "FileSystem.h"
+#include "NCString.h"
+#include "OpenGL.h"
+#include "LocalGame.h"
+#include "Utils.h"
 
-#include <stdio.h>
-#include <sys/types.h>
-#include <ifaddrs.h>
-#include <netinet/in.h>
-#include <string.h>
-#include <arpa/inet.h>
 
-Core _core;
+ncCore _core;
 
-ConsoleVariable      version("core", "version", "Game version", "6q", CVFLAG_NEEDSREFRESH);
-ConsoleVariable      core_maxfps("core", "maxfps", "Maximum game framerate.", "90", CVFLAG_NEEDSREFRESH);
-ConsoleVariable      timescale("core", "timescale", "Time scale.", "1.0", CVFLAG_KID);
-ConsoleVariable      log_verbose("log", "verbose", "Show more detailed log?", "1", CVFLAG_NONE);
+ncConsoleVariable      core_version("core", "version", "Game version", "6q", CVFLAG_NEEDSREFRESH);
+ncConsoleVariable      core_maxfps("core", "maxfps", "Maximum game framerate.", "90", CVFLAG_NEEDSREFRESH);
+ncConsoleVariable      core_timemultiplier("core", "timescale", "Time scale.", "1.0", CVFLAG_KID);
+ncConsoleVariable      log_verbose("log", "verbose", "Show more detailed log?", "1", CVFLAG_NONE);
 
 /*
     Lazy functions. 
@@ -58,13 +53,27 @@ static void lazyError( void ){
     _clientgame.Error();
 }
 
-void temp_tokenize( void ) {
-    uint32 TestWords[4] = { 0xfeedc0de, 0x1337d05e, 0xdeadbeef, 0x1337c0de };
-    _core.Print( LOG_INFO, "%x %x\n", TestWords[0], TestWords[1] );
-    
-    netdata_t temp;
-    _netmanager.Resolve( &temp, "stackoverflow.com" );
+static void lazyConvertModel( void ) {
+    ncUtils::OBJtoSM( _commandManager.Arguments(0) );
+}
 
+const uint32 _randomWords[] = {
+    0xfeedc0de,
+    0x1337d05e,
+    0xdeadbeef,
+    0x1337c0de,
+};
+
+unsigned char Sharedsecret[] =
+{   0x3f,0x58,0xf0,0xbe,0xba,0x68,0x54,0x07,0xe5,0xc7,
+    0x6b,0x23,0x05,0x33,0x00,0x18
+};
+
+void temp_tokenize( void ) {
+    _core.Print( LOG_INFO, "%x %x\n", _randomWords[0], _randomWords[1] );
+    
+    ncNetdata temp;
+    _netmanager.Resolve( &temp, "stackoverflow.com" );
 }
 
 static void lazyConsoleClear( void ) {
@@ -78,7 +87,7 @@ void lazyConnectA() {
 /*
     Pre-load stuff, even before context & graphic stuff load.
 */
-void Core::Preload( const char *execpath ) {
+void ncCore::Preload( const char *execpath ) {
     
     // O
    
@@ -125,16 +134,16 @@ void Core::Preload( const char *execpath ) {
 /*
     Some help.
 */
-void Core::Printhelp( void ) {
+void ncCore::Printhelp( void ) {
     _core.Print( LOG_NONE, "Nanocat running, version %s\n", _version );
     _core.Print( LOG_NONE, "\n" );
-    _core.Print( LOG_NONE, "Server running: %s\n", server_running.GetInteger() ? "Yes" : "No" );
+    _core.Print( LOG_NONE, "Server running: %s\n", Server_Active.GetInteger() ? "Yes" : "No" );
 }
 
 /*
     Game core, load only on application launch!
 */
-void Core::Initialize( void )
+void ncCore::Initialize( void )
 {
     float  t1, t2;
 
@@ -143,21 +152,21 @@ void Core::Initialize( void )
     _opengl.ShowInfo();
 
     // Default stuff.
-    _gconsole.SetPrefix( version.GetString() );
+    _gconsole.SetPrefix( core_version.GetString() );
 
     // Notify us.
     _core.Print( LOG_NONE, "\n" );
     _core.Print( LOG_INFO, "Loading core...\n" );
-    _core.Print( LOG_INFO, "OS: %s, Version: %s, Build date: %s\n", _osname, _version, _date );
+    _core.Print( LOG_INFO, "OS: %s, Version: %s, Build date: %s\n", _osname, _version, __DATE__ );
 
     // Developer stuff.
-    _commandManager.Add( "cm", model_convert ); // Model converation tool.
+    _commandManager.Add( "cm", lazyConvertModel ); // Model converation tool.
 
     // Client game. ( Do not bother with server-client ).
     _clientgame.Initialize();
     
     // Build version info.
-    version.Set( _stringhelper.STR("%s %s %s", _osname, _version, _date) );
+    core_version.Set( _stringhelper.STR("%s %s %s", _osname, _version, __DATE__) );
     
     // User input.
     _input.Initialize();
@@ -182,7 +191,7 @@ void Core::Initialize( void )
 /*
     All systems got loaded, so do something after it.
 */
-void Core::Loaded( void ) {
+void ncCore::Loaded( void ) {
     _core.Print( LOG_NONE, "\n" );
 
     _core.Print( LOG_NONE, "\n" );
@@ -192,7 +201,7 @@ void Core::Loaded( void ) {
 
     _core.Print( LOG_NONE, "\n" );
 
-    if( server_dedi.GetInteger() ) {
+    if( Server_Dedicated.GetInteger() ) {
         _gconsole.Execute("launch");
         _core.Print( LOG_INFO, "See server configuration file to edit parameters.\n" );
         _core.Print( LOG_INFO, "Server has been successfully created.\n" );
@@ -206,7 +215,7 @@ void Core::Loaded( void ) {
     Game process.
     Let the everything create/think/move/load/do/read/write etc..
 */
-void Core::Frame( void ) {
+void ncCore::Frame( void ) {
 
     int		msec, minMsec;
     float   scale;
@@ -227,9 +236,9 @@ void Core::Frame( void ) {
 
     LastTime = FrameTime;
 
-    scale = timescale.GetFloat();
+    scale = core_timemultiplier.GetFloat();
     if( scale < 1 )
-        timescale.Set( "1.0" );
+        core_timemultiplier.Set( "1.0" );
 
     msec = (unsigned int)(msec * scale);
 
@@ -260,19 +269,19 @@ void Core::Frame( void ) {
 /*
     Smart disconnect.
 */
-void Core::Disconnect( void ) {
-    if( client_running.GetInteger() ) {
+void ncCore::Disconnect( void ) {
+    if( Client_Running.GetInteger() ) {
         _client.Disconnect();
     }
 
-    if( server_running.GetInteger() ) {
+    if( Server_Active.GetInteger() ) {
         _server.Disconnect();
     }
 }
 /*
     Calls only on application quit.
 */
-void Core::Shutdown( void )
+void ncCore::Shutdown( void )
 {
     const char *msg;
 
@@ -288,10 +297,22 @@ void Core::Shutdown( void )
     printf( "Bye, %s", _system.GetCurrentUsername() );
 }
 
+
+/*  
+    Developer print.
+*/
+void ncCore::DPrint( const char *msg ) {
+    if( !msg ) {
+        return;
+    }
+    
+    printf( "Core::DPrint - %s\n", msg );
+}
+
 /*
     Error.
 */
-void Core::Error( Error_t err, const char *msg, ... ) {
+void ncCore::Error( ncCoreErrorType err, const char *msg, ... ) {
     system("COLOR 0C");
     
     if( ( strlen(msg) < 1 || !msg ) ) {
@@ -315,7 +336,7 @@ void Core::Error( Error_t err, const char *msg, ... ) {
     hOut = GetStdHandle(STD_OUTPUT_HANDLE);
     SetConsoleTextAttribute(hOut, FOREGROUND_BLUE | FOREGROUND_RED | FOREGROUND_INTENSITY );
 #elif __APPLE__ // and Cocoa
-    //MassageBox( _stringhelper.STR( "%s (errorcode: 0x%x)\n%s", text, err, ERROR_REPORT ) );
+    MassageBox( _stringhelper.STR( "%s (errorcode: 0x%x)\n%s", text, err, ERROR_REPORT ) );
 #endif // _WIN32
     
     _core.Print( LOG_NONE, "\n" );
@@ -360,7 +381,11 @@ void Core::Error( Error_t err, const char *msg, ... ) {
 /*
     Print to console and to the log file if necessary.
 */
-void Core::Print( Logtype_t type, char const *msg, ... ) {
+void ncCore::Print( const char *message ) {
+    _core.Print( LOG_INFO, message );
+}
+
+void ncCore::Print( ncCoreLogType type, char const *msg, ... ) {
     
     // Developer stuff.
     if( (type == LOG_DEVELOPER && !log_verbose.GetInteger()) )
@@ -431,6 +456,18 @@ void Core::Print( Logtype_t type, char const *msg, ... ) {
     fflush(stdout);
 }
 
-const char *Core::GetVersionString() {
-    return version.GetString();
+const char *ncCore::GetVersionString() {
+    return core_version.GetString();
+}
+
+double ncCore::GetVersionDouble() {
+    return CORE_VERSION_MM;
+}
+
+unsigned int ncCore::GetVersionMajor() {
+    return CORE_VERSION_MAJOR;
+}
+
+unsigned int ncCore::GetVersionMinor() {
+    return CORE_VERSION_MINOR;
 }

@@ -1,7 +1,7 @@
 //
 //  Nanocat engine.
 //
-//  System manager.
+//  System manager..
 //
 //  Created by Neko Vision on 23/08/2013.
 //  Copyright (c) 2014 Neko Vision. All rights reserved.

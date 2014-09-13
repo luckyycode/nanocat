@@ -1,7 +1,7 @@
 //
 //  Nanocat engine.
 //
-//  Game camera.
+//  Game camera..
 //
 //  Created by Neko Code on 8/28/14.
 //  Copyright (c) 2014 Neko Vision. All rights reserved.
@@ -10,8 +10,8 @@
 #ifndef camera_h
 #define camera_h
 
-#include "gmath.h"
-#include "systemshared.h"
+#include "GameMath.h"
+#include "SystemShared.h"
 
 // (Dev) Uncomment to use non-server based player control.
 // #define PLAYER_SERVERLESS_CONTROL
@@ -30,7 +30,7 @@ public:
     
     void Initialize( void );
     void Reset( void );
-    void Movement( uint key );
+    void Movement( char key );
 
     ncMatrix4 ProjectionMatrix;
     ncMatrix4 RotationMatrix;

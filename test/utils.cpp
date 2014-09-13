@@ -1,23 +1,24 @@
 //
 //  Nanocat engine.
 //
-//  Utilities.
+//  Utilities..
 //
 //  Created by Neko Code on 4/25/14.
 //  Copyright (c) 2014 Neko Vision. All rights reserved.
 //
 
-#include "core.h"
-#include "command.h"
-#include "files.h"
-#include "ncstring.h"
-#include "model.h"
+#include "Core.h"
+#include "ConsoleCommand.h"
+#include "FileSystem.h"
+#include "NCString.h"
+#include "Models.h"
 
-/*
+#include "Utils.h"
+
+
 static const char hex_chars[] = "0123456789abcdef";
 
-static inline char *hex_encode(const char *data, unsigned int data_size)
-{
+inline char *ncUtils::HexEncode( const char *data, unsigned int data_size ) {
     char *ret;
     char buf2[3];
     buf2[2] = '\0';
@@ -27,18 +28,18 @@ static inline char *hex_encode(const char *data, unsigned int data_size)
         unsigned char c = (unsigned char) data[i];
         buf2[0] = hex_chars[(c & 0xf0) >> 4];
         buf2[1] = hex_chars[c & 0x0f];
-        //ret.append(buf2);
+        
+    
+        char* name_with_extension;
+        name_with_extension = (char*)malloc(strlen(ret)+1+4); /* make space for the new string (should check the return value ...) */
+        strcpy(name_with_extension, ret); /* copy name into the new var */
+        strcat(name_with_extension, buf2); /* add the extension */
     }
     
     return ret;
 }
 
-static inline std::string hex_encode(const std::string &data)
-{
-    return hex_encode(data.c_str(), data.size());
-}
-
-static inline bool hex_digit_decode(char hexdigit, unsigned char &value)
+inline bool ncUtils::HexCharDecode( char hexdigit, unsigned char &value )
 {
     if(hexdigit >= '0' && hexdigit <= '9')
         value = hexdigit - '0';
@@ -50,7 +51,7 @@ static inline bool hex_digit_decode(char hexdigit, unsigned char &value)
         return false;
     return true;
 }
-*/
+
 
 
 /*
@@ -70,7 +71,7 @@ void model_convert( void )
     switch( atoi(_commandManager.Arguments(0) ) ) {
         case 1:
             _core.Print( LOG_INFO, "Processing \"%s.obj\" ...\n", _commandManager.Arguments(1) );
-            model_obj2sm( _commandManager.Arguments(1) );
+            
             break;
 
         default:
@@ -82,9 +83,9 @@ void model_convert( void )
 /*
     Wavefront .obj to sm
 */
-void model_obj2sm( const char *filename )
-{
- /*   int         vertex_num  = 0,
+typedef struct { int v[3], t[3], n[3]; } polygon_type;
+void ncUtils::OBJtoSM( const char *filename ) {
+   int         vertex_num  = 0,
     normal_num  = 0,
     polygon_num = 0,
     uv_num      = 0,
@@ -95,7 +96,7 @@ void model_obj2sm( const char *filename )
 
 
     // load the file
-    l_file = _filesystem.OpenRead( _stringhelper.STR("%s/%s/%s.obj", filesystem_path->string, MODEL_FOLDER, filename) );
+    l_file = _filesystem.OpenRead( _stringhelper.STR("%s/%s/%s.obj", Filesystem_Path.GetString(), MODEL_FOLDER, filename) );
 
     if( !l_file  ){
         _core.Print( LOG_ERROR, "Couldn't find \"%s.obj\"\n", filename );
@@ -118,11 +119,11 @@ void model_obj2sm( const char *filename )
 
         if ( !strcmp( l_header, "v" ) )
         {
-            fscanf( l_file, "%f %f %f", &vertex[vertex_num].GetX(), &vertex[vertex_num].GetY() ,&vertex[vertex_num].GetZ() );
+            fscanf( l_file, "%f %f %f", &vertex[vertex_num].x, &vertex[vertex_num].y,&vertex[vertex_num].z );
             vertex_num++;
         }
         else if ( !strcmp( l_header, "vn" ) ) {
-            fscanf( l_file, "%f %f %f", normal_coord[normal_num].GetX(), &normal_coord[normal_num].GetY(), &normal_coord[normal_num].GetZ() );
+           // fscanf( l_file, "%f %f %f", normal_coord[normal_num].x, &normal_coord[normal_num].y, &normal_coord[normal_num].z );
             normal_num++;
         }
         else if ( !strcmp( l_header, "vt" ) ) {
@@ -185,24 +186,24 @@ void model_obj2sm( const char *filename )
     	}
 	}
 
-    sm1header_t     *header;
-    sm1header_t     outheader;
+    ncSM1Header     *header;
+    ncSM1Header     outheader;
 
     FILE            *g_file;
     int             len;
     filechunk_t     *chunk1, *chunk2, *chunk3;
 
     header = &outheader;
-    memset( header, 0, sizeof(sm1header_t) );
+    memset( header, 0, sizeof(ncSM1Header) );
 
     header->id          = SM1HEADER;
     header->poly_num    = polygon_num;
 
     _stringhelper.SPrintf( header->material, strlen(mat_name) + 1, mat_name );
 
-    g_file  = _filesystem.OpenWrite( _stringhelper.STR("%s/%s.sm1", filesystem_path->string, filename) );
+    g_file  = _filesystem.OpenWrite( _stringhelper.STR("%s/%s.sm1", Filesystem_Path.GetString(), filename) );
 
-    _filesystem.Write(g_file, header, sizeof(sm1header_t));
+    _filesystem.Write(g_file, header, sizeof(ncSM1Header));
 
     len = (num_index+1) * sizeof(ncVec3);
 
@@ -236,7 +237,7 @@ void model_obj2sm( const char *filename )
 
     // write all changes
     fseek(g_file, 0, SEEK_SET);
-    _filesystem.Write( g_file, header, sizeof(sm1header_t) );
+    _filesystem.Write( g_file, header, sizeof(ncSM1Header) );
     fclose(g_file);
 
     // - -------------------------------------------------------------------
@@ -246,6 +247,6 @@ void model_obj2sm( const char *filename )
 	free(tmp_faces);    tmp_faces       = NULL;
     free(tmp_uv);       tmp_uv          = NULL;
 
-    _core.Print( LOG_DEVELOPER, "Model \"%s.obj\" successfully converted to *.sm format ( '%i' polygon faces )\n", filename, polygon_num );*/
+    _core.Print( LOG_DEVELOPER, "Model \"%s.obj\" successfully converted to *.sm format ( '%i' polygon faces )\n", filename, polygon_num );
 }
 

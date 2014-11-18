@@ -8,6 +8,7 @@
 
 #import <Foundation/Foundation.h>
 #import "MacUtils.h"
+#include "SystemShared.h"
 #import <Cocoa/Cocoa.h>
 
 @implementation ncMacUtils : NSObject
@@ -20,47 +21,46 @@ void SetCursorPos( int x, int y ) {
     point.x = x;
     point.y = y;
     
-    //CGWarpMouseCursorPosition( point );
+    CGWarpMouseCursorPosition( point );
 }
 
 /*
     Popup window.
 */
-void MassageBox( const char *msg ) {
+void MassageBox( const NString msg ) {
     NSString    *message;
     
     message = [NSString stringWithFormat:@"%s", msg];
     
     // Ignore this damned warning.
 
-    //NSAlert *alert = [[NSAlert alloc] init];
-    //[alert setMessageText:[NSString stringWithFormat:@"%@", message]];
-    //[alert setDelegate:self];
-    //[alert runModal];
+    NSAlert *alert = [[NSAlert alloc] init];
+    [alert setMessageText:[NSString stringWithFormat:@"%@", message]];
+    [alert runModal];
 }
 
 /*
     Since it won't work properly,
     we need to write custom path finder.
 */
-const char *GetBundlePath() {
-    const char        *fs_path;
+const NString GetBundlePath() {
+    const char  *fs_path;
     
-        NSString *bundlePath = [[NSBundle mainBundle] resourcePath];
-        NSString *secondParentPath = [[bundlePath stringByDeletingLastPathComponent] stringByDeletingLastPathComponent];
-        NSString *thirdParentPath = [[secondParentPath stringByDeletingLastPathComponent] stringByDeletingLastPathComponent];
+    NSString *bundlePath = [[NSBundle mainBundle] resourcePath];
+    NSString *secondParentPath = [[bundlePath stringByDeletingLastPathComponent] stringByDeletingLastPathComponent];
+    NSString *thirdParentPath = [[secondParentPath stringByDeletingLastPathComponent] stringByDeletingLastPathComponent];
 
-        fs_path = [thirdParentPath UTF8String];
+    fs_path = [thirdParentPath UTF8String];
     
-        return fs_path;
+    return fs_path;
 }
 
 /*
-    Current Mac version running.
+    Current Mac/iOS version running.
 */
-const char *GetSystemVersion() {
-        NSString *operatingSystemVersionString = [[NSProcessInfo processInfo] operatingSystemVersionString];
-        return [operatingSystemVersionString UTF8String];
+const NString GetSystemVersion() {
+        NSString *operatingSystemVersioNString  = [[NSProcessInfo processInfo] operatingSystemVersionString ];
+        return [operatingSystemVersioNString  UTF8String];
 }
 
 @end

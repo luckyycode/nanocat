@@ -12,31 +12,56 @@
 
 #include "Core.h"
 
+/*
+    Device types.
+*/
+enum ncDeviceType {
+    UNKNOWN = -1, // Unknown.
+    
+    OSX = 0, // Macintosh
+    
+    // iOS based devices.
+    IOS_iPad,
+    IOS_iPod,
+    IOS_iPhone,
+    
+    // Android.
+    ANDROID,
+    
+    // Windows based devices,
+    WINDOWS_DESKTOP,
+    WINDOWS_MOBILE
+};
+
 class ncSystem {
 public:
     void Initialize( void );
     void Frame( void );
-    void Quit( const char *rmsg );
+    void Quit( const NString rmsg );
     
-    const char *GetCurrentUsername( void );
+    const NString GetCurrentUsername( void );
     int Milliseconds( void );
     void ShowInfo( void );
     
+    void PrintSystemTime( void );
+
 private:
     int GetSysCTLValue( const char key[], void *dest );
+    int GetSysFreeMemory( void );
     
     int         mem_available;
     int         mem_totalphysical;
     int         mem_totalvirtual;
     int         mem_used;
     
+    ncDeviceType    m_CurrentDevice = UNKNOWN;
 };
 
-extern ncSystem _system;
+extern ncSystem *c_coreSystem;
 
 
 // SYSTEM
-extern ncConsoleVariable       system_gpu;                                // System GPU name.
+extern ncConsoleVariable       System_GPUname;                                // System GPU name.
 extern ncConsoleVariable       system_glversion;                          // OpenGL version.
 extern ncConsoleVariable       system_glslversion;                        // GLSL version.
 

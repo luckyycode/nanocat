@@ -16,15 +16,15 @@ class ncClientGame {
 public:
     void Initialize( void );
     void Error( void );
-    bool Loadmap( const char *map_name );
+    bool Loadmap( const NString map_name );
 };
 
-extern ncClientGame _clientgame;
+extern ncClientGame *cg_LocalGame;
 
 // CLIENT SETTINGS
 extern ncConsoleVariable       clientgame_mousesensivity;                 // Mouse sensitivity.
-extern ncConsoleVariable       clientgame_fov;                            // Field of view.
-extern ncConsoleVariable       cam_speed;                                 // Default movement speed.
+extern ncConsoleVariable       GameView_FieldOfView;                            // Field of view.
+extern ncConsoleVariable       GCamera_Speed;                                 // Default movement speed.
 
 // GAME SYSTEM
 extern ncConsoleVariable       log_verbose;                       // More detailed logging.

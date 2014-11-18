@@ -28,6 +28,9 @@
 // Maximum bind change tries.
 #define MAX_BIND_CHANGE                         16
 
+// In case if something fails.
+#define NETWORK_IGNORE_GETHOSTBYNAME
+
 // Last raw received message.
 extern byte network_message_buffer[MAX_UDP_PACKET];
 
@@ -82,11 +85,11 @@ public:
     void Shutdown( void );
     void Assign( ncNetdata *from, byte *buffer );
     void SendPacket( unsigned long len, const void *data, ncNetdata *from );
-    void PrintOutOfBand( ncNetdata *adr, const char *format, ... ) ;
+    void PrintOutOfBand( ncNetdata *adr, const NString format, ... ) ;
     void PrintOutOfBandData( ncNetdata *adr, Byte *format, int len );
     bool CompareAddress( ncNetdata *t1, ncNetdata *t2 );
     bool IsLanAddress( ncNetdata *adr );
-    bool Resolve( ncNetdata *address, const char *host );
+    bool Resolve( ncNetdata *address, const NString host );
     
     void CreateChannel( ncNetchannel *chan, ncNetdata *adr );
     void SendMessageChannel( ncNetchannel *chan, ncBitMessage *msg );
@@ -100,12 +103,12 @@ private:
     struct sockaddr_in  DataAddr, RecvAddr;
 };
 
-extern ncNetwork _netmanager;
+extern ncNetwork *g_networkManager;
 
 // NETWORK
-extern ncConsoleVariable       network_port;                          // Network port.
-extern ncConsoleVariable       network_ip;                            // Network ip address.
-extern ncConsoleVariable       network_active;                        // Turn on/off networking.
-extern ncConsoleVariable       network_localip;                       // Local Device IP Address.
-extern ncConsoleVariable        network_nonet;                        // Is internet connection available?
+extern ncConsoleVariable       Network_Port;                          // Network port.
+extern ncConsoleVariable       Network_IPAddress;                            // Network ip address.
+extern ncConsoleVariable       Network_Active;                        // Turn on/off networking.
+extern ncConsoleVariable       Network_LocalIPAddress;                       // Local Device IP Address.
+extern ncConsoleVariable        Network_NotAvailable;                        // Is internet connection available?
 #endif

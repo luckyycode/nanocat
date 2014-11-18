@@ -45,6 +45,16 @@ public:
         x = x1;
         y = y1;
     }
+    
+    ncVec2 operator-(const ncVec2& v) const;
+    ncVec2 operator+(const ncVec2& v) const;
+    ncVec2 operator/(const ncVec2& v) const;
+    ncVec2 operator*(const ncVec2& v) const;
+    
+    ncVec2 operator-(const float& v) const;
+    ncVec2 operator+(const float& v) const;
+    ncVec2 operator/(const float& v) const;
+    ncVec2 operator*(const float& v) const;
 };
 
 class ncVec4 {

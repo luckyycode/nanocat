@@ -16,14 +16,14 @@
 #define false   FALSE
 #define true    TRUE
 
-// For MEMORYSTATUS(EX)
+// For MEMORYSTATUS.
 #define _WIN32_WINNT 0x0500
 
 #include <ws2tcpip.h>
 #include <winsock.h>
+#include <winsock2.h>
 #include <fcntl.h>
 #include <sys/fcntl.h>
-#include <winsock2.h>
 
 #include <windows.h>
 #include <malloc.h>
@@ -47,8 +47,7 @@
 #pragma comment( lib, "glew32.lib" )
 #pragma comment( lib, "glew32s.lib" )
 
-// GLU doesn't support new versions
-// of OpenGL.
+// No GLU on newer OpenGL versions.
 #define GLEW_NO_GLU
 
 #endif

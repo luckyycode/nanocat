@@ -1,16 +1,19 @@
-dependencies: /Users/nekocode/Desktop/nanocat/test/MacOpenGL.mm \
-  /Users/nekocode/Desktop/nanocat/test/MacUtils.h \
-  /Users/nekocode/Desktop/nanocat/test/MacOpenGL.h \
-  /Users/nekocode/Desktop/nanocat/test/Core.h \
-  /Users/nekocode/Desktop/nanocat/test/ConsoleVariable.h \
-  /Users/nekocode/Desktop/nanocat/test/Console.h \
-  /Users/nekocode/Desktop/nanocat/test/SystemShared.h \
-  /Users/nekocode/Desktop/nanocat/test/SharedMac.h \
-  /Users/nekocode/Desktop/nanocat/test/Input.h \
-  /Users/nekocode/Desktop/nanocat/test/Renderer.h \
-  /Users/nekocode/Desktop/nanocat/test/ShaderLoader.h \
-  /Users/nekocode/Desktop/nanocat/test/OpenGL.h \
-  /Users/nekocode/Desktop/nanocat/test/MultiplayerServer.h \
-  /Users/nekocode/Desktop/nanocat/test/Network.h \
-  /Users/nekocode/Desktop/nanocat/test/ncBitMessage.h \
-  /Users/nekocode/Desktop/nanocat/test/GameMath.h
+dependencies: \
+  /Users/nekocode/Documents/App\ resourses/nanocat/test/MacOpenGL.mm \
+  /Users/nekocode/Documents/App\ resourses/nanocat/test/MacUtils.h \
+  /Users/nekocode/Documents/App\ resourses/nanocat/test/MacOpenGL.h \
+  /Users/nekocode/Documents/App\ resourses/nanocat/test/Core.h \
+  /Users/nekocode/Documents/App\ resourses/nanocat/test/ConsoleVariable.h \
+  /Users/nekocode/Documents/App\ resourses/nanocat/test/NCString.h \
+  /Users/nekocode/Documents/App\ resourses/nanocat/test/SystemShared.h \
+  /Users/nekocode/Documents/App\ resourses/nanocat/test/SharedApple.h \
+  /Users/nekocode/Documents/App\ resourses/nanocat/test/Console.h \
+  /Users/nekocode/Documents/App\ resourses/nanocat/test/Input.h \
+  /Users/nekocode/Documents/App\ resourses/nanocat/test/Renderer.h \
+  /Users/nekocode/Documents/App\ resourses/nanocat/test/ShaderLoader.h \
+  /Users/nekocode/Documents/App\ resourses/nanocat/test/GameMath.h \
+  /Users/nekocode/Documents/App\ resourses/nanocat/test/VBOOpenGL.h \
+  /Users/nekocode/Documents/App\ resourses/nanocat/test/OpenGL.h \
+  /Users/nekocode/Documents/App\ resourses/nanocat/test/MultiplayerServer.h \
+  /Users/nekocode/Documents/App\ resourses/nanocat/test/Network.h \
+  /Users/nekocode/Documents/App\ resourses/nanocat/test/ncBitMessage.h

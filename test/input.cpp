@@ -14,25 +14,65 @@
 #include "Camera.h"
 #include "SystemShared.h"
 
+// Temp.
+#include "ncBSP.h"
+
 ncConsoleVariable  clientgame_mousesensivity("input", "mousesens", "Mouse sensivity", "0.001", CVFLAG_NONE);
 ncConsoleVariable  clientgame_invertmouse("input", "invertmouse", "Mouse invertion", "0", CVFLAG_NONE);
 
 ncConsoleVariable  dev_showcursorpos("dev", "showcursorpos", "Show cursor position?", "0", CVFLAG_NONE);
 
-ncMouse _imouse;
-ncInput _input;
+ncMouse local_iMouse;
+ncMouse *c_Mouse = &local_iMouse;
+
+ncInput local_coreInput;
+ncInput *g_Input = &local_coreInput;
 
 /*
     Initialize user input stuff.
 */
 void ncInput::Initialize( void ) {
-    _core.Print( LOG_INFO, "Initializing input..\n" );
+    
+    g_Core->LoadState = NCCLOAD_INPUT;
+    g_Core->Print( LOG_INFO, "Initializing input..\n" );
 
-    _imouse.x = 0.0f;
-    _imouse.y = 0.0f;
-    _imouse.Holding = false;
+    c_Mouse->x = 0.0f;
+    c_Mouse->y = 0.0f;
+    c_Mouse->Holding = false;
 
-    _camera.Initialize();
+    g_playerCamera->Initialize();
+}
+
+void ncInput::MakeKeyEvent( char key ) {
+    OnKeyPress( key );
+}
+
+void ncInput::MakeKeyEvent( ncInputKeyType type ) {
+    switch ( type ) {
+        case NCKEY_FORWARD:
+            OnKeyPress( 'w' );
+            break;
+            
+        case NCKEY_BACKWARD:
+            OnKeyPress( 's' );
+            break;
+            
+        case NCKEY_ESCAPE:
+            OnKeyPress( '3' );
+            break;
+            
+        case NCKEY_STRAFELEFT:
+            OnKeyPress( 'a' );
+            break;
+            
+        case NCKEY_STRAFERIGHT:
+            OnKeyPress( 'd' );
+            break;
+            
+        default:
+            g_Core->Print( LOG_WARN, "ncInput::MakeKeyEvent - wrong key event given.\n" );
+            break;
+    }
 }
 
 /*
@@ -42,19 +82,23 @@ void ncInput::Initialize( void ) {
 void ncInput::OnKeyPress( char key )
 {
     // Game console.
-    _gconsole.KeyInput( key );
+    g_Console->KeyInput( key );
    
     // Camera movement.
-    _camera.Movement( key );
+    g_playerCamera->Movement( key );
 
     switch( key ) {
             
         case 'r':
-            _gconsole.Execute( "glrefresh" );
+            g_Console->Execute( "glrefresh" );
             break;
             
         case '3':
-            _system.Quit("User quit.");
+            c_coreSystem->Quit("User quit.");
+        break;
+            
+        case 'f':
+            g_staticWorld->InUse = true;
         break;
 
 	}
@@ -64,15 +108,15 @@ void ncInput::OnKeyPress( char key )
     Handles key release.
 */
 void ncInput::OnKeyUp( char key ) {
-    _camera.deltaMove = 0;
+    g_playerCamera->deltaMove = 0;
 }
 
 /*
     Mouse move.
 */
 void ncInput::OnMouseMove( int x, int y ) {
-    _imouse.x = x;
-    _imouse.y = y;
+    c_Mouse->x = x;
+    c_Mouse->y = y;
 }
 
 

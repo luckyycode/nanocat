@@ -1,3 +1,4 @@
+
 //
 //  Nanocat engine.
 //
@@ -6,6 +7,12 @@
 //  Created by Neko Code on 6/15/14.
 //  Copyright (c) 2014 Neko Vision. All rights reserved.
 //
+
+/*
+ 
+    Static world manager..
+
+*/
 
 #include "ncBSP.h"
 #include "Core.h"
@@ -17,807 +24,829 @@
 #include "System.h"
 #include "LevelEnvironment.h"
 
-/*
- * We use binary space partition level type to make
- * static world. Also I am lazy to write custom map editor...
-*/
-
-const ncVec3 bsp_position = ncVec3( 0.0, -10.0, 0.0 );
-
-ncBSP _bspmngr;
+ncBSP local_bspMap;
+ncBSP *g_staticWorld = &local_bspMap;
 
 /*
     Initialize.
 */
 void ncBSP::Initialize( void ) {
     if( Initialized ) {
-        _core.Print( LOG_WARN, "Called ncBSP::Initialize, but it was already initialized.\n" );
+        g_Core->Print( LOG_WARN, "Called ncBSP::Initialize, but it was already initialized.\n" );
         return;
     }
-
+    
     // Set shader values.
-    _assetmanager.FindShader( "level", &bspShader );
-
-    glUseProgram( bspShader.shader_id );
-
-    glUniform1i( glGetUniformLocation(bspShader.shader_id, "decalMap" ), 0 );        // Level decal textures.
-    glUniform1i( glGetUniformLocation(bspShader.shader_id, "lightMap" ), 1 );        // Level light map.
-
-    glUseProgram( 0 );
+    bspShader = f_AssetManager->FindShaderByName( "level" );
+    
+    // Setup shader values.
+    bspShader->Use();
+    
+    g_bspUniforms[SHMVP_UNIFORM] = bspShader->UniformLocation( "MVP" );
+    g_bspUniforms[SHMV_UNIFORM] = bspShader->UniformLocation( "ModelMatrix" );
+    g_bspUniforms[SHCAMPOS_UNIFORM] = bspShader->UniformLocation( "cameraPos" );
+    g_bspUniforms[SHDECALMAP_UNIFORM] = bspShader->UniformLocation( "decalMap" );
+    g_bspUniforms[SHLIGHTMAP_UNIFORM] = bspShader->UniformLocation( "lightMap" );
+    g_bspUniforms[SHDEPTHMAP_UNIFORM] = bspShader->UniformLocation( "depthMap");
+    g_bspUniforms[SHNORMALMAP_UNIFORM] = bspShader->UniformLocation( "normalMap");
+    
+    // Level decal textures.
+    bspShader->SetUniform( g_bspUniforms[SHDECALMAP_UNIFORM], 0 );
+    // Level light map texture.
+    bspShader->SetUniform( g_bspUniforms[SHLIGHTMAP_UNIFORM], 1 );
+    // Depth screen texture.
+    bspShader->SetUniform( g_bspUniforms[SHDEPTHMAP_UNIFORM], 2 );
+    // Normal decal map texture.
+    bspShader->SetUniform( g_bspUniforms[SHNORMALMAP_UNIFORM], 3 );
+    
+    bspShader->Next();
     
     Initialized = true;
 }
 
 /*
-    Just remove the allocated stuff.
-    TODO: Improve me.
+    Clean up.
 */
 void ncBSP::Unload( void ) {
-    _core.Print( LOG_DEVELOPER, "Unloading static world...\n" );
+
+    if( meshIndices )
+        delete [] meshIndices;
+    if( leafFaces )
+        delete [] leafFaces;
+    if( f_bspType )
+        delete[] f_bspType;
+    if( m_patches )
+        delete [] m_patches;
+    if( m_leaves )
+        delete [] m_leaves;
+    if( m_planes )
+        delete [] m_planes;
+    
+    if( m_EntityData )
+        delete [] m_EntityData;
+    
+    if( m_vertices )
+        delete [] m_vertices;
+    if( m_polygonFaces )
+        delete [] m_polygonFaces;
+    if( m_meshFaces )
+        delete [] m_meshFaces;
+    if( m_nodes )
+        delete [] m_nodes;
+    if( m_pFaces )
+        delete [] m_pFaces;
+    
+    // Remove textures.
+    if( m_decalTextures )
+        delete [] m_decalTextures;
+    if( m_lightmapTextures )
+        delete [] m_lightmapTextures;
+    if( m_normalTextures )
+        delete [] m_normalTextures;
+
+    zeromem( &m_visibilityData, sizeof(m_visibilityData) );
+    visibleFaces.Delete();
     
     InUse = false;
-
-    leafCount       = 0;
-    lightmapCount   = 0;
-    meshCount       = 0;
-    nodeCount       = 0;
-    patchCount      = 0;
-    planeCount      = 0;
-    polygonCount    = 0;
-    decalTextureCount = 0;
-    facesCount      = 0;
-    vertexCount     = 0;
-
-    if( vertices )          free( vertices );
-    if( patches )           free( patches );
-    if( meshFaces )         free( meshFaces );
-    if( polygonFaces )      free( polygonFaces );
-    if( decalTextures )     free( decalTextures );
-    if( lightmapTextures )  free( lightmapTextures );
-    if( leaves )            free( leaves );
-    if( leafFaces )         free( leafFaces );
-    if( planes )            free( planes );
-    if( nodes )             free( nodes );
 }
+
+/*
+    Check file header and version.
+*/
+bool ncBSP::IsValid( ncBSPHeader *header ) {
+    NC_ASSERTWARN( header );
+    
+    if( header->string[0] != 'I' && header->string[1] != 'B' && header->string[2] != 'S' && header->string[3] != 'P' ) {
+        return false;
+    }
+    
+    if( header->version != 0x2e ) {
+        return false;
+    }
+    
+    return true;
+}
+
 
 /*
     Load binary spaced file.
 */
-bool ncBSP::Load( const char *filename ) {
-
+bool ncBSP::Load( const NString filename ) {
+    
     if( !Initialized ) {
-        _core.Print( LOG_WARN, "ncBSP::Load - Loading map while static world is not initialized yet.\n" );
+        g_Core->Print( LOG_WARN, "ncBSP::Load - Loading map while static world is not initialized yet.\n" );
         return false;
     }
-
+    
     InUse = false;
-
-	FILE    *g_file;
     
-	float   t1, t2;
-    bool    error = false;
-
-    t1 = _system.Milliseconds();
-
-	g_file = fopen( _stringhelper.STR("%s/%s", Filesystem_Path.GetString(), filename ), "rb" );
-
-	if( !g_file ) {
-        _core.Print( LOG_INFO, "Could not find %s/%s map file.\n", Filesystem_Path.GetString(), filename );
-		return false;
-	}
-
+    FILE *g_mapFile;
+    float t1, t2;
+    
+    t1 = c_coreSystem->Milliseconds();
+    
+    g_mapFile = fopen( _stringhelper.STR("%s/%s", Filesystem_Path.GetString(), filename ), "rb" );
+    
+    if( !g_mapFile ) {
+        g_Core->Print( LOG_ERROR, "Couldn't load %s map file.\n", filename );
+        return false;
+    }
+    
+    // Read and check its header!
     zeromem( &header, sizeof( header ) );
-	fread( &header, sizeof( bspheader_t ), 1, g_file );
-
-    // iBSP
-	if(	header.string[0] != 'I' && header.string[1] != 'B' && header.string[2] != 'S' && header.string[3] != 'P' ) {
-        _core.Print( LOG_ERROR, "%s is corrupted.\n", filename );
+    
+    // Clear memory, don't make it static.
+    fread( &header, sizeof( ncBSPHeader ), 1, g_mapFile );
+    
+    // Check header and version.
+    if(	!IsValid( &header ) ) {
+        g_Core->Print( LOG_ERROR, "%s is corrupted or has wrong version.\n", filename );
         
-        fclose( g_file );
-		return false;
-	}
-
-    // 38
-	if( header.version != 0x2e ) {
-	    _core.Print( LOG_ERROR, "%s has wrong version.\n", filename );
-        
-        fclose( g_file );
-        return false;
-    }
-
-    /*
-        Load specific bsp data now.
-    */
-
-    // Load vertices.
-    if( !LoadVertices(g_file) )
-        error = true;
-    
-    // Load mesh data.
-    if( !LoadMeshes(g_file) )
-        error = true;
-
-	// Load faces.
-	if( !LoadFaces(g_file) )
-		error = true;
-
-	// Load textures.
-	if( !LoadTextures(g_file) )
-		error = true;
-
-	// Load light maps.
-	if( !LoadLightmaps(g_file) )
-		error = true;
-
-    // Load bsp data.
-	if( !LoadData(g_file) )
-		error = true;
-
-    // * something failed *
-    if( error ) {
-        fclose( g_file );
+        fclose( g_mapFile );
         return false;
     }
     
-	fclose(g_file);
+    mainFile = g_mapFile;
 
-    if( !SetupObjects() ) {
-        return false;
-    }
+    SetupObjects();
     
-	t2 = _system.Milliseconds();
-
-	_core.Print( LOG_DEVELOPER, "%s loaded. ( %4.2f msec )\n", filename, t2 - t1 );
+    LoadEntityString();
+    LoadBrushes();
+    LoadVertices();
+    LoadMeshes();
+    LoadFaces();
+    LoadTextures();
+    LoadLightmaps();
+    LoadLightVols();
+    LoadData();
     
-    InUse = true;
-
-	return true;
+    fclose( mainFile );
+    
+    t2 = c_coreSystem->Milliseconds();
+    
+    g_Core->Print( LOG_DEVELOPER, "%s loaded. ( %4.2f msec )\n", filename, t2 - t1 );
+    
+    return true;
 }
-
 
 /*
     Vertex buffer and array data.
 */
 bool ncBSP::SetupObjects( void ) {
-    // Setup rendering data now.
-    glGenVertexArrays(1, &vaoID[0]);
-    glBindVertexArray(vaoID[0]);
     
-    /* Vertex. */
-    glGenBuffers(1, &verticeVBO);
-    glBindBuffer(GL_ARRAY_BUFFER, verticeVBO);
-    glEnableVertexAttribArray(0);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(ncBSPVertex) * vertexCount, &vertices[0].position, GL_STATIC_DRAW);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(ncBSPVertex), 0);
+    // Setup objects.
+    glGenVertexArrays( BSP_VERTEXARRAY_COUNT, m_bspVertexArray );
     
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glGenBuffers( BSP_FACEVBO_COUNT, m_bspFaceVBOs );
+    glGenBuffers( BSP_MESHVBO_COUNT, m_bspMeshVBOs );
+    glGenBuffers( BSP_INDEXELEMENTS_COUNT, m_bspIndexElementsData );
     
-    /* Lightmap textures. */
-    glGenBuffers(1, &lightVBO);
-    glBindBuffer(GL_ARRAY_BUFFER, lightVBO);
-    glEnableVertexAttribArray(1);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(ncBSPVertex) * vertexCount, &vertices[0].light.x, GL_STATIC_DRAW);
-    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(ncBSPVertex), 0);//&vertices[0].lightmapS);
+    return true;
+}
+
+bool ncBSP::CleanupGraphics( void ) {
+    glDeleteVertexArrays( BSP_VERTEXARRAY_COUNT, m_bspVertexArray );
     
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
-    
-    /* Decal textures. */
-    glGenBuffers(1, &decalVBO);
-    glBindBuffer(GL_ARRAY_BUFFER, decalVBO);
-    glEnableVertexAttribArray(2);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(ncBSPVertex) * vertexCount, &vertices[0].decal.x, GL_STATIC_DRAW);
-    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(ncBSPVertex), 0);//&vertices[0].decalS);
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
-    
-    /* Normals. */
-    glGenBuffers(1, &normalVBO);
-    glBindBuffer(GL_ARRAY_BUFFER, normalVBO);
-    glEnableVertexAttribArray(3);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(ncBSPVertex) * vertexCount, &vertices[0].normal, GL_STATIC_DRAW);
-    glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, sizeof(ncBSPVertex), 0);//&vertices[0].decalS);
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
-    
-    glBindVertexArray(0);
-    
-    glGenVertexArrays(1, &vaoID[1]);
-    glBindVertexArray(vaoID[1]);
-    
-    glDeleteBuffers( 1, &verticeVBO );
-    glDeleteBuffers( 1, &lightVBO );
-    glDeleteBuffers( 1, &decalVBO );
-    
-    /* Vertex. */
-    glGenBuffers(1, &verticeVBO);
-    glBindBuffer(GL_ARRAY_BUFFER, verticeVBO);
-    glEnableVertexAttribArray(0);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(ncBSPVertex) * vertexCount, &vertices[meshFaces[0].firstVertexIndex].position, GL_STATIC_DRAW);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(ncBSPVertex), 0);
-    
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
-    
-    /* Lightmap textures. */
-    glGenBuffers(1, &lightVBO);
-    glBindBuffer(GL_ARRAY_BUFFER, lightVBO);
-    glEnableVertexAttribArray(1);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(ncBSPVertex) * vertexCount, &vertices[meshFaces[0].firstVertexIndex].light.x, GL_STATIC_DRAW);
-    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(ncBSPVertex), 0);//&vertices[0].lightmapS);
-    
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
-    
-    /* Decal textures. */
-    glGenBuffers(1, &decalVBO);
-    glBindBuffer(GL_ARRAY_BUFFER, decalVBO);
-    glEnableVertexAttribArray(2);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(ncBSPVertex) * vertexCount, &vertices[meshFaces[0].firstVertexIndex].decal.x, GL_STATIC_DRAW);
-    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(ncBSPVertex), 0);//&vertices[0].decalS);
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
-    
-    glBindVertexArray(0);
+    glDeleteBuffers( BSP_FACEVBO_COUNT, m_bspFaceVBOs );
+    glDeleteBuffers( BSP_MESHVBO_COUNT, m_bspMeshVBOs );
+    glDeleteBuffers( BSP_INDEXELEMENTS_COUNT, m_bspIndexElementsData );
     
     return true;
 }
 
 /*
-    Load map data now.
+    Load entity data now.
 */
+void ncBSP::LoadEntityString( void ) {
+    int size = header.dirEntry[SW_ENTITIES].length / sizeof(char);
+    m_EntityData = new char[size];
+    
+    fseek( mainFile, header.dirEntry[SW_ENTITIES].offset, SEEK_SET );
+    fread( m_EntityData, header.dirEntry[SW_ENTITIES].length, 1, mainFile );
+    
+    // TODO: Make a parser.
+}
 
-bool ncBSP::LoadMeshes( FILE *file ) {
+/*
+    Load brush data.
+*/
+void ncBSP::LoadBrushes( void ) {
+    // Read brushes.
+    int m_iNumBrushes = header.dirEntry[SW_BRUSHES].length / sizeof(ncBSPBrush);
+    m_pBrushes = new ncBSPBrush[m_iNumBrushes];
+    
+    fseek( mainFile, header.dirEntry[SW_BRUSHES].offset, SEEK_SET );
+    fread( m_pBrushes, header.dirEntry[SW_BRUSHES].length, 1, mainFile );
+    
+    // Read brush sides.
+    int m_iNumBrushSides =  header.dirEntry[SW_BRUSHSIDES].length / sizeof(ncBSPBrushSide);
+    m_pBrushSides = new ncBSPBrushSide[m_iNumBrushSides];
+    
+    fseek( mainFile, header.dirEntry[SW_BRUSHSIDES].offset, SEEK_SET );
+    fread( m_pBrushSides, header.dirEntry[SW_BRUSHSIDES].length, 1, mainFile );
+    
+    // Read leaf brushes.
+    int m_iNumLeafBrushes = header.dirEntry[SW_LEAFBRUSHES].length / sizeof(int);
+    m_pLeafBrushes = new int[m_iNumLeafBrushes];
+    
+    fseek( mainFile, header.dirEntry[SW_LEAFBRUSHES].offset, SEEK_SET );
+    fread( m_pLeafBrushes, header.dirEntry[SW_LEAFBRUSHES].length, 1, mainFile );
+}
+
+/*
+    Load mesh indices.
+*/
+void ncBSP::LoadMeshes( void ) {
     // Meshes.
     int numMeshIndices = header.dirEntry[SW_MESHINDICES].length / sizeof(int);
-
-    meshIndices = (int*)malloc( sizeof(int) * numMeshIndices );
+    
+    meshIndices = new int[numMeshIndices];
     
     if( !meshIndices ) {
-        _core.Print( LOG_ERROR, ".. failed to allocated memory for %i mesh indices.\n", numMeshIndices );
-        return false;
+        g_Core->Error( ERR_FATAL, "Failed to allocated memory for %i mesh indices.\n", numMeshIndices );
+        return;
     }
     
-    fseek( file, header.dirEntry[SW_MESHINDICES].offset, SEEK_SET );
-    fread( meshIndices, header.dirEntry[SW_MESHINDICES].length, 1, file );
-    
-    return true;
+    fseek( mainFile, header.dirEntry[SW_MESHINDICES].offset, SEEK_SET );
+    fread( meshIndices, header.dirEntry[SW_MESHINDICES].length, 1, mainFile );
 }
 
-bool ncBSP::LoadVertices( FILE *file ) {
+/*
+    Load vertices.
+*/
+void ncBSP::LoadVertices( void ) {
     
-    ncBSPLoadVertex *vertexData;
+    vertexCount = header.dirEntry[SW_VERTICES].length / sizeof(ncBSPLoadVertex);
     
-	vertexCount = header.dirEntry[SW_VERTICES].length / sizeof(ncBSPLoadVertex);
-    
-    _core.Print( LOG_DEVELOPER, "Loading vertex data.. ( %i vertices )\n", vertexCount );
-    
-    vertexData = (ncBSPLoadVertex*)malloc( sizeof(ncBSPLoadVertex) * vertexCount );
-	if( !vertexData ) {
-        _core.Print( LOG_DEVELOPER, ".. Failed to allocate memory for %i load vertices.\n", vertexCount );
-        _bspmngr.Unload();
-        
-		return false;
-	}
+    g_Core->Print( LOG_DEVELOPER, "Loading vertice data.. ( %i vertices )\n", vertexCount );
 
+    fseek( mainFile, header.dirEntry[SW_VERTICES].offset, SEEK_SET );
+   
+    m_vertices = new ncBSPVertex[vertexCount];
     
-	fseek( file, header.dirEntry[SW_VERTICES].offset, SEEK_SET );
-	fread( vertexData, header.dirEntry[SW_VERTICES].length, 1, file );
-
-	vertices = (ncBSPVertex*)malloc( sizeof(ncBSPVertex) * vertexCount );
-
-	if( !vertices ) {
-        _core.Print( LOG_ERROR, ".. Failed to allocate memory for %i vertices.\n", vertexCount );
-        _bspmngr.Unload();
-		return false;
-	}
-
+    if( !m_vertices ) {
+        g_Core->Error( ERR_FATAL, "Failed to allocate memory for %i m_vertices.\n", vertexCount );
+        Unload();
+        return;
+    }
+    
     int i;
-
-	for( i = 0 ; i < vertexCount; i++ ) {
+    
+    for( i = 0 ; i < vertexCount; i++ ) {
         
-		// Invert Z.
-        vertices[i].position.x = vertexData[i].position.x;
-        vertices[i].position.y = vertexData[i].position.z;
-        vertices[i].position.z = -vertexData[i].position.y;
-
-		// Scale.
-        vertices[i].position.x /= MAX_BSP_SCALE;
-        vertices[i].position.y /= MAX_BSP_SCALE;
-        vertices[i].position.z /= MAX_BSP_SCALE;
+        fread( &m_vertices[i], 1, sizeof(ncBSPVertex), mainFile );
         
-		// Texture coordinates.
-		vertices[i].decal.x = vertexData[i].decal.x;
-		vertices[i].decal.y = -vertexData[i].decal.y;
-
-		// Light map texture coordinates.
-		vertices[i].light.x = vertexData[i].light.x;
-		vertices[i].light.y = vertexData[i].light.y;
+        // Invert Z.
+        float tempY = m_vertices[i].position.y;
+        m_vertices[i].position.y = m_vertices[i].position.z;
+        m_vertices[i].position.z = -tempY;
+        
+        // Scale.
+        m_vertices[i].position.x /= MAX_BSP_SCALE;
+        m_vertices[i].position.y /= MAX_BSP_SCALE;
+        m_vertices[i].position.z /= MAX_BSP_SCALE;
+        
+        // Texture coordinates.
+        m_vertices[i].decal.y = -m_vertices[i].decal.y;
         
         // Normals.
-        vertices[i].normal.x = vertexData[i].normal.x;
-        vertices[i].normal.y = vertexData[i].normal.y;
-        vertices[i].normal.z = vertexData[i].normal.z;
-	}
-
-    if( vertexData )
-		free( vertexData );
-    else
-        _core.Error( ERC_FATAL, "ncBSP::LoadVertices: Unexpected error." );
-    
-	vertexData = NULL;
-
-	return true;
+        float tempNormalY = m_vertices[i].normal.y;
+        m_vertices[i].normal.y = m_vertices[i].normal.z;
+        m_vertices[i].normal.z = -tempNormalY;
+    }
 }
 
-bool ncBSP::LoadFaces( FILE *file ) {
+/*
+    Load faces.
+*/
+void ncBSP::LoadFaces( void ) {
     
     ncBSPLoadFace *faceData;
     
-	facesCount = header.dirEntry[SW_FACES].length / sizeof(ncBSPLoadFace);
+    facesCount = header.dirEntry[SW_FACES].length / sizeof(ncBSPLoadFace);
     
-    _core.Print( LOG_DEVELOPER, "Loading mesh faces.. ( %i faces )\n", facesCount );
-
-	faceData = (ncBSPLoadFace*)malloc( sizeof(ncBSPLoadFace) * facesCount );
-	if( !faceData ) {
-        _core.Print( LOG_DEVELOPER, ".. Failed to allocate memory for %i load faces. \n", facesCount );
-        _bspmngr.Unload();
-		return false;
-	}
-
-	fseek( file, header.dirEntry[SW_FACES].offset, SEEK_SET );
-	fread( faceData, header.dirEntry[SW_FACES].length, 1, file );
-
-	bspDirectory = (ncBSPDirectoryEntry*)malloc( sizeof(ncBSPDirectoryEntry) * facesCount );
+    g_Core->Print( LOG_DEVELOPER, "Loading mesh faces.. ( %i faces )\n", facesCount );
     
-	if( !bspDirectory ) {
-        _core.Print( LOG_DEVELOPER, ".. Failed to allocate memory for %i face entries!\n", facesCount );
-        _bspmngr.Unload();
-        
-		return false;
-	}
-
-    // Visibility faces data.
-	visibleFaces.Initialize( facesCount );
-
-    int i;
-	for( i = 0; i < facesCount; i++ ) {
-		if( faceData[i].type == SW_POLYGON )
-			polygonCount++;
-
-		if( faceData[i].type == SW_PATCH )
-			patchCount++;
-
-		if( faceData[i].type == SW_MESH )
-			meshCount++;
-	}
-
-    _core.Print( LOG_DEVELOPER, "We got %i polygons, %i patches, %i meshes\n", polygonCount, patchCount, meshCount );
-
-	polygonFaces = (ncBSPPolygonFace*)malloc( sizeof(ncBSPPolygonFace) * polygonCount );
+    faceData = new ncBSPLoadFace[facesCount];
     
-	if( !polygonFaces ) {
-        _core.Print( LOG_ERROR, ".. failed to allocate memory for %i polygon faces.\n", polygonCount );
-        _bspmngr.Unload();
-		return false;
-	}
-
-	int currentFace = 0;
-	for( i = 0; i < facesCount; i++ ) {
-		if( faceData[i].type != SW_POLYGON )
-			continue;
-
-		polygonFaces[currentFace].firstVertexIndex = faceData[i].firstVertexIndex;
-		polygonFaces[currentFace].vertexCount = faceData[i].vertexCount;
-		polygonFaces[currentFace].textureIndex = faceData[i].texture;
-		polygonFaces[currentFace].lightmapIndex = faceData[i].lightmapIndex;
-
-		bspDirectory[i].faceType = SW_POLYGON;
-		bspDirectory[i].typeFaceNumber = currentFace;
-
-		currentFace++;
-	}
-
-	meshFaces = (ncBSPMeshFace*)malloc( sizeof(ncBSPMeshFace) * meshCount );
-	if( !meshFaces ) {
-        _core.Print( LOG_ERROR, ".. Failed to allocate memory for %i mesh faces.\n", meshCount );
-        _bspmngr.Unload();
-		return false;
-	}
-
-	int currentMeshFace = 0;
-
-	for( i = 0; i < facesCount; ++i ) {
-		if( faceData[i].type != SW_MESH )
-			continue;
-
-		meshFaces[currentMeshFace].firstVertexIndex = faceData[i].firstVertexIndex;
-		meshFaces[currentMeshFace].vertexCount = faceData[i].vertexCount;
-		meshFaces[currentMeshFace].textureIndex = faceData[i].texture;
-		meshFaces[currentMeshFace].lightmapIndex = faceData[i].lightmapIndex;
-		meshFaces[currentMeshFace].firstMeshIndex = faceData[i].firstMeshIndex;
-		meshFaces[currentMeshFace].numMeshIndices = faceData[i].numMeshIndices;
-
-		bspDirectory[i].faceType = SW_MESH;
-		bspDirectory[i].typeFaceNumber = currentMeshFace;
-
-		++currentMeshFace;
-	}
-
-	patches = (ncBSPPatch*)malloc( sizeof(ncBSPPatch) * patchCount );
+    if( !faceData ) {
+        g_Core->Error( ERR_FATAL, "Failed to allocate memory for %i load faces. \n", facesCount );
+        Unload();
+        return;
+    }
     
-	if( !patches ) {
-        _core.Print( LOG_ERROR, "..Failed to allocate memory for %i patch faces.\n", patchCount );
+    fseek( mainFile, header.dirEntry[SW_FACES].offset, SEEK_SET );
+    fread( faceData, header.dirEntry[SW_FACES].length, 1, mainFile );
+    
+    f_bspType = new ncBSPDirectoryEntry[facesCount];
+    
+    if( !f_bspType ) {
+        g_Core->Error( ERR_FATAL, "Failed to allocate memory for %i face entries!\n", facesCount );
         Unload();
         
-		return false;
-	}
-
+        return;
+    }
     
-// Oh goosh this is bad.
-#ifdef USE_TESSELATION
-	int currentPatch = 0;
+    // Visibility faces data.
+    visibleFaces.Initialize( facesCount );
     
-	for( i = 0; i < facesCount; ++i ) {
-		if(faceData[i].type != SW_PATCH)
-			continue;
-
-		patches[currentPatch].textureIndex = faceData[i].texture;
-		patches[currentPatch].lightmapIndex = faceData[i].lightmapIndex;
-		patches[currentPatch].width = faceData[i].patchSize[0];
-		patches[currentPatch].height = faceData[i].patchSize[1];
+    int i;
+    for( i = 0; i < facesCount; i++ ) {
+        if( faceData[i].type == SW_POLYGON )
+            polygonCount++;
         
-        _core.Print( LOG_NONE, "w: %i h: %i\n", (faceData[i].patchSize[0]-1)/2, (faceData[i].patchSize[1]-1)/2 );
-
-		bspDirectory[i].faceType = SW_PATCH;
-		bspDirectory[i].typeFaceNumber = currentPatch;
+        if( faceData[i].type == SW_PATCH )
+            patchCount++;
         
-		int patchCountWide = (patches[currentPatch].width-1) / 2;
-		int patchCountHigh = (patches[currentPatch].height-1) / 2;
-
-        _core.Print( LOG_NONE, "%i MB", (patchCountWide*patchCountHigh) / MEGABYTE );
+        if( faceData[i].type == SW_MESH )
+            meshCount++;
+    }
+    
+    // All face data.
+    m_pFaces = new ncBSPLoadFace[facesCount];
+    if( !m_pFaces ) {
+        g_Core->Error( ERR_FATAL, "Couldn't allocate %i world faces.\n", facesCount );
+    }
+    
+    int currentFace = 0;
+    
+    for( int i = 0; i < facesCount; i++ ) {
+        if( faceData[i].type != SW_POLYGON )
+            continue;
         
-        patches[currentPatch].numQuadraticPatches = 102;
-		patches[currentPatch].quadraticPatches = new ncBSPBiquadricPatch[ patches[currentPatch].numQuadraticPatches ];
-
-		if( !patches[currentPatch].quadraticPatches ) {
-            _core.Error( ERC_FATAL, "Could not allocate %i kbytes for quadratic patches.", patches[currentPatch].numQuadraticPatches / 1024 );
-            //level_unload();
-			return false;
-		}
-
+        m_pFaces[i].texture = faceData[i].texture;
+        m_pFaces[i].lightmapIndex = faceData[i].lightmapIndex;
+        m_pFaces[i].firstVertexIndex = faceData[i].firstVertexIndex;
+        m_pFaces[i].vertexCount = faceData[i].vertexCount;
+        m_pFaces[i].numMeshIndices = faceData[i].numMeshIndices;
+        m_pFaces[i].firstMeshIndex = faceData[i].firstMeshIndex;
         
-		// Quadratic patches increment.
-        for(int y=0; y<patchCountHigh; ++y)
+        f_bspType[i].faceType = SW_FACE;
+        f_bspType[i].typeFaceNumber = currentFace;
+        
+        currentFace++;
+    }
+    
+    g_Core->Print( LOG_DEVELOPER, "We got %i polygons, %i patches, %i meshes\n", polygonCount, patchCount, meshCount );
+    
+    m_polygonFaces = new ncBSPLoadFace[polygonCount];
+    
+    if( !m_polygonFaces ) {
+        g_Core->Error( ERR_FATAL, "Failed to allocate memory for %i polygon faces.\n", polygonCount );
+        Unload();
+        return;
+    }
+    
+    currentFace = 0;
+    for( i = 0; i < polygonCount; i++ ) {
+        if( faceData[i].type != SW_POLYGON )
+            continue;
+        
+        m_polygonFaces[currentFace].firstVertexIndex = faceData[i].firstVertexIndex;
+        m_polygonFaces[currentFace].vertexCount = faceData[i].vertexCount;
+        m_polygonFaces[currentFace].texture = faceData[i].texture;
+        m_polygonFaces[currentFace].lightmapIndex = faceData[i].lightmapIndex;
+        
+        //f_bspType[i].faceType = SW_POLYGON;
+        //f_bspType[i].typeFaceNumber = currentFace;
+        
+        currentFace++;
+    }
+    
+    m_meshFaces = new ncBSPMeshFace[facesCount];
+    
+    if( !m_meshFaces ) {
+        g_Core->Error( ERR_FATAL, "Failed to allocate memory for %i mesh faces.\n", meshCount );
+        Unload();
+        return;
+    }
+    
+    int currentMeshFace = 0;
+    
+    for( i = 0; i < facesCount; ++i ) {
+        if( faceData[i].type != SW_MESH )
+            continue;
+        
+        m_meshFaces[currentMeshFace].firstVertexIndex = faceData[i].firstVertexIndex;
+        m_meshFaces[currentMeshFace].vertexCount = faceData[i].vertexCount;
+        m_meshFaces[currentMeshFace].textureIndex = faceData[i].texture;
+        m_meshFaces[currentMeshFace].lightmapIndex = faceData[i].lightmapIndex;
+        m_meshFaces[currentMeshFace].firstMeshIndex = faceData[i].firstMeshIndex;
+        m_meshFaces[currentMeshFace].numMeshIndices = faceData[i].numMeshIndices;
+        
+        f_bspType[i].faceType = SW_MESH;
+        f_bspType[i].typeFaceNumber = currentMeshFace;
+        
+        ++currentMeshFace;
+    }
+    
+    m_patches = new ncBSPPatch[patchCount];
+    
+    if( !m_patches ) {
+        g_Core->Print( LOG_ERROR, "Failed to allocate memory for %i patch faces.\n", patchCount );
+        Unload();
+        
+        return;
+    }
+
+    int currentPatch = 0;
+    g_Core->DPrint( "tesselation begin\n" );
+    for( i = 0; i < patchCount; ++i ) {
+        if(faceData[i].type != SW_PATCH)
+            continue;
+        
+        m_patches[currentPatch].textureIdx = faceData[i].texture;
+        m_patches[currentPatch].lightmapIdx = faceData[i].lightmapIndex;
+        m_patches[currentPatch].width = faceData[i].patchSize[0];
+        m_patches[currentPatch].height = faceData[i].patchSize[1];
+        
+        f_bspType[i].faceType = SW_PATCH;
+        f_bspType[i].typeFaceNumber = currentPatch;
+        
+        ncBSPPatch *newPatch = new ncBSPPatch;
+        
+        newPatch->textureIdx  = faceData[i].texture;
+        newPatch->lightmapIdx = faceData[i].lightmapIndex;
+        newPatch->width  = faceData[i].patchSize[0];
+        newPatch->height = faceData[i].patchSize[1];
+        
+        int numPatchesWidth  = ( newPatch->width - 1  ) >> 1;
+        int numPatchesHeight = ( newPatch->height - 1 ) >> 1;
+        
+        newPatch->quadraticPatches = new ncBSPBiquadPatch[ numPatchesHeight * numPatchesWidth ];
+  
+        for(int y = 0; y < numPatchesHeight; ++y)
         {
-            for(int x=0; x<patchCountWide; ++x)
+            for(int x = 0; x < numPatchesWidth; ++x)
             {
-                for(int row=0; row<3; ++row)
+                for(int row = 0; row < 3; ++row)
                 {
-                    for(int point=0; point<3; ++point)
+                    for(int col = 0; col < 3; ++col)
                     {
-                        patches[currentPatch].quadraticPatches[y*patchCountWide+x].
-                        controlPoints[row*3+point]=vertices[faceData[i].firstVertexIndex+
-                                                            (y*2*patches[currentPatch].width+x*2)+
-                                                            row*patches[currentPatch].width+point];
+                        int patchIdx = y * numPatchesWidth + x;
+                        int cpIdx = row * 3 + col;
+                        newPatch->quadraticPatches[ patchIdx ].controlPoints[ cpIdx ] =
+                        
+                        m_vertices[faceData[i].firstVertexIndex + (y * 2 * newPatch->width + x * 2) + row * newPatch->width + col];
                     }
                 }
                 
-                //tesselate the patch
-                patches[currentPatch].quadraticPatches[y*patchCountWide+x].Tesselate(render_curvetesselation.GetInteger());
+                newPatch->quadraticPatches[ y * numPatchesWidth + x ].Tesselate( 10 );
             }
-            
-            
         }
         
-		++currentPatch;
-        _core.Print( LOG_INFO, "Generated %i patch\n", currentPatch );
-	}
-    
-#endif
+        
+        ++currentPatch;
+    }
     
     if( faceData )
-		free( faceData );
+        free( faceData );
     else
-        _core.Error( ERC_FATAL, "ncBSP::LoadFaces - Unexpected error." );
+        g_Core->Error( ERR_FATAL, "ncBSP::LoadFaces - Unexpected error." );
     
-	faceData = NULL;
-
-	return true;
+    faceData = NULL;
 }
 
-bool ncBSP::LoadTextures( FILE *file ) {
+/*
+    Load textures.
+*/
+void ncBSP::LoadTextures( void ) {
     
     ncBSPLoadTexture *g_loadTextures;
     
-	decalTextureCount = header.dirEntry[SW_TEXTURES].length / sizeof(ncBSPLoadTexture);
+    decalTextureCount = header.dirEntry[SW_TEXTURES].length / sizeof(ncBSPLoadTexture);
     
-    _core.Print( LOG_DEVELOPER, "Loading material entries.. ( %i entries )\n", decalTextureCount );
-
-	g_loadTextures = (ncBSPLoadTexture*)malloc( sizeof(ncBSPLoadTexture) * decalTextureCount );
-	if( !g_loadTextures ) {
-        _core.Print( LOG_ERROR, ".. Failed to allocate memory for %i materials.\n", decalTextureCount );
+    g_Core->Print( LOG_DEVELOPER, "Loading material entries.. ( %i entries )\n", decalTextureCount );
+    
+    g_loadTextures = new ncBSPLoadTexture[decalTextureCount];
+    
+    if( !g_loadTextures ) {
+        g_Core->Error( ERR_FATAL, "Failed to allocate memory for %i materials.\n", decalTextureCount );
         Unload();
         
-		return false;
-	}
-
-	fseek( file, header.dirEntry[SW_TEXTURES].offset, SEEK_SET );
-	fread( g_loadTextures, 1, header.dirEntry[SW_TEXTURES].length, file );
-
-	decalTextures = (uint*)malloc( sizeof(uint) * decalTextureCount );
-	if( !decalTextures ) {
-        _core.Print( LOG_ERROR, ".. Failed to allocate memory for %i materials.\n", decalTextureCount );
+        return;
+    }
+    
+    fseek( mainFile, header.dirEntry[SW_TEXTURES].offset, SEEK_SET );
+    fread( g_loadTextures, 1, header.dirEntry[SW_TEXTURES].length, mainFile );
+    
+    m_decalTextures = new GLuint[decalTextureCount];
+    m_normalTextures = new GLuint[decalTextureCount];
+    
+    if( !m_decalTextures || !m_normalTextures ) {
+        g_Core->Error( ERR_FATAL, "Failed to allocate memory for %i materials.\n", decalTextureCount );
+        
         Unload();
-		return false;
-	}
-
+        return;
+    }
+    
     // Temp!!!
-    ncMaterial textureImage = _materials.Find( "brick" );
 
+    
     int i;
-	for( i = 0; i < decalTextureCount; i++ ) {
-        decalTextures[i] = textureImage.texture.tex_id;
-	}
-
-	if( g_loadTextures )
-		free( g_loadTextures );
-
-	g_loadTextures = NULL;
-
-	return true;
+    for( i = 0; i < decalTextureCount; i++ ) {
+        int rands = rand() % 2;
+        ncMaterial *textureImage, *normalImage;
+        switch (rands) {
+            case 0:
+                textureImage = g_materialManager->Find("floor");
+                normalImage = g_materialManager->Find("floor_n");
+                break;
+            case 1:
+                textureImage = g_materialManager->Find("wood_c");
+                normalImage = g_materialManager->Find("wood_n");
+                break;
+            default:
+                textureImage = g_materialManager->Find("brick");
+                normalImage = g_materialManager->Find("brick_n");
+                break;
+        }
+        
+        m_decalTextures[i] = textureImage->Image.TextureID;
+        m_normalTextures[i] = normalImage->Image.TextureID;
+    }
+    
+    if( g_loadTextures )
+        free( g_loadTextures );
+    
+    g_loadTextures = NULL;
 }
 
+/*
+    Load light volumes.
+*/
+void ncBSP::LoadLightVols( void ) {
+    ncBSPLightVol *g_loadLightVols;
+    
+    int lightVolCount = header.dirEntry[SW_LIGHTVOLS].length / sizeof( ncBSPLightVol );
+    
+    
+    g_Core->Print( LOG_DEVELOPER, "Loading lightvols.. ( %i vols )\n", lightVolCount );
+}
+
+/*
+    Load lightmaps.
+*/
 #define LIGHTMAP_SIZE 128
-bool ncBSP::LoadLightmaps( FILE * file ) {
+void ncBSP::LoadLightmaps( void ) {
     
     ncBSPLoadLightmap *g_loadLightmaps;
     
-	lightmapCount = header.dirEntry[SW_LIGHTMAPS].length / sizeof(ncBSPLoadLightmap);
+    lightmapCount = header.dirEntry[SW_LIGHTMAPS].length / sizeof(ncBSPLoadLightmap);
     
-    _core.Print( LOG_DEVELOPER, "Loading lightmaps.. ( %i lightmaps ) \n", lightmapCount );
+    g_Core->Print( LOG_DEVELOPER, "Loading lightmaps.. ( %i lightmaps ) \n", lightmapCount );
     
-	g_loadLightmaps = (ncBSPLoadLightmap*)malloc( sizeof(ncBSPLoadLightmap) * lightmapCount );
-	if( !g_loadLightmaps ) {
-        _core.Print( LOG_ERROR, ".. Failed to allocate memory for %i load lightmaps.\n", lightmapCount );
-        _bspmngr.Unload();
+    g_loadLightmaps = new ncBSPLoadLightmap[lightmapCount];
+    
+    if( !g_loadLightmaps ) {
+        g_Core->Error( ERR_FATAL, "Failed to allocate memory for %i load lightmaps.\n", lightmapCount );
+        Unload();
         
-		return false;
-	}
+        return;
+    }
     
-	fseek(file, header.dirEntry[SW_LIGHTMAPS].offset, SEEK_SET);
-	fread(g_loadLightmaps, 1, header.dirEntry[SW_LIGHTMAPS].length, file);
-
-	lightmapTextures = (uint*)malloc( sizeof(uint) * lightmapCount );
+    fseek( mainFile, header.dirEntry[SW_LIGHTMAPS].offset, SEEK_SET );
+    fread( g_loadLightmaps, 1, header.dirEntry[SW_LIGHTMAPS].length, mainFile );
     
-	if( !lightmapTextures ) {
-        _core.Print( LOG_ERROR, ".. failed to allocate memory for %i lightmaps.\n", lightmapCount );
-        _bspmngr.Unload();
+    m_lightmapTextures = new uint[lightmapCount];
+    
+    if( !m_lightmapTextures ) {
+        g_Core->Error( ERR_FATAL, "Failed to allocate memory for %i lightmaps.\n", lightmapCount );
+        Unload();
         
-		return false;
-	}
-
-	glGenTextures( lightmapCount, lightmapTextures );
-
-	float gamma = render_lightmapgamma.GetFloat();
-	int i, j;
+        return;
+    }
     
-	for( i = 0; i < lightmapCount; i++ ) {
-		for( j = 0; j < 128 * 128; j++ ) {
+    float gamma = Render_LightmapGamma.GetFloat();
+    int i, j;
+    
+    for( i = 0; i < lightmapCount; i++ ) {
+        for( j = 0; j < 128 * 128; j++ ) {
             
             float r;
             float g;
             float b;
             
-			r = g_loadLightmaps[i].lightmapData[j * 3 + 0];
-			g = g_loadLightmaps[i].lightmapData[j * 3 + 1];
-			b = g_loadLightmaps[i].lightmapData[j * 3 + 2];
-
-			r *= gamma / 255.0f;
-			g *= gamma / 255.0f;
-			b *= gamma / 255.0f;
-
-			float scale = 1.0f;
-			float temp;
-
-			if(r > 1.0f && (temp = (1.0f / r)) < scale) scale = temp;
-			if(g > 1.0f && (temp = (1.0f / g)) < scale) scale = temp;
-			if(b > 1.0f && (temp = (1.0f / b)) < scale) scale = temp;
-
+            r = g_loadLightmaps[i].lightmapData[j * 3 + 0];
+            g = g_loadLightmaps[i].lightmapData[j * 3 + 1];
+            b = g_loadLightmaps[i].lightmapData[j * 3 + 2];
+            
+            r *= gamma / 255.0f;
+            g *= gamma / 255.0f;
+            b *= gamma / 255.0f;
+            
+            float scale = 1.0f;
+            float temp;
+            
+            if( r > 1.0f && (temp = (1.0f / r) ) < scale ) scale = temp;
+            if( g > 1.0f && (temp = (1.0f / g) ) < scale ) scale = temp;
+            if( b > 1.0f && (temp = (1.0f / b) ) < scale ) scale = temp;
+            
             // Fix the colors.
-			scale *= 255.0f;
-
-			r *= scale;
-			g *= scale;
-			b *= scale;
-
-			g_loadLightmaps[i].lightmapData[j * 3 + 0] = (Byte)r;
-			g_loadLightmaps[i].lightmapData[j * 3 + 1] = (Byte)g;
-			g_loadLightmaps[i].lightmapData[j * 3 + 2] = (Byte)b;
-		}
-	}
+            scale *= 255.0f;
+            
+            r *= scale;
+            g *= scale;
+            b *= scale;
+            
+            // Set the light array data now.
+            g_loadLightmaps[i].lightmapData[j * 3 + 0] = (GLubyte)r;
+            g_loadLightmaps[i].lightmapData[j * 3 + 1] = (GLubyte)g;
+            g_loadLightmaps[i].lightmapData[j * 3 + 2] = (GLubyte)b;
+        }
+    }
     
-	for( i = 0; i < lightmapCount; i++ ) {
-		glBindTexture( GL_TEXTURE_2D, lightmapTextures[i] );
-
-		glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR );
-		glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
-		glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT );
-		glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT );
-
-		glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA8, LIGHTMAP_SIZE, LIGHTMAP_SIZE, 0, GL_RGB, GL_UNSIGNED_BYTE, g_loadLightmaps[i].lightmapData );
-
-        glGenerateMipmap( GL_TEXTURE_2D );
+    glGenTextures( lightmapCount, m_lightmapTextures );
+    
+    for( i = 0; i < lightmapCount; i++ ) {
         
-        glBindTexture( GL_TEXTURE_2D, 0 );
-	}
-
-	glGenTextures( 1, &whiteTexture );
-	glBindTexture( GL_TEXTURE_2D, whiteTexture );
-
+        glBindTexture( GL_TEXTURE_2D, m_lightmapTextures[i] );
+        
+        glTexImage2D( GL_TEXTURE_2D, 0, GL_RGB, LIGHTMAP_SIZE, LIGHTMAP_SIZE, 0, GL_RGB, GL_UNSIGNED_BYTE, g_loadLightmaps[i].lightmapData );
+        
+        glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
+        glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR );
+        
+        glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT );
+        glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT );
+        
+        glGenerateMipmap( GL_TEXTURE_2D );
+    }
+    
+    glGenTextures( 1, &m_defaultLightTexture );
+    glBindTexture( GL_TEXTURE_2D, m_defaultLightTexture );
+    
     float white_tex[] = { 1.0f, 1.0f, 1.0f, 1.0f };
-
-	glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR );
-	glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
-	glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT );
-	glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT );
-
-    glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA8, 1.0, 1.0, 0, GL_RGB, GL_FLOAT, white_tex );
-
+    
+    glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR );
+    glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
+    glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT );
+    glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT );
+    
+    glTexImage2D( GL_TEXTURE_2D, 0, GL_RGB, 1.0, 1.0, 0, GL_RGB, GL_FLOAT, white_tex );
+    
     glGenerateMipmap( GL_TEXTURE_2D );
     
     glBindTexture( GL_TEXTURE_2D, 0 );
     
-	if( g_loadLightmaps )
-		free( g_loadLightmaps );
-    else
-        _core.Error( ERC_FATAL, "ncBSP::LoadLightmaps - Unexpected error." );
     
-	g_loadLightmaps = NULL;
-
-	return true;
+    if( g_loadLightmaps )
+        free( g_loadLightmaps );
+    else
+        g_Core->Error( ERR_FATAL, "ncBSP::LoadLightmaps - Unexpected error." );
+    
+    g_loadLightmaps = NULL;
 }
 
-bool ncBSP::LoadData( FILE *file ) {
-    ncBSPLoadLeaf *leafData;
+/*
+ 
+    Load leaf and plane data.
+ 
+*/
+void ncBSP::LoadData( void ) {
     
-	leafCount = header.dirEntry[SW_LEAVES].length / sizeof(ncBSPLoadLeaf);
+    leafCount = header.dirEntry[SW_LEAVES].length / sizeof(ncBSPLoadLeaf);
     
-    _core.Print( LOG_DEVELOPER, "Loading map data..\n" );
+    g_Core->Print( LOG_DEVELOPER, "Loading map data..\n" );
     
-	leafData = (ncBSPLoadLeaf*)malloc( sizeof(ncBSPLoadLeaf) * leafCount );
-	if( !leafData ) {
+    ncBSPLoadLeaf *m_leafData = new ncBSPLoadLeaf[leafCount];
+    
+    if( !m_leafData ) {
         
-        _core.Print( LOG_ERROR, ".. Failed to allocate memory for %i load leaves..\n", leafCount );
+        g_Core->Error( ERR_FATAL, "Failed to allocate memory for %i load leaves..\n", leafCount );
         Unload();
         
-		return false;
-	}
-
-	leaves = (ncBSPLeaf*)malloc( sizeof(ncBSPLeaf) * leafCount );
-	if(!leaves) {
-        _core.Print( LOG_ERROR, ".. Failed to allocate memory for %i leaves.\n", leafCount );
+        return;
+    }
+    
+    m_leaves = new ncBSPLeaf[leafCount];
+    if( !m_leaves ) {
+        g_Core->Error( ERR_FATAL, "Failed to allocate memory for %i leaves.\n", leafCount );
         Unload();
         
-		return false;
-	}
-
-	fseek( file, header.dirEntry[SW_LEAVES].offset, SEEK_SET );
-	fread( leafData, 1, header.dirEntry[SW_LEAVES].length, file );
-
-	int i, j;
-	for( i = 0; i < leafCount; i++ ) {
+        return;
+    }
+    
+    fseek( mainFile, header.dirEntry[SW_LEAVES].offset, SEEK_SET );
+    fread( m_leafData, 1, header.dirEntry[SW_LEAVES].length, mainFile );
+    
+    int i, j;
+    for( i = 0; i < leafCount; i++ ) {
         
-		leaves[i].cluster = leafData[i].cluster;
-		leaves[i].firstLeafFace = leafData[i].firstLeafFace;
-		leaves[i].numFaces = leafData[i].numFaces;
-
+        m_leaves[i].cluster = m_leafData[i].cluster;
+        m_leaves[i].firstLeafFace = m_leafData[i].firstLeafFace;
+        m_leaves[i].numFaces = m_leafData[i].numFaces;
+        
         // Build a bounding box.
-        leaves[i].boundingBoxVertices[0] = ncVec3( (float)leafData[i].mins[0], (float)leafData[i].mins[2],-(float)leafData[i].mins[1] );
-        leaves[i].boundingBoxVertices[1] = ncVec3( (float)leafData[i].mins[0], (float)leafData[i].mins[2],-(float)leafData[i].maxs[1] );
-        leaves[i].boundingBoxVertices[2] = ncVec3( (float)leafData[i].mins[0], (float)leafData[i].maxs[2],-(float)leafData[i].mins[1] );
-        leaves[i].boundingBoxVertices[3] = ncVec3( (float)leafData[i].mins[0], (float)leafData[i].maxs[2],-(float)leafData[i].maxs[1] );
-        leaves[i].boundingBoxVertices[4] = ncVec3( (float)leafData[i].maxs[0], (float)leafData[i].mins[2],-(float)leafData[i].mins[1] );
-        leaves[i].boundingBoxVertices[5] = ncVec3( (float)leafData[i].maxs[0], (float)leafData[i].mins[2],-(float)leafData[i].maxs[1] );
-        leaves[i].boundingBoxVertices[6] = ncVec3( (float)leafData[i].maxs[0], (float)leafData[i].maxs[2],-(float)leafData[i].mins[1] );
-        leaves[i].boundingBoxVertices[7] = ncVec3( (float)leafData[i].maxs[0], (float)leafData[i].maxs[2],-(float)leafData[i].maxs[1] );
+        m_leaves[i].boundingBoxVertices[0] = ncVec3( (float)m_leafData[i].mins[0], (float)m_leafData[i].mins[2],-(float)m_leafData[i].mins[1] );
+        m_leaves[i].boundingBoxVertices[1] = ncVec3( (float)m_leafData[i].mins[0], (float)m_leafData[i].mins[2],-(float)m_leafData[i].maxs[1] );
+        m_leaves[i].boundingBoxVertices[2] = ncVec3( (float)m_leafData[i].mins[0], (float)m_leafData[i].maxs[2],-(float)m_leafData[i].mins[1] );
+        m_leaves[i].boundingBoxVertices[3] = ncVec3( (float)m_leafData[i].mins[0], (float)m_leafData[i].maxs[2],-(float)m_leafData[i].maxs[1] );
+        m_leaves[i].boundingBoxVertices[4] = ncVec3( (float)m_leafData[i].maxs[0], (float)m_leafData[i].mins[2],-(float)m_leafData[i].mins[1] );
+        m_leaves[i].boundingBoxVertices[5] = ncVec3( (float)m_leafData[i].maxs[0], (float)m_leafData[i].mins[2],-(float)m_leafData[i].maxs[1] );
+        m_leaves[i].boundingBoxVertices[6] = ncVec3( (float)m_leafData[i].maxs[0], (float)m_leafData[i].maxs[2],-(float)m_leafData[i].mins[1] );
+        m_leaves[i].boundingBoxVertices[7] = ncVec3( (float)m_leafData[i].maxs[0], (float)m_leafData[i].maxs[2],-(float)m_leafData[i].maxs[1] );
         
         for( j = 0; j < 8; j++ ) {
-            leaves[i].boundingBoxVertices[j].x /= MAX_BSP_SCALE;
-            leaves[i].boundingBoxVertices[j].y /= MAX_BSP_SCALE;
-            leaves[i].boundingBoxVertices[j].z /= MAX_BSP_SCALE;
+            m_leaves[i].boundingBoxVertices[j].x /= MAX_BSP_SCALE;
+            m_leaves[i].boundingBoxVertices[j].y /= MAX_BSP_SCALE;
+            m_leaves[i].boundingBoxVertices[j].z /= MAX_BSP_SCALE;
         }
         
-	}
-
-	int numLeafFaces = header.dirEntry[SW_LEAFFACES].length / sizeof(int);
-    _core.Print( LOG_DEVELOPER, "Loading leaf faces.. ( %i entries )\n", numLeafFaces );
-
-	leafFaces = (int*)malloc( sizeof(int) * numLeafFaces );
+    }
     
-	if( !leafFaces ) {
-        _core.Print( LOG_DEVELOPER, ".. failed to allocate memory for %i leaf faces.\n", numLeafFaces );
+    int numLeafFaces = header.dirEntry[SW_LEAFFACES].length / sizeof(int);
+    g_Core->Print( LOG_DEVELOPER, "Loading leaf faces.. ( %i entries )\n", numLeafFaces );
+    
+    leafFaces = new int[numLeafFaces];
+    
+    if( !leafFaces ) {
+        g_Core->Error( ERR_FATAL, "Failed to allocate memory for %i leaf faces.\n", numLeafFaces );
         Unload();
         
-		return false;
-	}
-
+        return;
+    }
     
-	fseek( file, header.dirEntry[SW_LEAFFACES].offset, SEEK_SET );
-	fread( leafFaces, 1, header.dirEntry[SW_LEAFFACES].length, file );
-
-	planeCount = header.dirEntry[SW_PLANES].length / sizeof(ncPlane);
-    _core.Print( LOG_DEVELOPER, "Loading map planes.. ( %i entries )\n", planeCount );
-
-	planes = (ncPlane*)malloc( sizeof(ncPlane) * planeCount );
-	if( !planes ){
-        _core.Print( LOG_ERROR, ".. Failed to allocate memory for %i planes.\n", planeCount );
+    
+    fseek( mainFile, header.dirEntry[SW_LEAFFACES].offset, SEEK_SET );
+    fread( leafFaces, 1, header.dirEntry[SW_LEAFFACES].length, mainFile );
+    
+    planeCount = header.dirEntry[SW_PLANES].length / sizeof(ncPlane);
+    g_Core->Print( LOG_DEVELOPER, "Loading map planes.. ( %i entries )\n", planeCount );
+    
+    m_planes = new ncPlane[planeCount];
+    
+    if( !m_planes ){
+        g_Core->Error( ERR_FATAL, "Failed to allocate memory for %i planes.\n", planeCount );
         Unload();
         
-		return false;
-	}
-
-	fseek( file, header.dirEntry[SW_PLANES].offset, SEEK_SET );
-	fread( planes, 1, header.dirEntry[SW_PLANES].length, file );
-
-	// Reverse the intercept.
+        return;
+    }
+    
+    fseek( mainFile, header.dirEntry[SW_PLANES].offset, SEEK_SET );
+    fread( m_planes, 1, header.dirEntry[SW_PLANES].length, mainFile );
+    
+    // Reverse the intercept.
     for( i = 0; i < planeCount; i++ ) {
-		// Negate Z.
-		float temp = planes[i].normal.y;
-		planes[i].normal.y = planes[i].normal.z;
-		planes[i].normal.z = -temp;
-
-		planes[i].intercept = -planes[i].intercept;
-		planes[i].intercept /= MAX_BSP_SCALE;
-	}
-
-	nodeCount = header.dirEntry[SW_NODES].length / sizeof(ncBSPNode);
-
-	nodes = (ncBSPNode*)malloc( sizeof(ncBSPNode) * nodeCount );
-    if( !nodes ) {
-        _core.Print( LOG_ERROR, ".. Failed to allocate memory for %i nodes.\n", nodeCount );
+        // Negate Z.
+        float temp = m_planes[i].normal.y;
+        m_planes[i].normal.y = m_planes[i].normal.z;
+        m_planes[i].normal.z = -temp;
+        
+        m_planes[i].intercept = -m_planes[i].intercept;
+        m_planes[i].intercept /= MAX_BSP_SCALE;
+    }
+    
+    nodeCount = header.dirEntry[SW_NODES].length / sizeof(ncBSPNode);
+    
+    m_nodes = new ncBSPNode[nodeCount];
+    
+    if( !m_nodes ) {
+        g_Core->Error( ERR_FATAL, "Failed to allocate memory for %i m_nodes.\n", nodeCount );
         Unload();
         
-		return false;
-	}
-
-	fseek( file, header.dirEntry[SW_NODES].offset, SEEK_SET );
-	fread( nodes, 1, header.dirEntry[SW_NODES].length, file );
-
-	fseek( file, header.dirEntry[SW_VISIBLEDATA].offset, SEEK_SET );
-	fread( &visibilityData, 2, sizeof(int), file );
-
-	int bitsetSize = visibilityData.numClusters * visibilityData.bytesPerCluster;
-
-	visibilityData.bitset = (Byte*)malloc( sizeof(Byte) * bitsetSize );
+        return;
+    }
     
-	if( !visibilityData.bitset ) {
-        _core.Print( LOG_ERROR, ".. Failed to allocate memory for visibility data.\n" );
-        _bspmngr.Unload();
-		return false;
-	}
-
-	fread( visibilityData.bitset, 1, bitsetSize, file );
-
-	if( leafData )
-		free( leafData );
-    else
-        _core.Error( ERC_FATAL, "ncBSP::LoadData - Unexpected error." );
-
-	leafData = NULL;
-
-	return true;
+    fseek( mainFile, header.dirEntry[SW_NODES].offset, SEEK_SET );
+    fread( m_nodes, 1, header.dirEntry[SW_NODES].length, mainFile );
+    
+    fseek( mainFile, header.dirEntry[SW_VISIBLEDATA].offset, SEEK_SET );
+    fread( &m_visibilityData, 2, sizeof(int), mainFile );
+    
+    int bitsetSize = m_visibilityData.numClusters * m_visibilityData.bytesPerCluster;
+    
+    m_visibilityData.bitset = new Byte[bitsetSize];
+    
+    if( !m_visibilityData.bitset ) {
+        g_Core->Error( ERR_FATAL, "Failed to allocate memory for visibility data.\n" );
+        Unload();
+        return;
+    }
+    
+    fread( m_visibilityData.bitset, 1, bitsetSize, mainFile );
+    
+    delete [] m_leafData;
 }
+
+
+/* Visibility data calculation methods. */
 
 /*
     Calculate camera leaf.
 */
 int ncBSP::CalculateLeaf( ncVec3 cameraPosition ) {
-	int currentNode = 0;
-
-	while( currentNode >= 0 ) {
+    int currentNode = 0;
+    
+    while( currentNode >= 0 ) {
         // Find the closest plane.
-        if( planes[nodes[currentNode].planeIndex].ClassifyPoint( cameraPosition ) == POINT_IN_FRONT_OF_PLANE )
-			currentNode = nodes[currentNode].front;
-		else
-			currentNode = nodes[currentNode].back;
-	}
-
-	return ~currentNode;
+        if( m_planes[m_nodes[currentNode].planeIndex].ClassifyPoint( cameraPosition ) == POINT_IN_FRONT_OF_PLANE )
+            currentNode = m_nodes[currentNode].front;
+        else
+            currentNode = m_nodes[currentNode].back;
+    }
+    
+    return ~currentNode;
 }
 
 /*
@@ -825,18 +854,18 @@ int ncBSP::CalculateLeaf( ncVec3 cameraPosition ) {
 */
 int ncBSP::IsClusterVisible( int cameraCluster,
                             int testCluster ) {
-
-	int index =	cameraCluster * visibilityData.bytesPerCluster + testCluster / 8;
-
+    
+    int index =	cameraCluster * m_visibilityData.bytesPerCluster + testCluster / 8;
+    
     /* Note to myself. */
-	/* If index will go less than zero application will explode. */
-	/* Do not remove. */
-	if( index < 0 )
+    /* If index will go less than zero application will explode. */
+    /* Do not remove. */
+    if( index < 0 )
         return 0;
-
-	int returnValue = visibilityData.bitset[index] & (1 << (testCluster & 7));
-
-	return returnValue;
+    
+    int returnValue = m_visibilityData.bitset[index] & (1 << (testCluster & 7));
+    
+    return returnValue;
 }
 
 /*
@@ -844,36 +873,39 @@ int ncBSP::IsClusterVisible( int cameraCluster,
 */
 void ncBSP::CalculateVisibleData( ncVec3 cameraPosition ) {
     // Do not calculate visibility data while
-    // there's no static world loaded/initialized.
+    // there's no static world loaded.
     if( !Initialized )
         return;
     
     if ( !InUse )
         return;
-
+    
+    if( !Render_CalculateVisibleData.GetInteger() )
+        return;
+    
     // Remove previous visibility data.
     visibleFaces.ClearAll();
-
+ 
     // Calculate new visibility data.
-	int cameraLeaf = CalculateLeaf(cameraPosition);
-	int cameraCluster = leaves[cameraLeaf].cluster;
-
+    int cameraLeaf = CalculateLeaf( cameraPosition );
+    int cameraCluster = m_leaves[cameraLeaf].cluster;
+    
     int i, j;
-
-	for( i = 0; i < leafCount; i++ ) {
+    
+    for( i = 0; i < leafCount; i++ ) {
         
-        if( render_updatepvs.GetInteger() ) {
-            if( !IsClusterVisible( cameraCluster, leaves[i].cluster ) )
-                continue;
-
-            if( !Frustum_IsBoxInside( leaves[i].boundingBoxVertices ) )
-                continue;
+        if( !IsClusterVisible( cameraCluster, m_leaves[i].cluster ) ) {
+            continue;
         }
         
-		for( j = 0; j < leaves[i].numFaces; j++ ) {
-            visibleFaces.Set( leafFaces[leaves[i].firstLeafFace + j] );
-		}
-	}
+        if( !Frustum_IsBoxInside( m_leaves[i].boundingBoxVertices ) ) {
+            continue;
+        }
+        
+        for( j = 0; j < m_leaves[i].numFaces; j++ ) {
+            visibleFaces.Set( leafFaces[m_leaves[i].firstLeafFace + j] );
+        }
+    }
 }
 
 /*
@@ -886,32 +918,16 @@ void ncBSP::Render( bool reflection, ncSceneEye oc ) {
     
     if( !InUse )
         return;
-
+    
     glEnable( GL_CULL_FACE );
-	glFrontFace( GL_CW );
-
-    int i;
-	for( i = 0; i < facesCount; ++i ) {
-        if( visibleFaces.IsSet( i ) ) {
-            _bspmngr.RenderFace( i, reflection, oc );
-		}
-	}
-
-	glFrontFace( GL_CCW );
-    glDisable( GL_CULL_FACE );
-}
-
-void ncBSP::RenderFace( int faceNumber, bool reflection, ncSceneEye oc ) {
-
-	if( bspDirectory[faceNumber].faceType == 0 )
-		return;
-
-    ncMatrix4 model;
+    glFrontFace( GL_CW );
+    
+    bspShader->Use();
+    
+  //  ncMatrix4 model;
     ncMatrix4 pos;
-
-    glUseProgram( bspShader.shader_id );
-
-    model.Identity();
+    
+   // model.Identity();
     pos.Identity();
     
     pos.Translate( bsp_position );
@@ -924,232 +940,466 @@ void ncBSP::RenderFace( int faceNumber, bool reflection, ncSceneEye oc ) {
     else
         pos.Scale( normalScale );
     
+#ifdef OCULUSVR_SUPPORTED
+    
     float ipd = 0.64;
+    
     ncVec3 offset = ncVec3( ipd / 2.0f, 0.0f, 0.0f );
     ncVec3 minus_offset = ncVec3( -(ipd / 2.0f), 0.0f, 0.0f );
     
     ncMatrix4 ls = ncMatrix4();
     ncMatrix4 rs = ncMatrix4();
+    
     ls.Translate( offset );
     rs.Translate( minus_offset );
     
-    pos = oc == EYE_LEFT ? ls * pos : rs * pos;
-
-    glUniformMatrix4fv( glGetUniformLocation( bspShader.shader_id, "ProjectionMatrix" ), 1, false, _camera.ProjectionMatrix.m );
-    glUniformMatrix4fv( glGetUniformLocation( bspShader.shader_id, "ModelMatrix" ), 1, false, pos.m );
-    glUniformMatrix4fv( glGetUniformLocation( bspShader.shader_id, "ViewMatrix" ), 1, false, _camera.ViewMatrix.m );
+    if( oc == EYE_LEFT ) {
+        pos = ls * pos;
+    } else {
+        pos = rs * pos;
+    }
     
-    glUniform3f( glGetUniformLocation( bspShader.shader_id, "cameraPos" ), _camera.g_vEye.x, _camera.g_vEye.y, _camera.g_vEye.z );
-	if( bspDirectory[faceNumber].faceType == SW_POLYGON )
-		_bspmngr.RenderPolygon( bspDirectory[faceNumber].typeFaceNumber );
+#endif
+    
+    ncMatrix4 mvp = g_playerCamera->ProjectionMatrix * g_playerCamera->ViewMatrix * pos;
+    
+    bspShader->SetUniform( g_bspUniforms[SHMV_UNIFORM], 1, false, pos.m );
+    bspShader->SetUniform( g_bspUniforms[SHMVP_UNIFORM], 1, false, mvp.m );
+    bspShader->SetUniform( g_bspUniforms[SHCAMPOS_UNIFORM], g_playerCamera->g_vEye );
 
-	if( bspDirectory[faceNumber].faceType == SW_MESH )
-		_bspmngr.RenderMesh( bspDirectory[faceNumber].typeFaceNumber );
 
-#ifdef USE_TESSELATION
-	if( bspDirectory[faceNumber].faceType == SW_PATCH )
-        _bspmngr.RenderPatch( bspDirectory[faceNumber].typeFaceNumber );
-#endif 
+    int i;
+    for( i = 0; i < facesCount; ++i ) {
+        //if( Render_CalculateVisibleData.GetInteger() ) {
+            
+            if( visibleFaces.IsSet( i ) ) {
+                RenderFace( i, reflection, oc );
+            }
+            
+        //} else {
+            
+        //    RenderFace( i, reflection, oc );
+            
+        //}
+    }
     
     glUseProgram( 0 );
+    
+    glFrontFace( GL_CCW );
+    glDisable( GL_CULL_FACE );
+}
+
+void ncBSP::RenderFace( int faceNumber, bool reflection, ncSceneEye oc ) {
+    if( f_bspType[faceNumber].faceType == 0 )
+        return;
+    
+    if( f_bspType[faceNumber].faceType == SW_MESH )
+        RenderMesh( f_bspType[faceNumber].typeFaceNumber );
+    
+    //if( f_bspType[faceNumber].faceType == SW_POLYGON )
+    //    RenderPolygon( f_bspType[faceNumber].typeFaceNumber );
+    
+    //if( f_bspType[faceNumber].faceType == SW_PATCH )
+    //    RenderPatch( f_bspType[faceNumber].typeFaceNumber );
+
+    if( f_bspType[faceNumber].faceType == SW_FACE )
+        RenderFaces( faceNumber );
 }
 
 
 // Polygon
 void ncBSP::RenderPolygon( int polygonFaceNumber ) {
-    glBindVertexArray( vaoID[0] );
-
+    
+    ncBSPLoadFace *pFace = &m_polygonFaces[polygonFaceNumber];
+    
+    // Static vertices.
+    glBindVertexArray( m_bspVertexArray[0] );
+    
     glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, decalTextures[polygonFaces[polygonFaceNumber].lightmapIndex]);
-    glUniform1i( glGetUniformLocation( bspShader.shader_id, "decalMap"), 0 );
+    glBindTexture(GL_TEXTURE_2D, m_decalTextures[pFace->texture]);
 
     glActiveTexture(GL_TEXTURE1);
-    glBindTexture(GL_TEXTURE_2D, lightmapTextures[polygonFaces[polygonFaceNumber].lightmapIndex]);
-    glUniform1i( glGetUniformLocation( bspShader.shader_id, "lightMap"), 1 );
+    glBindTexture(GL_TEXTURE_2D, m_lightmapTextures[pFace->lightmapIndex]);
 
     glActiveTexture(GL_TEXTURE2);
-    glBindTexture(GL_TEXTURE_2D, _scene.depthtex
-                  );
-    glUniform1i( glGetUniformLocation( bspShader.shader_id, "depthMap"), 2 );
-    
-    glActiveTexture(GL_TEXTURE3);
-    glBindTexture(GL_TEXTURE_2D, _materials.Find("brick_n").texture.tex_id);
-    glUniform1i( glGetUniformLocation( bspShader.shader_id, "normalMap"), 3 );
-    
-    /* Draw now. */
-    switch( render_wireframe.GetInteger() ) {
-        case 0:
-            glDrawArrays(GL_TRIANGLE_FAN, polygonFaces[polygonFaceNumber].firstVertexIndex,
-                          polygonFaces[polygonFaceNumber].vertexCount);
-        break;
-        case 1:
-            glDrawArrays(GL_LINES, polygonFaces[polygonFaceNumber].firstVertexIndex,
-                          polygonFaces[polygonFaceNumber].vertexCount);
-        break;
-        case 2:
-            glDrawArrays(GL_POINTS, polygonFaces[polygonFaceNumber].firstVertexIndex,
-                          polygonFaces[polygonFaceNumber].vertexCount);
-        break;
-        default:
-            glDrawArrays(GL_TRIANGLE_FAN, polygonFaces[polygonFaceNumber].firstVertexIndex,
-                          polygonFaces[polygonFaceNumber].vertexCount);
-        break;
-    }
+    glBindTexture(GL_TEXTURE_2D, g_sceneBuffer[EYE_FULL].depthtex );
 
+    glActiveTexture(GL_TEXTURE3);
+    glBindTexture(GL_TEXTURE_2D, m_normalTextures[pFace->texture]);
+    
+    // Draw now.
+    glDrawArrays( GL_TRIANGLE_FAN, pFace->firstVertexIndex, pFace->vertexCount );
+    
+    glActiveTexture( GL_TEXTURE3 ); glBindTexture( GL_TEXTURE_2D, 0 );
+    glActiveTexture( GL_TEXTURE2 ); glBindTexture( GL_TEXTURE_2D, 0 );
+    glActiveTexture( GL_TEXTURE1 ); glBindTexture( GL_TEXTURE_2D, 0 );
+    glActiveTexture( GL_TEXTURE0 ); glBindTexture( GL_TEXTURE_2D, 0 );
+    
     glBindVertexArray( 0 );
 }
 
 void ncBSP::RenderMesh( int meshFaceNumber ) {
-    glBindVertexArray( vaoID[1] );
     
-    glEnableVertexAttribArray(2);
-    glVertexAttribPointer( 2, 3, GL_FLOAT, GL_FALSE, sizeof(ncBSPVertex), &vertices[meshFaces[meshFaceNumber].firstVertexIndex].decal.x );
+    ncBSPMeshFace *pFace = &m_meshFaces[meshFaceNumber];
+    
+    // Bind vertex array.
+    glBindVertexArray( m_bspVertexArray[1] );
 
-    glEnableVertexAttribArray(1);
-    glVertexAttribPointer( 1, 3, GL_FLOAT, GL_FALSE, sizeof(ncBSPVertex),&vertices[meshFaces[meshFaceNumber].firstVertexIndex].light.x );
+    // Vertices.
+    glEnableVertexAttribArray( 0 );
+    glBindBuffer( GL_ARRAY_BUFFER, m_bspMeshVBOs[0] );
+    glBufferData( GL_ARRAY_BUFFER, sizeof(ncBSPVertex) * pFace->numMeshIndices, &(m_vertices[pFace->firstVertexIndex].position), GL_STATIC_DRAW );
+    glVertexAttribPointer( 0, 3, GL_FLOAT, GL_FALSE, sizeof(ncBSPVertex), (void*)0 );
+    
+    // Light map coordinates.
+    glEnableVertexAttribArray( 1 );
+    glBindBuffer( GL_ARRAY_BUFFER, m_bspMeshVBOs[1] );
+    glBufferData( GL_ARRAY_BUFFER, sizeof(ncBSPVertex) * pFace->numMeshIndices, &(m_vertices[pFace->firstVertexIndex].light), GL_STATIC_DRAW );
+    glVertexAttribPointer( 1, 3, GL_FLOAT, GL_FALSE, sizeof(ncBSPVertex), (void*)0 );
+    
+    // Decal map coordinates.
+    glEnableVertexAttribArray( 2 );
+    glBindBuffer( GL_ARRAY_BUFFER, m_bspMeshVBOs[2] );
+    glBufferData( GL_ARRAY_BUFFER, sizeof(ncBSPVertex) * pFace->numMeshIndices, &(m_vertices[pFace->firstVertexIndex].decal), GL_STATIC_DRAW );
+    glVertexAttribPointer( 2, 3, GL_FLOAT, GL_FALSE, sizeof(ncBSPVertex), (void*)0 );
+    
+    // Normals.
+    glEnableVertexAttribArray( 3 );
+    glBindBuffer( GL_ARRAY_BUFFER, m_bspMeshVBOs[3] );
+    glBufferData( GL_ARRAY_BUFFER, sizeof(ncBSPVertex) * pFace->numMeshIndices, &(m_vertices[pFace->firstVertexIndex].normal), GL_STATIC_DRAW );
+    glVertexAttribPointer( 3, 3, GL_FLOAT, GL_FALSE, sizeof(ncBSPVertex), (void*)0 );
+    
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_bspIndexElementsData[0]);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, pFace->numMeshIndices * sizeof(uint), &meshIndices[pFace->firstMeshIndex], GL_STATIC_DRAW);
+    
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, m_decalTextures[pFace->textureIndex]);
+    
+    glActiveTexture(GL_TEXTURE1);
+    glBindTexture(GL_TEXTURE_2D, m_lightmapTextures[pFace->lightmapIndex]);
 
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer( 0, 3, GL_FLOAT, GL_FALSE, sizeof(ncBSPVertex), &vertices[meshFaces[meshFaceNumber].firstVertexIndex].position );
+    glActiveTexture(GL_TEXTURE2);
+    glBindTexture(GL_TEXTURE_2D, g_sceneBuffer[0].depthtex );
 
-    glActiveTexture( GL_TEXTURE0 );
-    glBindTexture( GL_TEXTURE_2D, decalTextures[meshFaces[meshFaceNumber].textureIndex] );
+    glActiveTexture(GL_TEXTURE3);
+    glBindTexture(GL_TEXTURE_2D, m_normalTextures[pFace->textureIndex] );
 
-    glActiveTexture( GL_TEXTURE1 );
-    glBindTexture( GL_TEXTURE_2D, lightmapTextures[meshFaces[meshFaceNumber].lightmapIndex] );
+    glDrawElements( GL_TRIANGLES, pFace->numMeshIndices, GL_UNSIGNED_INT, NULL );
+    
+    glActiveTexture( GL_TEXTURE3 ); glBindTexture( GL_TEXTURE_2D, 0 );
+    glActiveTexture( GL_TEXTURE2 ); glBindTexture( GL_TEXTURE_2D, 0 );
+    glActiveTexture( GL_TEXTURE1 ); glBindTexture( GL_TEXTURE_2D, 0 );
+    glActiveTexture( GL_TEXTURE0 ); glBindTexture( GL_TEXTURE_2D, 0 );
+    
+    glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, 0 );
 
-    switch( render_wireframe.GetInteger() ) {
-        case 0:
-            glDrawElements(	GL_TRIANGLES, meshFaces[meshFaceNumber].numMeshIndices, GL_UNSIGNED_INT,
-						&meshIndices[meshFaces[meshFaceNumber].firstMeshIndex]);
-        break;
-        case 1:
-            glDrawElements(	GL_LINES, meshFaces[meshFaceNumber].numMeshIndices, GL_UNSIGNED_INT,
-						&meshIndices[meshFaces[meshFaceNumber].firstMeshIndex]);
-        break;
-        case 2:
-            glDrawElements(	GL_POINTS, meshFaces[meshFaceNumber].numMeshIndices, GL_UNSIGNED_INT,
-						&meshIndices[meshFaces[meshFaceNumber].firstMeshIndex]);
-        break;
-        default:
-            glDrawElements(	GL_TRIANGLES, meshFaces[meshFaceNumber].numMeshIndices, GL_UNSIGNED_INT,
-						&meshIndices[meshFaces[meshFaceNumber].firstMeshIndex]);
-        break;
-    }
-
-    glDisableVertexAttribArray(0);
-    glDisableVertexAttribArray(1);
-    glDisableVertexAttribArray(2);
+    glBindBuffer( GL_ARRAY_BUFFER, 0 );
+    glDisableVertexAttribArray( 0 );
+    glBindBuffer( GL_ARRAY_BUFFER, 0 );
+    glDisableVertexAttribArray( 1 );
+    glBindBuffer( GL_ARRAY_BUFFER, 0 );
+    glDisableVertexAttribArray( 2 );
+    glBindBuffer( GL_ARRAY_BUFFER, 0 );
+    glDisableVertexAttribArray( 3 );
     
     glBindVertexArray( 0 );
 }
 
-#ifdef USE_TESSELATION
+void ncBSP::RenderFaces( int faceNumber ) {
+    if( !InUse )
+        return;
+    
+    if( !faceNumber )
+        return;
+    
+    ncBSPLoadFace *pFace = &m_pFaces[faceNumber];
+
+    if( !pFace )
+        return;
+    
+    glBindVertexArray( m_bspVertexArray[3] );
+    
+    glEnableVertexAttribArray( 0 );
+    glBindBuffer( GL_ARRAY_BUFFER, m_bspFaceVBOs[0] );
+    glBufferData( GL_ARRAY_BUFFER, sizeof(ncBSPVertex) * pFace->numMeshIndices, &(m_vertices[pFace->firstVertexIndex].position), GL_STATIC_DRAW );
+    
+    glVertexAttribPointer( 0, 3, GL_FLOAT, GL_FALSE, sizeof(ncBSPVertex), (void*)0 );
+    
+    glEnableVertexAttribArray( 1 );
+    glBindBuffer( GL_ARRAY_BUFFER, m_bspFaceVBOs[1] );
+    glBufferData( GL_ARRAY_BUFFER, sizeof(ncBSPVertex) * pFace->numMeshIndices, &(m_vertices[pFace->firstVertexIndex].light), GL_STATIC_DRAW );
+    glVertexAttribPointer( 1, 3, GL_FLOAT, GL_FALSE, sizeof(ncBSPVertex), (void*)0 );
+    
+    glEnableVertexAttribArray( 2 );
+    glBindBuffer( GL_ARRAY_BUFFER, m_bspFaceVBOs[2] );
+    glBufferData( GL_ARRAY_BUFFER, sizeof(ncBSPVertex) * pFace->numMeshIndices, &(m_vertices[pFace->firstVertexIndex].decal), GL_STATIC_DRAW );
+    glVertexAttribPointer( 2, 3, GL_FLOAT, GL_FALSE, sizeof(ncBSPVertex), (void*)0 );
+    
+    glEnableVertexAttribArray( 3 );
+    glBindBuffer( GL_ARRAY_BUFFER, m_bspFaceVBOs[3] );
+    glBufferData( GL_ARRAY_BUFFER, sizeof(ncBSPVertex) * pFace->numMeshIndices, &(m_vertices[pFace->firstVertexIndex].normal), GL_STATIC_DRAW );
+    glVertexAttribPointer( 3, 3, GL_FLOAT, GL_FALSE, sizeof(ncBSPVertex), (void*)0 );
+    
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_bspIndexElementsData[1]);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, pFace->numMeshIndices * sizeof(uint), &meshIndices[pFace->firstMeshIndex], GL_STATIC_DRAW);
+    
+    // Bind textures to shader.
+    glActiveTexture( GL_TEXTURE0 );
+    glBindTexture( GL_TEXTURE_2D, m_decalTextures[pFace->texture] );
+   
+    glActiveTexture( GL_TEXTURE1 );
+    glBindTexture( GL_TEXTURE_2D, m_lightmapTextures[pFace->lightmapIndex] );
+  
+    glActiveTexture( GL_TEXTURE2);
+    glBindTexture( GL_TEXTURE_2D, g_sceneBuffer[EYE_FULL].depthtex );
+    
+    glActiveTexture( GL_TEXTURE3 );
+    glBindTexture( GL_TEXTURE_2D, m_normalTextures[pFace->texture] );
+    
+    // Draw now.
+    glDrawElements( GL_TRIANGLES, pFace->numMeshIndices, GL_UNSIGNED_INT, NULL );
+
+    glActiveTexture( GL_TEXTURE3 ); glBindTexture( GL_TEXTURE_2D, 0 );
+    glActiveTexture( GL_TEXTURE2 ); glBindTexture( GL_TEXTURE_2D, 0 );
+    glActiveTexture( GL_TEXTURE1 ); glBindTexture( GL_TEXTURE_2D, 0 );
+    glActiveTexture( GL_TEXTURE0 ); glBindTexture( GL_TEXTURE_2D, 0 );
+
+    glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, 0 );
+    glBindBuffer( GL_ARRAY_BUFFER, 0 );
+    glDisableVertexAttribArray( 0 );
+    glBindBuffer( GL_ARRAY_BUFFER, 0 );
+    glDisableVertexAttribArray( 1 );
+    glBindBuffer( GL_ARRAY_BUFFER, 0 );
+    glDisableVertexAttribArray( 2 );
+    glBindBuffer( GL_ARRAY_BUFFER, 0 );
+    glDisableVertexAttribArray( 3 );
+    
+    glBindVertexArray( 0 );
+}
+
+
+/*
+    
+    Following functions are biquadric rendering patch related..
+ 
+*/
+ 
 void ncBSP::RenderPatch( int patchNumber )
 {
-    for(int i=0; i<patches[patchNumber].numQuadraticPatches; ++i)
-        patches[patchNumber].quadraticPatches[i].Draw();
-
-}
-#endif
-
-
-#ifdef USE_TESSELATION
-bool ncBSPBiquadricPatch::Tesselate(int newTesselation)
-{
-    tesselation=newTesselation;
-    _core.Print( LOG_INFO, "Woop\n" );
-    float px, py;
-    ncBSPVertex temp[3];
-    vertices=new ncBSPVertex[(tesselation+1)*(tesselation+1)];
+    ncBSPPatch *pFace = &m_patches[patchNumber];
     
-    for(int v=0; v<=tesselation; ++v)
-    {
-        px=(float)v/tesselation;
-        
-        
-        
-        vertices[v]=
-        controlPoints[0]*((1.0f-px)*(1.0f-px))+
-        controlPoints[3]*((1.0f-px)*px*2)+
-        controlPoints[6]*(px*px);
-    }
+    if( !pFace )
+        return;
+
+    glBindVertexArray( m_bspVertexArray[2] );
     
-    _core.Print( LOG_INFO, "Woop1\n" );
+    glEnableVertexAttribArray( 0 );
+    glBindBuffer( GL_ARRAY_BUFFER, m_bspFaceVBOs[0] );
+    glBufferData( GL_ARRAY_BUFFER, sizeof(ncBSPVertex) * vertexCount, &(m_vertices[0].position.x), GL_STATIC_DRAW );
+    glVertexAttribPointer( 0, 3, GL_FLOAT, GL_FALSE, sizeof(ncBSPVertex), (void*)0 );
     
-    for(int u=1; u<=tesselation; ++u)
-    {
-        py=(float)u/tesselation;
-        
-        temp[0]=controlPoints[0]*((1.0f-py)*(1.0f-py))+
-        controlPoints[1]*((1.0f-py)*py*2)+
-        controlPoints[2]*(py*py);
-        
-        temp[1]=controlPoints[3]*((1.0f-py)*(1.0f-py))+
-        controlPoints[4]*((1.0f-py)*py*2)+
-        controlPoints[5]*(py*py);
-        
-        temp[2]=controlPoints[6]*((1.0f-py)*(1.0f-py))+
-        controlPoints[7]*((1.0f-py)*py*2)+
-        controlPoints[8]*(py*py);
-        
-        for(int v=0; v<=tesselation; ++v)
+    glEnableVertexAttribArray( 1 );
+    glBindBuffer( GL_ARRAY_BUFFER, m_bspFaceVBOs[1] );
+    glBufferData( GL_ARRAY_BUFFER, sizeof(ncBSPVertex) * vertexCount, &(m_vertices[0].light), GL_STATIC_DRAW );
+    glVertexAttribPointer( 1, 3, GL_FLOAT, GL_FALSE, sizeof(ncBSPVertex), (void*)0 );
+    
+    glEnableVertexAttribArray( 2 );
+    glBindBuffer( GL_ARRAY_BUFFER, m_bspFaceVBOs[2] );
+    glBufferData( GL_ARRAY_BUFFER, sizeof(ncBSPVertex) * vertexCount, &(m_vertices[0].decal), GL_STATIC_DRAW );
+    glVertexAttribPointer( 2, 3, GL_FLOAT, GL_FALSE, sizeof(ncBSPVertex), (void*)0 );
+    
+    glEnableVertexAttribArray( 3 );
+    glBindBuffer( GL_ARRAY_BUFFER, m_bspFaceVBOs[3] );
+    glBufferData( GL_ARRAY_BUFFER, sizeof(ncBSPVertex) * vertexCount, &(m_vertices[0].normal), GL_STATIC_DRAW );
+    glVertexAttribPointer( 3, 3, GL_FLOAT, GL_FALSE, sizeof(ncBSPVertex), (void*)0 );
+    
+    // Bind textures to shader.
+    glActiveTexture( GL_TEXTURE0 );
+    glBindTexture( GL_TEXTURE_2D, m_decalTextures[pFace->textureIdx] );
+    
+    glActiveTexture( GL_TEXTURE1 );
+    glBindTexture( GL_TEXTURE_2D, m_lightmapTextures[pFace->lightmapIdx] );
+    
+    glActiveTexture( GL_TEXTURE2);
+    glBindTexture( GL_TEXTURE_2D, g_sceneBuffer[EYE_FULL].depthtex );
+    
+    glActiveTexture( GL_TEXTURE3 );
+    glBindTexture( GL_TEXTURE_2D, m_normalTextures[pFace->textureIdx] );
+    
+    // Draw now.
+    int quadPatchesCount = sizeof(m_patches) / sizeof(m_patches[0]);
+
+    for( int i = 0; i < quadPatchesCount; i++ ){
+        for(int row=0; row < m_patches[patchNumber].quadraticPatches[i].m_tesselationLevel; ++row)
         {
-            px=(float)v/tesselation;
+            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_bspIndexElementsData[1]);
+            glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(uint) * vertexCount, &m_patches[patchNumber].quadraticPatches[i].m_indices[ row * 2 * (m_patches[patchNumber].quadraticPatches[i].m_tesselationLevel + 1) ], GL_STATIC_DRAW);
             
-            vertices[u*(tesselation+1)+v]=	temp[0]*((1.0f-px)*(1.0f-px))+
-            temp[1]*((1.0f-px)*px*2)+
-            temp[2]*(px*px);
+            glDrawElements(GL_TRIANGLE_STRIP, 2 * (m_patches[patchNumber].quadraticPatches[i].m_tesselationLevel + 1), GL_UNSIGNED_INT,
+                           NULL);
+            glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, 0 );
         }
     }
     
-    //Create indices
-    indices=new GLuint[tesselation*(tesselation+1)*2];
-    if(!indices)
+    glActiveTexture( GL_TEXTURE3 ); glBindTexture( GL_TEXTURE_2D, 0 );
+    glActiveTexture( GL_TEXTURE2 ); glBindTexture( GL_TEXTURE_2D, 0 );
+    glActiveTexture( GL_TEXTURE1 ); glBindTexture( GL_TEXTURE_2D, 0 );
+    glActiveTexture( GL_TEXTURE0 ); glBindTexture( GL_TEXTURE_2D, 0 );
+    
+    glBindBuffer( GL_ARRAY_BUFFER, 0 );
+    glDisableVertexAttribArray( 0 );
+    glBindBuffer( GL_ARRAY_BUFFER, 0 );
+    glDisableVertexAttribArray( 1 );
+    glBindBuffer( GL_ARRAY_BUFFER, 0 );
+    glDisableVertexAttribArray( 2 );
+    glBindBuffer( GL_ARRAY_BUFFER, 0 );
+    glDisableVertexAttribArray( 3 );
+    
+    glBindVertexArray( 0 );
+}
+
+void ncBSP::ComputeTangentData( void ) {
+ 
+    /*
+    int verticeSize = sizeof( m_vertices ) / sizeof( m_vertices[0] );
+    int polygonSize = sizeof( m_polygonFaces ) / sizeof( m_polygonFaces[0] );
+    polygonSize = polygonSize / 3;
+    
+    ts = 0;
+    bs = 0;
+    //ncVec4 *tangents = (ncVec4*)malloc( sizeof(ncVec4) * verticeSize );
+    
+    for (long a = 0; a < polygonSize; a += 3)
     {
-        _core.Error( ERC_FATAL, "Unable to allocate memory for surface indices." );
-        return false;
+        long i1 = m_polygonFaces[a + 0].firstVertexIndex;
+        long i2 = m_polygonFaces[a + 1].firstVertexIndex;
+        long i3 = m_polygonFaces[a + 2].firstVertexIndex;
+        
+        ncVec3 v1 = m_vertices[i1].position;
+        ncVec3 v2 = m_vertices[i2].position;
+        ncVec3 v3 = m_vertices[i3].position;
+        
+        ncVec2 w1 = m_vertices[i1].decal;
+        ncVec2 w2 = m_vertices[i2].decal;
+        ncVec2 w3 = m_vertices[i3].decal;
+        
+        float x1 = v2.x - v1.x;
+        float x2 = v3.x - v1.x;
+        float y1 = v2.y - v1.y;
+        float y2 = v3.y - v1.y;
+        float z1 = v2.z - v1.z;
+        float z2 = v3.z - v1.z;
+        
+        float s1 = w2.x - w1.x;
+        float s2 = w3.x - w1.x;
+        float t1 = w2.y - w1.y;
+        float t2 = w3.y - w1.y;
+        
+        float r = 1.0f / (s1 * t2 - s2 * t1);
+        
+        ncVec3 sdir = ncVec3((t2 * x1 - t1 * x2) * r, (t2 * y1 - t1 * y2) * r, (t2 * z1 - t1 * z2) * r);
+        ncVec3 tdir = ncVec3((s1 * x2 - s2 * x1) * r, (s1 * y2 - s2 * y1) * r, (s1 * z2 - s2 * z1) * r);
+        
+        tangentData[i1] = tangentData[i1] + sdir;
+        tangentData[i2] = tangentData[i2] + sdir;
+        tangentData[i3] = tangentData[i3] + sdir;
+        
+        bitangentData[i1] = bitangentData[i1] + tdir;
+        bitangentData[i2] = bitangentData[i2] + tdir;
+        bitangentData[i2] = bitangentData[i2] + tdir;
+        
+        ts++;
     }
-    _core.Print( LOG_INFO, "Woop2\n" );
-    for(int row=0; row<tesselation; ++row)
+    
+    for (long a = 0; a < vertexCount; ++a)
     {
-        for(int point=0; point<=tesselation; ++point)
+        ncVec3 n = m_vertices[a].normal;
+        ncVec3 t = tangentData[a];
+        
+        //Vector3 tmp = (t - n * Vector3.Dot(n, t)).normalized;
+        //tangents[a] = new Vector4(tmp.x, tmp.y, tmp.z);
+        
+        n.Normalize();
+        t.Normalize();
+        
+        tangents[a].x = t.x;
+        tangents[a].y = t.y;
+        tangents[a].z = t.z;
+        
+        ncVec3 c = Cross( n, t );
+        tangents[a].w = ncVec3_Dot( c, bitangentData[a] ) < 0.0f ? -1.0f : 1.0f;
+    }
+    */
+}
+
+void ncBSPBiquadPatch::Tesselate(int tessLevel)
+{
+    m_tesselationLevel = tessLevel;
+    m_m_vertices = new ncBSPVertex[ (m_tesselationLevel+1) * (m_tesselationLevel+1) ];
+    
+    for(int i = 0; i <= m_tesselationLevel; ++i)
+    {
+        float a = (float)i / m_tesselationLevel;
+        float b = 1.f - a;
+        
+        m_m_vertices[i]= controlPoints[0] * (b * b) +
+        controlPoints[3] * ( 2 * b * a ) +
+        controlPoints[6] * ( a * a );
+    }
+    
+    for(int i = 1; i <= m_tesselationLevel; ++i)
+    {
+        float a = (float)i / m_tesselationLevel;
+        float b = 1.f - a;
+        
+        ncBSPVertex temp[3];
+        
+        for(int j = 0, k = 0; j < 3; ++j, k = 3 * j)
         {
-            //calculate indices
-            //reverse them to reverse winding
-            indices[(row*(tesselation+1)+point)*2+1]=row*(tesselation+1)+point;
-            indices[(row*(tesselation+1)+point)*2]=(row+1)*(tesselation+1)+point;
+            temp[j] = controlPoints[k + 0] * ( b * b ) +
+            controlPoints[k + 1] * ( 2 * b * a) +
+            controlPoints[k + 2] * ( a * a );
+        }
+        
+        for(int j = 0; j <= m_tesselationLevel; ++j)
+        {
+            float a = (float)j / m_tesselationLevel;
+            float b = 1.f - a;
+            
+            m_m_vertices[ i * (m_tesselationLevel + 1) + j] = temp[0] * ( b * b ) +
+            temp[1] * ( 2 * b * a ) +
+            temp[2] * ( a * a );
         }
     }
-    _core.Print( LOG_INFO, "Woop3\n" );
     
-    //Fill in the arrays for multi_draw_arrays
-    trianglesPerRow=new int[tesselation];
-    rowIndexPointers=new unsigned int *[tesselation];
-    if(!trianglesPerRow || !rowIndexPointers)
+    
+    m_indices = new uint[m_tesselationLevel * (m_tesselationLevel+1) * 2];
+    for(int row = 0; row < m_tesselationLevel; ++row)
     {
-        _core.Error( ERC_FATAL, "Unable to allocate memory for indices for multi_draw_arrays");
-        return false;
-    }
-    _core.Print( LOG_INFO, "Woop4\n" );
-    for(int row=0; row<tesselation; ++row)
-    {
-        trianglesPerRow[row]=2*(tesselation+1);
-        rowIndexPointers[row]=&indices[row*2*(tesselation+1)];
+        for(int col = 0; col <= m_tesselationLevel; ++col)
+        {
+            m_indices[ ( row * (m_tesselationLevel + 1) + col ) * 2 + 1 ] =  row      * (m_tesselationLevel + 1) + col;
+            m_indices[ ( row * (m_tesselationLevel + 1) + col ) * 2 ]     = (row + 1) * (m_tesselationLevel + 1) + col;
+        }
     }
     
-    return true;
-}
-
-void ncBSPBiquadricPatch::Draw() {
-
+    m_trianglesPerRow  = new int[m_tesselationLevel];
+    m_rowIndexPointers = new unsigned int *[m_tesselationLevel];
     
-    for(int row=0; row<tesselation; ++row)
+    for(int row = 0; row < m_tesselationLevel; ++row)
     {
-        glDrawElements(	GL_TRIANGLE_STRIP, 2*(tesselation+1), GL_UNSIGNED_INT,
-                       &indices[row*2*(tesselation+1)]);
-        // glMultiDrawElementsEXT(	GL_TRIANGLE_STRIP, trianglesPerRow,
-            // GL_UNSIGNED_INT, (const void **)rowIndexPointers,
-            // tesselation);
+        m_trianglesPerRow[row] = 2 * (m_tesselationLevel + 1);
+        m_rowIndexPointers[row] = &m_indices[ row * 2 * (m_tesselationLevel + 1) ];
     }
 }
-#endif
+
+void ncBSPBiquadPatch::Render( void )
+{
+    for(int row=0; row < m_tesselationLevel; ++row)
+    {
+        glDrawElements(GL_TRIANGLE_STRIP, 2 * (m_tesselationLevel + 1), GL_UNSIGNED_INT,
+                       &m_indices[ row * 2 * (m_tesselationLevel + 1) ]);
+    }
+    
+}
+

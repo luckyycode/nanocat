@@ -32,7 +32,7 @@ struct ncSM1Header {
     char    material[12];
     
     // Vertices, normals, UVs.
-    filechunk_t  chunk[3];
+    ncFileChunk  chunk[3];
 };
 
 enum ncModelType {
@@ -52,7 +52,7 @@ public:
     // model manager ( including converter ) but not in the game.
     char    m_name[MODEL_NAMELEN];
     
-    ncMaterial  material;
+    ncMaterial  *material;
     
     int    _faces;
     
@@ -79,7 +79,7 @@ public:
     bool        use_materials;
     bool        use_shader;
     
-    ncGLShader    g_shader;
+    ncGLShader  *g_shader;
     
     bool        follow_player;
     ncModelType type;
@@ -88,12 +88,14 @@ public:
 class ncModelLoader {
 public:
     void Initialize( void );
-    void Spawn( ncModelType type, const char *name, const char *shadername,
+    void Spawn( ncModelType type, const NString name, const NString shadername,
                      ncVec3 pos, ncVec3 rot, bool followsplayer );
     
-    ncModel Find( char *name );
-    void Load( const char *filename );
+    ncModel Find( NString name );
+    void Load( const NString filename );
     void Render( bool reflection, ncSceneEye eye );
+    
+    void RemoveSpawnedModels( void );
     
     // Precached Models.
     // Models which are used in the game.
@@ -101,11 +103,11 @@ public:
     ncPrecachedModel    *_gmodel;
     
     // Models.
-    // Used by loader. Contains data like vertices,
+    // Used by loader. Contains data like m_vertices,
     // normals, uvs, etc..
     ncModel             *_model;
 };
 
-extern ncModelLoader _modelLoader;
+extern ncModelLoader *g_modelManager;
 
 #endif

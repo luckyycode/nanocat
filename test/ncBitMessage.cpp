@@ -12,14 +12,14 @@
 
 bool ncBitset::Initialize( int num ) {
 	if( Bits )
-		free( Bits );
+        delete [] Bits;
 
 	Bits = NULL;
 	Size = ( num >> 3 ) + 1;
-	Bits = (byte*)malloc( sizeof(byte) * Size );
+    Bits = new Byte[Size];
 
 	if( !Bits ) {
-        _core.Error( ERC_FATAL, "ncBitset failed to allocate memory for %i bytes.\n", Size );
+        g_Core->Error( ERR_FATAL, "ncBitset failed to allocate memory for %i bytes.\n", Size );
 		return false;
 	}
 
@@ -48,6 +48,13 @@ byte ncBitset::IsSet( int num ) {
 	return Bits[num >> 3] & 1 << (num & 7);
 }
 
+void ncBitset::Delete( void ) {
+    ClearAll();
+    Size = 0;
+    
+    delete [] Bits;
+}
+
 void ncBitMessage::Clear() {
     Size = 0;
 }
@@ -64,14 +71,14 @@ void *ncBitMessage::GetSpace( int length ) {
 	if( Size + length > MaxSize ) {
 
 		if( !AllowOverflow )
-			_core.Error( ERC_FATAL, "No overflow allowed for ncBitMessage.\n" );
+			g_Core->Error( ERR_FATAL, "No overflow allowed for ncBitMessage.\n" );
 
 		if( length > MaxSize )
-			_core.Error( ERC_FATAL, "Given length to ncBitMessage is more than its max allowed size.", length );
+			g_Core->Error( ERR_FATAL, "Given length to ncBitMessage is more than its max allowed size.", length );
 
 		Overflowed = true;
 
-		_core.Print( LOG_WARN, "ncBitMessage overflowed ( Now: %i MaxSize: %i ) \n", Size + length, MaxSize );
+		g_Core->Print( LOG_WARN, "ncBitMessage overflowed ( Now: %i MaxSize: %i ) \n", Size + length, MaxSize );
 
         Clear();
 	}
@@ -113,8 +120,15 @@ void ncBitMessage::WriteLong( int c ) {
 	g_buf[3]    = c >> 24;
 }
 
+// Main write function for Bitstream.
+#pragma mark - TODO: fail checks.
 void ncBitMessage::Write( void *data, int length ) {
-	memcpy( GetSpace( length ), data, length );
+    if( !memcpy( GetSpace( length ), data, length ) ) {
+        
+        g_Core->Print( LOG_ERROR, "ncBitMessage::Write failed to copy data with %s!\n", data );
+        g_Core->Error( ERR_FATAL, "ncBitMessage::Write failed to copy data." );
+    }
+    
 }
 
 void ncBitMessage::WriteFloat( float f ) {
@@ -129,7 +143,7 @@ void ncBitMessage::WriteFloat( float f ) {
 	Write( &rev.l, 4 );
 }
 
-void ncBitMessage::WriteString( const char *s ) {
+void ncBitMessage::WriteString( const NString s ) {
     if ( !s ) {
         // Empty string, skip it
         // and write empty space to keep something.
@@ -137,6 +151,7 @@ void ncBitMessage::WriteString( const char *s ) {
     }
     else {
         // Ignore this damned warning.
+#pragma mark - Ignore this damned warning.
 		Write( (Byte*)s, strlen(s) + 1 );
     }
 }
@@ -230,7 +245,7 @@ float ncBitMessage::ReadFloat() {
 	return rev.f;
 }
 
-char *ncBitMessage::ReadString() {
+NString ncBitMessage::ReadString() {
 	static char g_string[2048];
 	int l, c;
 

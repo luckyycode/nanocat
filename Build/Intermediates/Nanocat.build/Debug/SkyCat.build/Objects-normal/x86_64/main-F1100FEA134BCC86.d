@@ -1,1 +1,2 @@
-dependencies: /Users/nekocode/Desktop/nanocat/test/main.mm
+dependencies: \
+  /Users/nekocode/Documents/App\ resourses/nanocat/test/main.mm

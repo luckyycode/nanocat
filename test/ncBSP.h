@@ -16,9 +16,8 @@
 #include "GameMath.h"
 #include "Renderer.h"
 
-#define MAX_BSP_SCALE 2.0
+#define MAX_BSP_SCALE 1.0
 #define DIR_ENTRIES 17
-//#define USE_TESSELATION
 
 /* 
     Don't change its order or it will blow up. 
@@ -40,8 +39,11 @@ enum ncBSPDirectoryType {
 	SW_FACES,
 	SW_LIGHTMAPS,
 	SW_LIGHTVOLS,
-	SW_VISIBLEDATA
+	SW_VISIBLEDATA,
+    SW_MAXLUMPS
 };
+
+
 
 struct ncBSPLoadVertex {
     ncVec3 position;
@@ -53,6 +55,42 @@ struct ncBSPLoadVertex {
     GLubyte color[4];
 };
 
+class ncBSPVertex {
+public:
+    ncVec3 position;
+
+    ncVec2 decal;
+    ncVec2 light;
+    
+    ncVec3 normal;
+    
+    Byte color[4];
+
+    
+    ncBSPVertex operator+(const ncBSPVertex & rhs) const
+    {
+        ncBSPVertex result;
+        result.position=position+rhs.position;
+        result.decal.x=decal.x+rhs.decal.x;
+        result.decal.y=decal.y+rhs.decal.y;
+        result.light.x=light.x+rhs.light.x;
+        result.light.y=light.y+rhs.light.y;
+        
+        return result;
+    }
+    
+    ncBSPVertex operator*( const float rhs ) const {
+        ncBSPVertex result;
+        result.position=position*rhs;
+        result.decal.x=decal.x*rhs;
+        result.decal.y=decal.y*rhs;
+        result.light.x=light.x*rhs;
+        result.light.y=light.y*rhs;
+        
+        return result;
+    }
+};
+/*
 class ncBSPVertex {
 public:
     ncVec3 position;
@@ -83,19 +121,49 @@ public:
         
         return result;
     }
-};
+};*/
 
 enum ncBSPFaceType {
     SW_POLYGON = 1,
-    SW_PATCH,
-    SW_MESH,
-    SW_BILLBOARD
+    SW_PATCH = 2,
+    SW_MESH = 3,
+    SW_BILLBOARD = 4,
+    SW_FACE = 5
+};
+
+struct ncBSPEntityDirString
+{
+    int  size;
+    NString ents;
+};
+
+struct ncBSPEntities
+{
+    char* entities;
+};
+
+struct ncBSPLightVol
+{
+    unsigned char ambient[3];
+    unsigned char directional[3];
+    unsigned char dir[2];
 };
 
 struct ncBSPDirectoryEntry {
     ncBSPFaceType faceType;
     int typeFaceNumber;
 };
+
+typedef struct {
+    int brushside;
+    int n_brushsides;
+    int texture;
+} ncBSPBrush;
+
+typedef struct {
+    int plane;
+    int texture;
+} ncBSPBrushSide;
 
 struct ncBSPLoadFace {
     int texture;
@@ -132,45 +200,44 @@ struct ncBSPMeshFace {
     int numMeshIndices;
 };
 
-class ncBSPBiquadricPatch
+
+class ncBSPBiquadPatch
 {
 public:
-    bool Tesselate(int newTesselation);
-    void Draw();
+    ncBSPBiquadPatch() : m_tesselationLevel(0),
+    m_trianglesPerRow(NULL),
+    m_rowIndexPointers(NULL)
+    {
+    }
+    
+    ~ncBSPBiquadPatch()
+    {
+        delete [] m_trianglesPerRow;
+        delete [] m_rowIndexPointers;
+    }
+    
+    void Tesselate(int tessLevel);      // perform tesselation
+    void Render(void);
+    void GenerateArrays(void);
+    
+    uint patch_vao[1];
     
     ncBSPVertex controlPoints[9];
     
-    int tesselation;
-    ncBSPVertex *vertices;
-    GLuint *indices;
-
-    int *trianglesPerRow;
-    unsigned int **rowIndexPointers;
-    
-    ncBSPBiquadricPatch() : vertices(NULL)
-    {
-        
-    }
-    
-    ~ncBSPBiquadricPatch()
-    {
-        if( vertices )
-            delete [] vertices;
-        vertices = NULL;
-        
-        if( indices )
-            delete [] indices;
-        indices = NULL;
-    }
+    int                          m_tesselationLevel;
+    ncBSPVertex                 *m_m_vertices;
+    unsigned int    *m_indices;
+    int*                         m_trianglesPerRow;
+    unsigned int**               m_rowIndexPointers;
 };
 
 struct ncBSPPatch {
-    int textureIndex;
-    int lightmapIndex;
-    int width, height;
+    int textureIdx;   // surface texture index
+    int lightmapIdx;  // surface lightmap index
+    int width;
+    int height;
     
-    int numQuadraticPatches;
-    ncBSPBiquadricPatch *quadraticPatches;
+    ncBSPBiquadPatch *quadraticPatches;
 };
 
 struct ncBSPLoadTexture {
@@ -213,36 +280,41 @@ struct ncBSPVisibilityData {
     byte *bitset;
 };
 
+
+// BSP header.
+class ncBSPHeader {
+public:
+    char string[4];
+    int version;
+    
+    ncFileChunk dirEntry[DIR_ENTRIES];
+};
+
+// BSP manager class.
 class ncBSP {
 public:
-    bool Load( const char *filename );
+    bool Load( const NString filename );
     void Unload( void );
     void Render( bool reflection, ncSceneEye oc );
     void Initialize( void );
     
-    // Other.
+    // Visibility calculation.
     int CalculateLeaf( const ncVec3 cameraPosition );
     int IsClusterVisible( int cameraCluster, int testCluster );
     void CalculateVisibleData( const ncVec3  cameraPosition );
     
     bool Initialized;
-    bool InUse;
+    bool InUse = false; // IsRendering?
     
     ncBitset visibleFaces;
-    ncGLShader bspShader;
-    
+    ncGLShader *bspShader;
+
 private:
-    // BSP header.
-    struct bspheader_t {
-        char string[4];
-        int version;
-        filechunk_t dirEntry[DIR_ENTRIES];
-    };
+    FILE *mainFile;
     
     int vertexCount;
     int facesCount;
     int polygonCount;
-    int *meshIndices;
     int meshCount;
     int patchCount;
     int decalTextureCount;
@@ -250,49 +322,122 @@ private:
     int nodeCount;
     int planeCount;
     int leafCount;
+    int m_iNumLeafBrushes;
+    
     int *leafFaces;
+    int *meshIndices;
+    int *m_pLeafBrushes;
     
-    ncBSPVertex         *vertices;
-    ncBSPDirectoryEntry *bspDirectory;
-    ncBSPPolygonFace    *polygonFaces;
-    ncBSPMeshFace       *meshFaces;
-    ncBSPPatch          *patches;
-    ncBSPLeaf           *leaves;
-    ncPlane             *planes;
-    ncBSPNode           *nodes;
-    ncBSPVisibilityData visibilityData;
+    ncBSPLoadLeaf       *m_leafData;
+    ncBSPVertex         *m_vertices;
+    ncBSPDirectoryEntry *f_bspType;
+    ncBSPLoadFace       *m_polygonFaces;
+    ncBSPMeshFace       *m_meshFaces;
+    ncBSPPatch          *m_patches;
+    ncBSPLeaf           *m_leaves;
+    ncPlane             *m_planes;
+    ncBSPNode           *m_nodes;
+    ncBSPLoadFace       *m_pFaces;
     
-    GLuint  *decalTextures;
-    GLuint  *lightmapTextures;
-    GLuint  whiteTexture;
+    ncBSPVisibilityData m_visibilityData;
     
-    GLuint vaoID[2];
+    ncBSPBrush          *m_pBrushes;
+    ncBSPBrushSide      *m_pBrushSides;
     
-    GLuint lightVBO;
-    GLuint decalVBO;
-    GLuint verticeVBO;
-    GLuint normalVBO;
+    GLuint  *m_decalTextures;
+    GLuint  *m_normalTextures;
+    GLuint  *m_lightmapTextures;
     
+    GLuint  m_defaultLightTexture;
+    
+    NString m_EntityData; // Raw string.
+    
+    /*
+     
+     Vertex buffer objects:
+     
+     0) Vertice data
+     1) Light UV data
+     2) Decal UV data
+     3) Normal data
+     
+     Index array:
+     
+     0) Mesh index array
+     1) Face index array
+     2) Patch index array
+     
+     Vertex array objects:
+     
+     0) Polygon vao
+     1) Mesh vao
+     2) Patch vao
+     3) Face vao
+     
+     */
+    
+#define BSP_FACEVBO_COUNT 4
+#define BSP_MESHVBO_COUNT 4
+#define BSP_INDEXELEMENTS_COUNT 3
+    
+#define BSP_VERTEXARRAY_COUNT 4
+    
+#define BSPSHADER_MAXUNIFORMS 7
+    
+    GLuint m_bspFaceVBOs[BSP_FACEVBO_COUNT];
+    GLuint m_bspMeshVBOs[BSP_MESHVBO_COUNT];
+    GLuint m_bspIndexElementsData[BSP_INDEXELEMENTS_COUNT];
+    
+    GLuint m_bspVertexArray[BSP_VERTEXARRAY_COUNT];
+    
+    enum ncBSPShaderUniforms {
+        SHMVP_UNIFORM = 0, // Model + View + Projection
+        SHMV_UNIFORM, // Model view
+        SHCAMPOS_UNIFORM, // Camera position
+        SHLIGHTMAP_UNIFORM,
+        SHDECALMAP_UNIFORM,
+        SHNORMALMAP_UNIFORM,
+        SHDEPTHMAP_UNIFORM
+    };
+    
+    // Shader uniforms.
+    GLuint g_bspUniforms[BSPSHADER_MAXUNIFORMS];
+
     // Rendering functions.
     void RenderFace( int faceNumber, bool reflection, ncSceneEye oc );
     void RenderPolygon( int polygonFaceNumber );
     void RenderMesh( int meshFaceNumber );
     void RenderPatch( int patchNumber );
+    // Render faces.
+    void RenderFaces( int faceNumber );
     
     // Vertex array/buffer object setup.
     bool SetupObjects( void );
+    bool CleanupGraphics( void );
+    
+    // Helper functions.
+    void ComputeTangentData( void );
     
     // BSP build functions.
-    bool LoadMeshes( FILE *file );
-    bool LoadLightmaps( FILE *file );
-    bool LoadData( FILE *file );
-    bool LoadVertices( FILE *file );
-    bool LoadFaces( FILE *file );
-    bool LoadTextures( FILE *file );
+    void LoadEntityString( void );
+    void LoadMeshes( void );
+    void LoadBrushes( void );
+    void LoadLightmaps( void );
+    void LoadLightVols( void );
+    void LoadData( void );
+    void LoadVertices( void );
+    void LoadFaces( void );
+    void LoadTextures( void );
     
-    bspheader_t header;
+    // Global functions.
+    bool IsValid( ncBSPHeader *header );
+
+    ncBSPHeader header;
+    
+    const ncVec3 bsp_position = ncVec3( 0.0, 0.0, 0.0 );
 };
 
-extern ncBSP _bspmngr;
+extern ncBSP *g_staticWorld;
+
 
 #endif

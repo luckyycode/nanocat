@@ -23,6 +23,7 @@ public:
     void Clear( int num );
     void Set( int num );
     void SetAll( void );
+    void Delete( void );
     
     Byte IsSet( int num );
 };
@@ -69,7 +70,7 @@ public:
     void WriteLong( int c );
     void Write( void *data, int length );
     void WriteFloat( float f );
-    void WriteString( const char *s );
+    void WriteString( const NString s );
     void WriteCoord( float f );
     void WriteAngle( float f );
     void WriteData( byte *data, int length );
@@ -81,7 +82,7 @@ public:
     int ReadInt32( void );
     int ReadLong( void );
     float ReadFloat( void );
-    char *ReadString( void );
+    NString ReadString( void );
     float ReadCoord( void );
     float ReadAngle( void );
 };

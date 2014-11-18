@@ -10,25 +10,25 @@
 #ifndef command_h
 #define command_h
 
-typedef void (*functioncall_t) (void);
+typedef void (*ncFunctionCall) (void);
 
 class ncConsoleCommand {
 public:
     char            name[32];
-    functioncall_t  function;
+    ncFunctionCall  function;
 };
 
 class ncCommandManager {
 public:
-    void Add( const char *cmd, functioncall_t command );
-    char *Arguments( int c );
+    void Add( const NString cmd, ncFunctionCall command );
+    NString Arguments( int c );
     int ArgCount( void );
     void Initialize( void );
-    void Execute( const char *cmd[] );
+    void Execute( const NString cmd[] );
     
     unsigned int CommandCount;
 };
 
-extern ncCommandManager _commandManager;
+extern ncCommandManager *c_CommandManager;
 
 #endif

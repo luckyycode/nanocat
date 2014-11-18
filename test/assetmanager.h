@@ -12,23 +12,26 @@
 
 #include "ShaderLoader.h"
 
-enum AssetType {
-    ASSET_MODEL,
-    ASSET_SOUND,
-    ASSET_SHADER,
-    ASSET_MATERIAL,
-    ASSET_IMAGE
+// Asset types.
+enum ncAssetType {
+    ASSET_MODEL = 0,
+    ASSET_SOUND = 1,
+    ASSET_SHADER = 2,
+    ASSET_MATERIAL = 3 // I.e image/texture.
 };
 
 class ncAssetManager {
 public:
     
     void Initialize( void );
-    void Load( AssetType type, const char *name );
-    void FindShader( const char *name, ncGLShader *shader );
-    bool Exists( AssetType type, char *name );
+    void Load( ncAssetType type, const NString name );
+    
+    void FindShaderByName( const NString name, ncGLShader *shader );
+    ncGLShader *FindShaderByName( const NString name );
+    
+    bool Exists( ncAssetType type, NString name );
 };
 
-extern ncAssetManager _assetmanager;
+extern ncAssetManager *f_AssetManager;
 
 #endif

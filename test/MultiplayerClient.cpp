@@ -21,7 +21,8 @@
 #include "LocalGame.h"
 #include "ncBitMessage.h"
 
-ncClient _client;
+ncClient local_client;
+ncClient *n_client = &local_client;
 
 /*
     Client side.
@@ -38,15 +39,15 @@ ncConsoleVariable      Client_MaximumPackets( "client", "maxpackets", "Maximum p
 
 // Lazy commands.
 void lazyConnect() {
-    _client.Connect();
+    n_client->Connect();
 }
 
 void lazyName() {
-    _client.ChangeName();
+    n_client->ChangeName();
 }
 
 void lazySay() {
-    _client.Say();
+    n_client->Say();
 }
 
 /*
@@ -54,22 +55,24 @@ void lazySay() {
 */
 void ncClient::Disconnect( void ) {
     // Forced disconnect.
-    _client.DisconnectForced( "User disconnect.", true );
+    n_client->DisconnectForced( "User disconnect.", true );
 }
 
 /*
     Initialize client stuff.
 */
 void ncClient::Initialize() {
-    _core.Print( LOG_INFO, "Client initializing...\n" );
+    
+    g_Core->LoadState = NCCLOAD_CLIENT;
+    g_Core->Print( LOG_INFO, "Client initializing...\n" );
 
-    NameVar.Set( _system.GetCurrentUsername() );
+    NameVar.Set( c_coreSystem->GetCurrentUsername() );
     State = CLIENT_IDLE;
 
     // Commands.
-    _commandManager.Add( "connect", lazyConnect );
-    _commandManager.Add( "name", lazyName );
-    _commandManager.Add( "say", lazySay );
+    c_CommandManager->Add( "connect", lazyConnect );
+    c_CommandManager->Add( "name", lazyName );
+    c_CommandManager->Add( "say", lazySay );
 
     _stringhelper.Copy( Name, NameVar.GetString() );
 
@@ -82,14 +85,14 @@ void ncClient::Initialize() {
 /*
     Add ack command.
 */
-void ncClient::SendAcknowledge( const char *command ) {
+void ncClient::SendAcknowledge( const NString command ) {
     
     int unacknowledged = AckSequence - AckAcknowledged;
     int commandCount = sizeof( AckCommands ) / sizeof( AckCommands[0] );
 
     if( unacknowledged > commandCount ) {
-        _core.Print( LOG_INFO, "ncClient::SendAcknowledge - Error is going to happen. Command overflow ( Got %i )\n", unacknowledged );
-        _core.Error( ERC_FATAL, "ncClient::SendAcknowledge - Client command stack overflow." );
+        g_Core->Print( LOG_INFO, "ncClient::SendAcknowledge - Error is going to happen. Command overflow ( Got %i )\n", unacknowledged );
+        g_Core->Error( ERR_FATAL, "ncClient::SendAcknowledge - Client command stack overflow." );
         return;
     }
 
@@ -105,7 +108,7 @@ void ncClient::CheckTimeout( void ) {
         return;
 
     if( Time - LastMessageReceivedAt > ( Client_ServerTimeout.GetInteger() * 10000.0 ) ) {
-        _core.Print( LOG_INFO, "Active connection timed out.\n" );
+        g_Core->Print( LOG_INFO, "Active connection timed out.\n" );
         
         // Disconnect from server and clear info.
         Disconnect();
@@ -118,34 +121,34 @@ void ncClient::CheckTimeout( void ) {
 void ncClient::Connect( void ) {
     
     if( Server_Dedicated.GetInteger() ) {
-        _core.Print( LOG_INFO, "Not available in server dedicated mode.\n" );
+        g_Core->Print( LOG_INFO, "Not available in server dedicated mode.\n" );
         return;
     }
 
-    if( _commandManager.ArgCount() < 2 ) {
-        _core.Print( LOG_INFO, "USAGE: connect <address> <port>\n" );
+    if( c_CommandManager->ArgCount() < 2 ) {
+        g_Core->Print( LOG_INFO, "USAGE: connect <address> <port>\n" );
         return;
     }
 
     if( Server_Active.GetInteger() ) {
-        _core.Print( LOG_WARN, "You need to shutdown the server first.\n" );
+        g_Core->Print( LOG_WARN, "You need to shutdown the server first.\n" );
         return;
     }
 
     struct sockaddr_in _server;
     int socket;
     
-    const char *addr = _commandManager.Arguments(0);
-    const int port = atoi(_commandManager.Arguments(1));
+    const NString addr = c_CommandManager->Arguments(0);
+    const int port = atoi(c_CommandManager->Arguments(1));
     
-    _core.Print( LOG_INFO, "Connecting to %s:%i...\n", addr, port );
+    g_Core->Print( LOG_INFO, "Connecting to %s:%i...\n", addr, port );
 
     // FIXME: This is ugly
     if(( !strcmp( "localhost", addr ) ||
          !strcmp( "127.0.0.1", addr ) ) &&
-         port == network_port.GetInteger() ) {
+         port == Network_Port.GetInteger() ) {
         
-        _core.Print( LOG_INFO, "Local client - address type is loopback.\n" );
+        g_Core->Print( LOG_INFO, "Local client - address type is loopback.\n" );
         Server_Active.Set( "1" );
     }
     else
@@ -159,7 +162,7 @@ void ncClient::Connect( void ) {
     _server.sin_port = htons( port );
     _server.sin_addr.s_addr = inet_addr( addr );
 
-    socket = _netmanager.GetSocket();
+    socket = g_networkManager->GetSocket();
     
     CurrentServer = new ncNetdata( _server, port, socket );
     
@@ -167,11 +170,11 @@ void ncClient::Connect( void ) {
     
     // Resolve the network address.
     // If it changes then re-assign it.
-    if( _netmanager.Resolve( CurrentServer, addr ) )
+    if( g_networkManager->Resolve( CurrentServer, addr ) )
         _stringhelper.Copy( CurrentServer->IPAddress, inet_ntoa( CurrentServer->SockAddress.sin_addr ) );
     
     // Create network channel.
-    _netmanager.CreateChannel( &Channel, CurrentServer );
+    g_networkManager->CreateChannel( &Channel, CurrentServer );
     
     // Set client to be active.
     Client_Running.Set( "1" );
@@ -181,10 +184,10 @@ void ncClient::Connect( void ) {
     LastMessageReceivedAt = Time;
     LastConnectPacketTime = -999999;
 
-    ClientID = _core.Time ^ 0xFFFFFF;
+    ClientID = g_Core->Time ^ 0xFFFFFF;
     
     // Temp.
-    _clientgame.Loadmap( "demo" );
+    cg_LocalGame->Loadmap( "demo" );
 }
 
 /*
@@ -194,7 +197,7 @@ void ncClient::LoopbackConnect( void ) {
     if( Server_Dedicated.GetInteger() )
         return;
     
-    _gconsole.Execute( "connect 127.0.0.1 4004" );
+    g_Console->Execute( "connect 127.0.0.1 4004" );
 }
 
 /*
@@ -203,14 +206,14 @@ void ncClient::LoopbackConnect( void ) {
 void ncClient::ProcessAcknowledgeCommands( ncBitMessage *msg ) {
 
     int commandSequence = msg->ReadInt32();
-    char *command = msg->ReadString();
+    NString command = msg->ReadString();
 
     if( commandSequence > LastExecutedack ) {
 
         /*
             Gooosh, this is very bad.
         */
-
+        
         int     i;
         char    *p;
         const char    *token[8];
@@ -231,7 +234,7 @@ void ncClient::ProcessAcknowledgeCommands( ncBitMessage *msg ) {
             DisconnectForced(token[1], false);
         }
         else if( !strcmp( token[0], "print") ) {
-            _core.Print( LOG_INFO, "Server: %s\n", token[1] );
+            g_Core->Print( LOG_INFO, "Server: %s\n", token[1] );
         }
 
         LastExecutedack = commandSequence;
@@ -259,7 +262,7 @@ void ncClient::SendCommandPacket( void ) {
     msg->WriteInt32( LastServerMessage );
     msg->WriteInt32( LastackMessage );
 
-    for ( i = AckAcknowledged + 1; i <= AckSequence; i++ ) {
+    for( i = AckAcknowledged + 1; i <= AckSequence; i++ ) {
         msg->WriteByte( COMMANDHEADER_ACK );
         msg->WriteInt32( i );
         msg->WriteString( AckCommands[i & clientCommands - 1] );
@@ -272,18 +275,18 @@ void ncClient::SendCommandPacket( void ) {
     // calculate g_vUp and g_vRight,
     // also g_vEye for client view.
 
-    msg->WriteInt32( _camera.deltaMove );
-    msg->WriteFloat( _camera.g_vLook.x );
-    msg->WriteFloat( _camera.g_vLook.y );
-    msg->WriteFloat( _camera.g_vLook.z );
+    msg->WriteInt32( g_playerCamera->deltaMove );
+    msg->WriteFloat( g_playerCamera->g_vLook.x );
+    msg->WriteFloat( g_playerCamera->g_vLook.y );
+    msg->WriteFloat( g_playerCamera->g_vLook.z );
     
-    _netmanager.SendMessageChannel( &Channel, msg );
+    g_networkManager->SendMessageChannel( &Channel, msg );
 
     CommandSequence++;
 }
 
 void ncClient::CheckCommands( void ) {
-    TimeSinceLastPacket += _core.Time;
+    TimeSinceLastPacket += g_Core->Time;
     
     if( TimeSinceLastPacket > ( 1000 / Client_MaximumPackets.GetInteger() ) ) {
         SendCommandPacket();
@@ -313,7 +316,9 @@ void ncClient::ParseCommands( ncNetdata *from, ncBitMessage *buffer ) {
         switch(cmd) {
             case COMMANDHEADER_SERVERENTITY:
             {
-                int temp = buffer->ReadInt32();
+                int temp;
+                
+                temp = buffer->ReadInt32();
                 
                 AckAcknowledged = buffer->ReadInt32();
 
@@ -321,7 +326,7 @@ void ncClient::ParseCommands( ncNetdata *from, ncBitMessage *buffer ) {
                     AckAcknowledged = AckSequence;
                 }
 
-                TimeBase = (int)(_core.Time - Time);
+                TimeBase = (int)(g_Core->Time - Time);
 
                 int i;
                 for( i = buffer->ReadInt32(); i != MAX_SERVER_ENTITIES; i = buffer->ReadInt32() ){
@@ -384,11 +389,11 @@ void ncClient::Connectionless( ncNetdata *from, byte *data ) {
 
     if( !strcmp( token[0], "print" ) ) {
         // Server sends messages like SERVER_HELLO so make a parser for it.
-        _core.Print( LOG_INFO, "%s\n", token[1] );
+        g_Core->Print( LOG_INFO, "%s\n", token[1] );
     }
 
     if( !strcmp( token[0], "connectResponse" ) ) {
-        _core.Print( LOG_INFO, "Connected.\n" );
+        g_Core->Print( LOG_INFO, "Connected.\n" );
 
         State = CLIENT_CONNECTED;
     }
@@ -420,7 +425,7 @@ void ncClient::Reconnect( void ) {
 /*
     Disconnect the client from current server ( also clear server info ).
 */
-void ncClient::DisconnectForced( const char *msg, bool forced ) {
+void ncClient::DisconnectForced( const NString msg, bool forced ) {
 
     if( !Client_Running.GetInteger() )
         return;
@@ -433,7 +438,7 @@ void ncClient::DisconnectForced( const char *msg, bool forced ) {
     SendAcknowledge( "disconnect" );
     SendCommandPacket();
 
-    _renderer.RemoveWorld( "Client disconnect." ); // Remove current world.
+    g_mainRenderer->RemoveWorld( "Client disconnect." ); // Remove current world.
 
     State = CLIENT_IDLE;  // Set our state to IDLE.
 
@@ -446,32 +451,32 @@ void ncClient::DisconnectForced( const char *msg, bool forced ) {
     
     memset( AckCommands, 0, sizeof( AckCommands ) );
     
-    _core.Print( LOG_INFO, "Disconnected from server.\n" );
-    _core.Print( LOG_INFO, "\"%s\"\n", msg );
+    g_Core->Print( LOG_INFO, "Disconnected from server.\n" );
+    g_Core->Print( LOG_INFO, "\"%s\"\n", msg );
 }
 
 /*
     Change client name.
 */
 void ncClient::ChangeName( void ) {
-    if(  _commandManager.ArgCount() < 2 ) {
-        _core.Print( LOG_NONE, "\n" );
-        _core.Print( LOG_INFO, "Usage: name <username>" );
-        _core.Print( LOG_INFO, "Choose any name which you would like to use in game.\n" );
-        _core.Print( LOG_WARN, "No empty names allowed. Maximum name length is %i characters.\n", MAX_PLAYER_NAME_LEN );
-        _core.Print( LOG_INFO, "Try typing *random name* to get random nickname. :)\n" );
+    if(  c_CommandManager->ArgCount() < 2 ) {
+        g_Core->Print( LOG_NONE, "\n" );
+        g_Core->Print( LOG_INFO, "Usage: name <username>" );
+        g_Core->Print( LOG_INFO, "Choose any name which you would like to use in game.\n" );
+        g_Core->Print( LOG_WARN, "No empty names allowed. Maximum name length is %i characters.\n", MAX_PLAYER_NAME_LEN );
+        g_Core->Print( LOG_INFO, "Try typing *random name* to get random nickname. :)\n" );
         return;
     }
 
-    if( strlen( _commandManager.Arguments(0)) > MAX_PLAYER_NAME_LEN ) {
-        _core.Print( LOG_INFO, "Too long name, maximum %i symbols.\n", MAX_PLAYER_NAME_LEN );
+    if( strlen( c_CommandManager->Arguments(0)) > MAX_PLAYER_NAME_LEN ) {
+        g_Core->Print( LOG_INFO, "Too long name, maximum %i symbols.\n", MAX_PLAYER_NAME_LEN );
         return;
     }
 
-    _stringhelper.SPrintf( Name, MAX_PLAYER_NAME_LEN + 1,  _commandManager.Arguments(0));
-    NameVar.Set( _commandManager.Arguments(0) );
+    _stringhelper.SPrintf( Name, MAX_PLAYER_NAME_LEN + 1,  c_CommandManager->Arguments(0));
+    NameVar.Set( c_CommandManager->Arguments(0) );
 
-    _core.Print( LOG_INFO, "Your name was successfully changed to '%s'. Awesome!\n", NameVar.GetString() );
+    g_Core->Print( LOG_INFO, "Your name was successfully changed to '%s'. Awesome!\n", NameVar.GetString() );
 }
 
 /*
@@ -486,23 +491,23 @@ void ncClient::CheckConnect( void ) {
     switch( State ) {
         case CLIENT_PRECONNECTING:
             if ( Time - LastConnectPacketTime > RESPONSE_REPEAT ) {
-                _netmanager.PrintOutOfBand( CurrentServer, "getresponse" );
+                g_networkManager->PrintOutOfBand( CurrentServer, "getresponse" );
                 LastConnectPacketTime = Time;
 
-                _core.Print( LOG_INFO, "Awaiting server response..\n" );
+                g_Core->Print( LOG_INFO, "Awaiting server response..\n" );
             }
             break;
 
         case CLIENT_CONNECTING:
             if ( Time - LastConnectPacketTime > RESPONSE_REPEAT ) {
-                _netmanager.PrintOutOfBand( CurrentServer, "connect %i \"%s\" %s", Response, NameVar.GetString(), _version );
+                g_networkManager->PrintOutOfBand( CurrentServer, "connect %i \"%s\" %s", Response, NameVar.GetString(), _version );
                 LastConnectPacketTime = Time;
 
-                _core.Print( LOG_INFO, "Awaiting connect response..\n" );
+                g_Core->Print( LOG_INFO, "Awaiting connect response..\n" );
             }
             break;
         default:
-            _core.Error( ERC_FATAL, "Unexpected client state in CheckCommand\n" );
+            g_Core->Error( ERR_FATAL, "Unexpected client state in CheckCommand\n" );
             break;
     }
 }
@@ -524,9 +529,9 @@ void ncClient::Interpolate( void ) {
 
     float t = 1.0f - ( (latestPositionTime - Time) / 0.3 );
 
-    _camera.g_vEye.x = Math_Lerpf2( _camera.g_vEye.x, latestPosition.x, (t / 30.0f) / 25.0f );
-    _camera.g_vEye.y = Math_Lerpf2( _camera.g_vEye.y, latestPosition.y, (t / 30.0f) / 25.0f );
-    _camera.g_vEye.z = Math_Lerpf2( _camera.g_vEye.z, latestPosition.z, (t / 30.0f) / 25.0f );
+    g_playerCamera->g_vEye.x = Math_Lerpf2( g_playerCamera->g_vEye.x, latestPosition.x, (t / 30.0f) / 25.0f );
+    g_playerCamera->g_vEye.y = Math_Lerpf2( g_playerCamera->g_vEye.y, latestPosition.y, (t / 30.0f) / 25.0f );
+    g_playerCamera->g_vEye.z = Math_Lerpf2( g_playerCamera->g_vEye.z, latestPosition.z, (t / 30.0f) / 25.0f );
 }
 
 /*
@@ -562,19 +567,19 @@ void ncClient::Frame( int msec ) {
 */
 void ncClient::Say( void ) {
 
-    if( _commandManager.ArgCount() < 1 ) {
-        _core.Print( LOG_INFO, "USAGE: say <message>\n" );
+    if( c_CommandManager->ArgCount() < 1 ) {
+        g_Core->Print( LOG_INFO, "USAGE: say <message>\n" );
         return;
     }
 
     if( Server_Dedicated.GetInteger() ) {
-        _core.Print( LOG_NONE, "%s: %s\n", Server_Sayname.GetString(), _commandManager.Arguments(0) );
-        _server.SendAcknowledgeCommand( NULL, false, "print %s", _commandManager.Arguments(0) );
+        g_Core->Print( LOG_NONE, "%s: %s\n", Server_Sayname.GetString(), c_CommandManager->Arguments(0) );
+        n_server->SendAcknowledgeCommand( NULL, false, "print %s", c_CommandManager->Arguments(0) );
         return;
     }
 
     if( Client_Running.GetInteger() ) {
-        SendAcknowledge( _stringhelper.STR("say %s", _commandManager.Arguments(0)) );
+        SendAcknowledge( _stringhelper.STR("say %s", c_CommandManager->Arguments(0)) );
     }
 }
 

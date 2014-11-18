@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<document type="com.apple.InterfaceBuilder3.Cocoa.XIB" version="3.0" toolsVersion="6205" systemVersion="14A299l" targetRuntime="MacOSX.Cocoa" propertyAccessControl="none" useAutolayout="YES">
+<document type="com.apple.InterfaceBuilder3.Cocoa.XIB" version="3.0" toolsVersion="6249" systemVersion="14A388b" targetRuntime="MacOSX.Cocoa" propertyAccessControl="none" useAutolayout="YES">
     <dependencies>
-        <plugIn identifier="com.apple.InterfaceBuilder.CocoaPlugin" version="6205"/>
+        <deployment identifier="macosx"/>
+        <plugIn identifier="com.apple.InterfaceBuilder.CocoaPlugin" version="6249"/>
     </dependencies>
     <objects>
         <customObject id="-2" userLabel="File's Owner" customClass="NSApplication">
@@ -56,14 +57,14 @@
         <window title="Nanocat" allowsToolTipsWhenApplicationIsInactive="NO" autorecalculatesKeyViewLoop="NO" releasedWhenClosed="NO" animationBehavior="default" id="371" propertyAccessControl="none">
             <windowStyleMask key="styleMask" titled="YES" miniaturizable="YES" resizable="YES"/>
             <windowCollectionBehavior key="collectionBehavior" fullScreenAuxiliary="YES"/>
-            <rect key="contentRect" x="0.0" y="0.0" width="1920" height="1080"/>
+            <rect key="contentRect" x="0.0" y="0.0" width="1280" height="768"/>
             <rect key="screenRect" x="0.0" y="0.0" width="1366" height="745"/>
             <view key="contentView" id="372" customClass="glView">
-                <rect key="frame" x="0.0" y="0.0" width="1920" height="1080"/>
+                <rect key="frame" x="0.0" y="0.0" width="1280" height="768"/>
                 <autoresizingMask key="autoresizingMask"/>
                 <subviews>
                     <customView canDrawConcurrently="YES" focusRingType="exterior" fixedFrame="YES" placeholderIntrinsicWidth="infinite" placeholderIntrinsicHeight="infinite" translatesAutoresizingMaskIntoConstraints="NO" id="nwG-bV-F3S" customClass="glView">
-                        <rect key="frame" x="0.0" y="312" width="1920" height="1080"/>
+                        <rect key="frame" x="0.0" y="0.0" width="1920" height="1080"/>
                     </customView>
                 </subviews>
             </view>

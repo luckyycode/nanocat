@@ -1,1 +1,2 @@
-dependencies: /Users/nekocode/Desktop/nanocat/test/MapLevel.cpp
+dependencies: \
+  /Users/nekocode/Documents/App\ resourses/nanocat/test/MapLevel.cpp

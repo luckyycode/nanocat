@@ -25,6 +25,13 @@ public:
     bool Active;
 };
 
+enum ncWaterShaderUniforms {
+    WTIME_UNIFORM = 0,
+    WMODELMATRIX_UNIFORM,
+    WPROJECTIONMATRIX_UNIFORM,
+    WMVP_UNIFORM
+};
+
 /*
     Game beautiful manager.
 */
@@ -33,20 +40,22 @@ class ncGameWater {
     
 public:
     // Water.
-    void    Initialize( void );
-    void    Render( ncSceneEye eye );
-    void    Remove( void );
-    void    Refresh( void );
-    void    Spawn( ncVec3 position, float size );
+    void Initialize( void );
+    void Render( ncSceneEye eye );
+    void Remove( void );
+    void Refresh( void );
+    void Spawn( ncVec3 position, float size );
 
-    unsigned int    water_sectors;
+    unsigned int water_sectors;
     
     bool Initialized;
     bool InUse;
+    
+    GLint g_waterUniforms[4];
 };
 
-extern ncGameWorld _gameworld;
-extern ncGameWater _gamewater;
+extern ncGameWorld *g_gameWorld;
+extern ncGameWater *g_gameWater;
 
 extern ncConsoleVariable water_distance;                         // Water rendering distance.
 

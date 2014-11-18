@@ -16,22 +16,27 @@
 #define FONT_VERTICES 1024
 #define FONT_CHARACTERSKIP 32
 
+#define FONT_VBO_ID 0
+#define FONT_UV_ID 1
+
+#define FONT_VBO_COUNT 2
+
 class ncCoreFontRenderer {
 public:
     void Initialize( void );
-    void Print2D( ncVec4 color, int x, int y, int size, const char *msg, ... );
+    void Print2D( ncVec4 color, int x, int y, int size, const NString msg, ... );
     
-    uint VBO;
-    uint UV;
-    uint VAO;
+    GLuint font_vbo[FONT_VBO_COUNT];
+    GLuint font_vao;
+    
     uint colorID;
     uint texID;
     uint texture;
     
-    ncGLShader shader;
+    ncGLShader *shader;
 };
 
-extern ncCoreFontRenderer _font;
+extern ncCoreFontRenderer *g_coreFont;
 
 extern ncConsoleVariable Font_Size;
 extern ncConsoleVariable Font_Width;

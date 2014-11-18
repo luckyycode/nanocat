@@ -16,8 +16,10 @@
 #include "LocalGame.h"
 #include "LevelEnvironment.h"
 #include "Core.h"
+#include "Terrain.h"
 
-ncClientGame _clientgame;
+ncClientGame local_clientgame;
+ncClientGame *cg_LocalGame = &local_clientgame;
 
 /*
     Local client game.
@@ -30,19 +32,19 @@ ncConsoleVariable     World_Name( "level", "name", "Current level name", "world"
 */
 
 void ncClientGame::Initialize( void ) {
-    _core.Print( LOG_INFO, "Client game initializing..\n" );
+    g_Core->Print( LOG_INFO, "Client game initializing..\n" );
 }
 
 /*
     Just for fun and testing purposes.
 */
 void ncClientGame::Error( void ) {
-    if ( _commandManager.ArgCount() < 1 ) {
-        _core.Print( LOG_INFO, "USAGE: error <reason>\n" );
+    if ( c_CommandManager->ArgCount() < 1 ) {
+        g_Core->Print( LOG_INFO, "USAGE: error <reason>\n" );
         return;
     }
     
-    _core.Error( ERC_CRASH, _commandManager.Arguments(0) );
+    g_Core->Error( ERR_FATAL, c_CommandManager->Arguments(0) );
 }
 
 /*
@@ -51,31 +53,31 @@ void ncClientGame::Error( void ) {
 
 */
 
-bool ncClientGame::Loadmap( const char *map_name ) {
-    _core.Print( LOG_DEVELOPER, "Loading %s..\n", map_name );
+bool ncClientGame::Loadmap( const NString map_name ) {
+    g_Core->Print( LOG_DEVELOPER, "Loading %s..\n", map_name );
 
     // Remove current world ( if exists ).
-    if( _gameworld.Active )
-        _gconsole.Execute( "removeworld" );
+    g_Console->Execute( "removeworld" );
 
     // Get map file and load it.
-    if( _bspmngr.Load( _stringhelper.STR( "%s.bsp", map_name ) ) ) {
+    if( g_staticWorld->Load( _stringhelper.STR( "%s.bsp", map_name ) ) ) {
         World_Name.Set( map_name );
 
-        _levelenvironment.Prepare();
+        g_LevelEnvironment->Prepare();
         
-        _core.Print( LOG_INFO, "Map load success..\n" );
-        _core.Print( LOG_INFO, "Creating map entities..\n" );
+        g_Core->Print( LOG_INFO, "Map load success..\n" );
+        g_Core->Print( LOG_INFO, "Creating map entities..\n" );
 
         // Refresh map stuff.
         // console_exec( str("readconfig config/%s.nconf", map_name) );
 
         // Well, instant apply.
-        _gconsole.Execute( "glrefresh" );
+        g_Console->Execute( "glrefresh" );
 
-        _gameworld.Active   = true;
-        _gamewater.InUse    = true;
-        _bspmngr.InUse = true;
+        g_gameWorld->Active = true;
+        g_gameWater->InUse = true;
+        g_gameTerrain->InUse = true;
+        g_staticWorld->InUse = false;
         
         return true;
     }

@@ -10,6 +10,14 @@
 #ifndef input_h
 #define input_h
 
+enum ncInputKeyType {
+    NCKEY_FORWARD = 0,
+    NCKEY_BACKWARD,
+    NCKEY_STRAFELEFT,
+    NCKEY_STRAFERIGHT,
+    NCKEY_ESCAPE
+};
+
 class ncMouse {
 public:
     bool Holding;
@@ -27,10 +35,13 @@ public:
     void OnMouseUp( int x, int y );
     
     char GetKeyFromNum( uint key );
+    
+    void MakeKeyEvent( char key );
+    void MakeKeyEvent( ncInputKeyType type );
 };
 
-extern ncInput _input;
-extern ncMouse _imouse;
+extern ncInput *g_Input;
+extern ncMouse *c_Mouse;
 
 // DEVELOPER
 extern ncConsoleVariable       dev_showcursorpos;                         // Show cursor position on screen.

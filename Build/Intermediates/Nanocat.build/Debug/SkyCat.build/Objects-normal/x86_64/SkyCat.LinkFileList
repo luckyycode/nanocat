@@ -1,34 +1,37 @@
-/Users/nekocode/Desktop/nanocat/Build/Intermediates/Nanocat.build/Debug/SkyCat.build/Objects-normal/x86_64/ConsoleCommand.o
-/Users/nekocode/Desktop/nanocat/Build/Intermediates/Nanocat.build/Debug/SkyCat.build/Objects-normal/x86_64/FileSystem.o
-/Users/nekocode/Desktop/nanocat/Build/Intermediates/Nanocat.build/Debug/SkyCat.build/Objects-normal/x86_64/MacOpenGL.o
-/Users/nekocode/Desktop/nanocat/Build/Intermediates/Nanocat.build/Debug/SkyCat.build/Objects-normal/x86_64/Console.o
-/Users/nekocode/Desktop/nanocat/Build/Intermediates/Nanocat.build/Debug/SkyCat.build/Objects-normal/x86_64/Camera.o
-/Users/nekocode/Desktop/nanocat/Build/Intermediates/Nanocat.build/Debug/SkyCat.build/Objects-normal/x86_64/MultiplayerClient.o
-/Users/nekocode/Desktop/nanocat/Build/Intermediates/Nanocat.build/Debug/SkyCat.build/Objects-normal/x86_64/CoreFont.o
-/Users/nekocode/Desktop/nanocat/Build/Intermediates/Nanocat.build/Debug/SkyCat.build/Objects-normal/x86_64/GameMath.o
-/Users/nekocode/Desktop/nanocat/Build/Intermediates/Nanocat.build/Debug/SkyCat.build/Objects-normal/x86_64/main-37F37323D40A4090.o
-/Users/nekocode/Desktop/nanocat/Build/Intermediates/Nanocat.build/Debug/SkyCat.build/Objects-normal/x86_64/AssetManager.o
-/Users/nekocode/Desktop/nanocat/Build/Intermediates/Nanocat.build/Debug/SkyCat.build/Objects-normal/x86_64/Renderer.o
-/Users/nekocode/Desktop/nanocat/Build/Intermediates/Nanocat.build/Debug/SkyCat.build/Objects-normal/x86_64/Water.o
-/Users/nekocode/Desktop/nanocat/Build/Intermediates/Nanocat.build/Debug/SkyCat.build/Objects-normal/x86_64/ImageManager.o
-/Users/nekocode/Desktop/nanocat/Build/Intermediates/Nanocat.build/Debug/SkyCat.build/Objects-normal/x86_64/GameWorld.o
-/Users/nekocode/Desktop/nanocat/Build/Intermediates/Nanocat.build/Debug/SkyCat.build/Objects-normal/x86_64/OpenGL.o
-/Users/nekocode/Desktop/nanocat/Build/Intermediates/Nanocat.build/Debug/SkyCat.build/Objects-normal/x86_64/NCString.o
-/Users/nekocode/Desktop/nanocat/Build/Intermediates/Nanocat.build/Debug/SkyCat.build/Objects-normal/x86_64/ncBSP.o
-/Users/nekocode/Desktop/nanocat/Build/Intermediates/Nanocat.build/Debug/SkyCat.build/Objects-normal/x86_64/Network.o
-/Users/nekocode/Desktop/nanocat/Build/Intermediates/Nanocat.build/Debug/SkyCat.build/Objects-normal/x86_64/ConsoleVariable.o
-/Users/nekocode/Desktop/nanocat/Build/Intermediates/Nanocat.build/Debug/SkyCat.build/Objects-normal/x86_64/MultiplayerServer.o
-/Users/nekocode/Desktop/nanocat/Build/Intermediates/Nanocat.build/Debug/SkyCat.build/Objects-normal/x86_64/Utils.o
-/Users/nekocode/Desktop/nanocat/Build/Intermediates/Nanocat.build/Debug/SkyCat.build/Objects-normal/x86_64/Models.o
-/Users/nekocode/Desktop/nanocat/Build/Intermediates/Nanocat.build/Debug/SkyCat.build/Objects-normal/x86_64/Input.o
-/Users/nekocode/Desktop/nanocat/Build/Intermediates/Nanocat.build/Debug/SkyCat.build/Objects-normal/x86_64/Core.o
-/Users/nekocode/Desktop/nanocat/Build/Intermediates/Nanocat.build/Debug/SkyCat.build/Objects-normal/x86_64/MacUtils.o
-/Users/nekocode/Desktop/nanocat/Build/Intermediates/Nanocat.build/Debug/SkyCat.build/Objects-normal/x86_64/MaterialLoader.o
-/Users/nekocode/Desktop/nanocat/Build/Intermediates/Nanocat.build/Debug/SkyCat.build/Objects-normal/x86_64/AppDelegate.o
-/Users/nekocode/Desktop/nanocat/Build/Intermediates/Nanocat.build/Debug/SkyCat.build/Objects-normal/x86_64/System.o
-/Users/nekocode/Desktop/nanocat/Build/Intermediates/Nanocat.build/Debug/SkyCat.build/Objects-normal/x86_64/MapLevel.o
-/Users/nekocode/Desktop/nanocat/Build/Intermediates/Nanocat.build/Debug/SkyCat.build/Objects-normal/x86_64/LocalGame.o
-/Users/nekocode/Desktop/nanocat/Build/Intermediates/Nanocat.build/Debug/SkyCat.build/Objects-normal/x86_64/LevelEnvironment.o
-/Users/nekocode/Desktop/nanocat/Build/Intermediates/Nanocat.build/Debug/SkyCat.build/Objects-normal/x86_64/ShaderLoader.o
-/Users/nekocode/Desktop/nanocat/Build/Intermediates/Nanocat.build/Debug/SkyCat.build/Objects-normal/x86_64/ncBitMessage.o
-/Users/nekocode/Desktop/nanocat/Build/Intermediates/Nanocat.build/Debug/SkyCat.build/Objects-normal/x86_64/main-F1100FEA134BCC86.o
+/Users/nekocode/Documents/App resourses/nanocat/Build/Intermediates/Nanocat.build/Debug/SkyCat.build/Objects-normal/x86_64/ConsoleCommand.o
+/Users/nekocode/Documents/App resourses/nanocat/Build/Intermediates/Nanocat.build/Debug/SkyCat.build/Objects-normal/x86_64/FileSystem.o
+/Users/nekocode/Documents/App resourses/nanocat/Build/Intermediates/Nanocat.build/Debug/SkyCat.build/Objects-normal/x86_64/MacOpenGL.o
+/Users/nekocode/Documents/App resourses/nanocat/Build/Intermediates/Nanocat.build/Debug/SkyCat.build/Objects-normal/x86_64/Console.o
+/Users/nekocode/Documents/App resourses/nanocat/Build/Intermediates/Nanocat.build/Debug/SkyCat.build/Objects-normal/x86_64/Camera.o
+/Users/nekocode/Documents/App resourses/nanocat/Build/Intermediates/Nanocat.build/Debug/SkyCat.build/Objects-normal/x86_64/MultiplayerClient.o
+/Users/nekocode/Documents/App resourses/nanocat/Build/Intermediates/Nanocat.build/Debug/SkyCat.build/Objects-normal/x86_64/CoreFont.o
+/Users/nekocode/Documents/App resourses/nanocat/Build/Intermediates/Nanocat.build/Debug/SkyCat.build/Objects-normal/x86_64/GameMath.o
+/Users/nekocode/Documents/App resourses/nanocat/Build/Intermediates/Nanocat.build/Debug/SkyCat.build/Objects-normal/x86_64/main-37F37323D40A4090.o
+/Users/nekocode/Documents/App resourses/nanocat/Build/Intermediates/Nanocat.build/Debug/SkyCat.build/Objects-normal/x86_64/AssetManager.o
+/Users/nekocode/Documents/App resourses/nanocat/Build/Intermediates/Nanocat.build/Debug/SkyCat.build/Objects-normal/x86_64/Renderer.o
+/Users/nekocode/Documents/App resourses/nanocat/Build/Intermediates/Nanocat.build/Debug/SkyCat.build/Objects-normal/x86_64/Water.o
+/Users/nekocode/Documents/App resourses/nanocat/Build/Intermediates/Nanocat.build/Debug/SkyCat.build/Objects-normal/x86_64/ImageManager.o
+/Users/nekocode/Documents/App resourses/nanocat/Build/Intermediates/Nanocat.build/Debug/SkyCat.build/Objects-normal/x86_64/GameWorld.o
+/Users/nekocode/Documents/App resourses/nanocat/Build/Intermediates/Nanocat.build/Debug/SkyCat.build/Objects-normal/x86_64/Terrain.o
+/Users/nekocode/Documents/App resourses/nanocat/Build/Intermediates/Nanocat.build/Debug/SkyCat.build/Objects-normal/x86_64/OpenGL.o
+/Users/nekocode/Documents/App resourses/nanocat/Build/Intermediates/Nanocat.build/Debug/SkyCat.build/Objects-normal/x86_64/NCString.o
+/Users/nekocode/Documents/App resourses/nanocat/Build/Intermediates/Nanocat.build/Debug/SkyCat.build/Objects-normal/x86_64/ncBSP.o
+/Users/nekocode/Documents/App resourses/nanocat/Build/Intermediates/Nanocat.build/Debug/SkyCat.build/Objects-normal/x86_64/Network.o
+/Users/nekocode/Documents/App resourses/nanocat/Build/Intermediates/Nanocat.build/Debug/SkyCat.build/Objects-normal/x86_64/ConsoleVariable.o
+/Users/nekocode/Documents/App resourses/nanocat/Build/Intermediates/Nanocat.build/Debug/SkyCat.build/Objects-normal/x86_64/MultiplayerServer.o
+/Users/nekocode/Documents/App resourses/nanocat/Build/Intermediates/Nanocat.build/Debug/SkyCat.build/Objects-normal/x86_64/Utils.o
+/Users/nekocode/Documents/App resourses/nanocat/Build/Intermediates/Nanocat.build/Debug/SkyCat.build/Objects-normal/x86_64/Models.o
+/Users/nekocode/Documents/App resourses/nanocat/Build/Intermediates/Nanocat.build/Debug/SkyCat.build/Objects-normal/x86_64/Input.o
+/Users/nekocode/Documents/App resourses/nanocat/Build/Intermediates/Nanocat.build/Debug/SkyCat.build/Objects-normal/x86_64/Core.o
+/Users/nekocode/Documents/App resourses/nanocat/Build/Intermediates/Nanocat.build/Debug/SkyCat.build/Objects-normal/x86_64/MacUtils.o
+/Users/nekocode/Documents/App resourses/nanocat/Build/Intermediates/Nanocat.build/Debug/SkyCat.build/Objects-normal/x86_64/MaterialLoader.o
+/Users/nekocode/Documents/App resourses/nanocat/Build/Intermediates/Nanocat.build/Debug/SkyCat.build/Objects-normal/x86_64/AppDelegate.o
+/Users/nekocode/Documents/App resourses/nanocat/Build/Intermediates/Nanocat.build/Debug/SkyCat.build/Objects-normal/x86_64/Security.o
+/Users/nekocode/Documents/App resourses/nanocat/Build/Intermediates/Nanocat.build/Debug/SkyCat.build/Objects-normal/x86_64/System.o
+/Users/nekocode/Documents/App resourses/nanocat/Build/Intermediates/Nanocat.build/Debug/SkyCat.build/Objects-normal/x86_64/MapLevel.o
+/Users/nekocode/Documents/App resourses/nanocat/Build/Intermediates/Nanocat.build/Debug/SkyCat.build/Objects-normal/x86_64/LocalGame.o
+/Users/nekocode/Documents/App resourses/nanocat/Build/Intermediates/Nanocat.build/Debug/SkyCat.build/Objects-normal/x86_64/LevelEnvironment.o
+/Users/nekocode/Documents/App resourses/nanocat/Build/Intermediates/Nanocat.build/Debug/SkyCat.build/Objects-normal/x86_64/VBOOpenGL.o
+/Users/nekocode/Documents/App resourses/nanocat/Build/Intermediates/Nanocat.build/Debug/SkyCat.build/Objects-normal/x86_64/ShaderLoader.o
+/Users/nekocode/Documents/App resourses/nanocat/Build/Intermediates/Nanocat.build/Debug/SkyCat.build/Objects-normal/x86_64/ncBitMessage.o
+/Users/nekocode/Documents/App resourses/nanocat/Build/Intermediates/Nanocat.build/Debug/SkyCat.build/Objects-normal/x86_64/main-F1100FEA134BCC86.o

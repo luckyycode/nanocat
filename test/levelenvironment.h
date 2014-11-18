@@ -19,6 +19,6 @@ public:
     void PassShader( uint *id );
 };
 
-extern ncLevelEnvironment _levelenvironment;
+extern ncLevelEnvironment *g_LevelEnvironment;
 
 #endif

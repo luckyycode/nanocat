@@ -17,7 +17,7 @@
     Initialize game math.
 */
 void gamemath_init( void ) {
-    _core.Print( LOG_INFO, "GameMath initializing..\n" );
+    g_Core->Print( LOG_INFO, "GameMath initializing..\n" );
     // Nothing to initialize for now, lol.
 }
 
@@ -312,7 +312,7 @@ void ncMatrix4::Inverse( void ) {
     
     // Singularity test.
     if( det == 0.0 ) {
-        _core.Print( LOG_WARN, "GameMath: Call to InverseMatrix produced a singular matrix.\n" );
+        g_Core->Print( LOG_WARN, "GameMath: Call to InverseMatrix produced a singular matrix.\n" );
         
         float identity[16] = {
             1.0, 0.0, 0.0, 0.0,
@@ -449,6 +449,16 @@ ncVec3 ncVec3::operator-(const ncVec3& v) const {
     return vResult;
 }
 
+ncVec2 ncVec2::operator-(const ncVec2& v) const {
+    ncVec2 vResult;
+    
+    vResult.x = x - v.x;
+    vResult.y = y - v.y;
+    
+    return vResult;
+}
+
+
 ncVec3 ncVec3::operator+(const ncVec3& v) const {
     ncVec3 vResult;
     
@@ -481,6 +491,62 @@ ncVec3 ncVec3::operator/( const float v ) const {
     vResult.x = x / v;
     vResult.y = y / v;
     vResult.z = z / v;
+    
+    return vResult;
+}
+
+ncVec2 ncVec2::operator/( const float& v ) const {
+    ncVec2 vResult;
+    vResult.x = x / v;
+    vResult.y = y / v;
+    
+    return vResult;
+}
+
+ncVec2 ncVec2::operator*( const float& v ) const {
+    ncVec2 vResult;
+    vResult.x = x * v;
+    vResult.y = y * v;
+    
+    return vResult;
+}
+
+ncVec2 ncVec2::operator+( const float& v ) const {
+    ncVec2 vResult;
+    vResult.x = x + v;
+    vResult.y = y + v;
+    
+    return vResult;
+}
+
+ncVec2 ncVec2::operator-( const float& v ) const {
+    ncVec2 vResult;
+    vResult.x = x - v;
+    vResult.y = y - v;
+    
+    return vResult;
+}
+
+ncVec2 ncVec2::operator/( const ncVec2& v ) const {
+    ncVec2 vResult;
+    vResult.x = x / v.x;
+    vResult.y = y / v.y;
+    
+    return vResult;
+}
+
+ncVec2 ncVec2::operator*( const ncVec2& v ) const {
+    ncVec2 vResult;
+    vResult.x = x * v.x;
+    vResult.y = y * v.y;
+    
+    return vResult;
+}
+
+ncVec2 ncVec2::operator+( const ncVec2& v ) const {
+    ncVec2 vResult;
+    vResult.x = x + v.x;
+    vResult.y = y + v.y;
     
     return vResult;
 }
@@ -533,8 +599,9 @@ void Frustum_Update( void ) {
 
     int i;
     
+    mvp.Identity();
     // Calculate clip matrix.
-    mvp = _camera.ProjectionMatrix * _camera.ViewMatrix;
+    mvp = g_playerCamera->ProjectionMatrix * g_playerCamera->ViewMatrix;
     
     _frustum.planes[RIGHT_PLANE].normal.x = mvp.m[3] - mvp.m[0];
     _frustum.planes[RIGHT_PLANE].normal.y = mvp.m[7] - mvp.m[4];
@@ -559,7 +626,7 @@ void Frustum_Update( void ) {
     _frustum.planes[FAR_PLANE].normal.x = mvp.m[3] - mvp.m[2];
     _frustum.planes[FAR_PLANE].normal.y = mvp.m[7] - mvp.m[6];
     _frustum.planes[FAR_PLANE].normal.z = mvp.m[11] - mvp.m[10];
-    _frustum.planes[FAR_PLANE].intercept=mvp.m[15] - mvp.m[14];
+    _frustum.planes[FAR_PLANE].intercept= mvp.m[15] - mvp.m[14];
     
     _frustum.planes[NEAR_PLANE].normal.x = mvp.m[3] + mvp.m[2];
     _frustum.planes[NEAR_PLANE].normal.y = mvp.m[7] + mvp.m[6];

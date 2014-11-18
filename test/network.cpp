@@ -14,15 +14,15 @@
 
 #include "NCString.h"
 
-ncConsoleVariable    network_port( "net", "port", "Network port", "4004", CVFLAG_NEEDSREFRESH );
-ncConsoleVariable    network_ip( "net", "ip", "Network IP address.", "0.0.0.0", CVFLAG_NEEDSREFRESH );
-ncConsoleVariable    network_active( "net", "active", "Is network active?", "0", CVFLAG_NEEDSREFRESH );
-ncConsoleVariable    network_addrtype( "net", "addrtype", "Address type.", "0", CVFLAG_NEEDSREFRESH );
-ncConsoleVariable    network_localip( "net", "localip", "Local IP address.", "0.0.0.0", CVFLAG_NEEDSREFRESH );
-ncConsoleVariable    network_nonet( "net", "nonet", "Is internet connection available?", "0", CVFLAG_NEEDSREFRESH );
+ncConsoleVariable    Network_Port( "net", "port", "Network port", "4004", CVFLAG_NEEDSREFRESH );
+ncConsoleVariable    Network_IPAddress( "net", "ip", "Network IP address.", "0.0.0.0", CVFLAG_NEEDSREFRESH );
+ncConsoleVariable    Network_Active( "net", "active", "Is network active?", "0", CVFLAG_NEEDSREFRESH );
+ncConsoleVariable    Network_AddressType( "net", "addrtype", "Address type.", "0", CVFLAG_NEEDSREFRESH );
+ncConsoleVariable    Network_LocalIPAddress( "net", "localip", "Local IP address.", "0.0.0.0", CVFLAG_NEEDSREFRESH );
+ncConsoleVariable    Network_NotAvailable( "net", "nonet", "Is internet connection available?", "0", CVFLAG_NEEDSREFRESH );
 
-
-ncNetwork _netmanager;
+ncNetwork local_netmanager;
+ncNetwork *g_networkManager = &local_netmanager;
 
 // Last received message.
 byte network_message_buffer[MAX_UDP_PACKET];
@@ -41,7 +41,8 @@ void ncNetwork::Initialize( void ) {
     struct hostent *hp;
     static char n_hostname[MAX_NET_HOSTNAME_LENGTH];
 
-    _core.Print( LOG_INFO, "Initializing network..\n" );
+    g_Core->LoadState = NCCLOAD_NETWORK;
+    g_Core->Print( LOG_INFO, "Initializing network..\n" );
 
     i = 0;
     bound = false;
@@ -50,41 +51,47 @@ void ncNetwork::Initialize( void ) {
     // We have to initialize socket on Windows.
     int  w;
     if( WSAStartup( WINSOCKET_STARTUP_CODE, &w ) != 0 ) {
-        _core.Error( ERC_NETWORK, "Failed to initialize Windows socket. Initialization code: %s.\n", WINSOCKET_STARTUP_CODE );
+        g_Core->Error( ERC_NETWORK, "Failed to initialize Windows socket. Initialization code: %s.\n", WINSOCKET_STARTUP_CODE );
         return;
     }
 #endif
 
-    _core.Print( LOG_INFO, "Creating network socket using udp protocol..\n" );
-    if( (NetworkSocket = socket( PF_INET, SOCK_DGRAM, IPPROTO_UDP )) == - 1 ) {
-        _core.Error( ERC_NETWORK, "Could not initialize network socket. %s", strerror( errno ) );
+    g_Core->Print( LOG_INFO, "Creating network socket using udp protocol..\n" );
+    if( ( NetworkSocket = socket( PF_INET, SOCK_DGRAM, IPPROTO_UDP )) == - 1 ) {
+        g_Core->Print( LOG_ERROR, "%s\n", strerror(errno) );
+        g_Core->Error( ERR_NETWORK, "Could not initialize network socket. %s", strerror(errno) );
         return;
     }
     
     // Get local data.
     if( gethostname( n_hostname, sizeof(n_hostname) ) == -1 ) {
-        _core.Error( ERC_NETWORK, "ncNetwork::Init - Could not get host name.\n" );
+        g_Core->Error( ERR_NETWORK, "ncNetwork::Init - Could not get host name.\n" );
         return;
     }
     
+    const NString n_localIP;
+    
+#ifndef NETWORK_IGNORE_GETHOSTBYNAME
     struct hostent *host = gethostbyname( n_hostname );
 
     if( !host ) {
-        _core.Error( ERC_FATAL, "ncNetwork::Init - Couldn't get host by name. %s\n", strerror( errno ) );
+        g_Core->Error( ERC_FATAL, "ncNetwork::Init - Couldn't get host by name. %s\n", strerror( errno ) );
         return;
     }
-    
-    char *n_localIP;
     n_localIP = inet_ntoa( *(struct in_addr *)*host->h_addr_list );
+#else 
+    n_localIP = "null";
+#endif
     
-    _core.Print( LOG_INFO, "Our local host name is '%s'\n", n_hostname );
-    _core.Print( LOG_INFO, "Our local address is %s\n", n_localIP );
     
-    network_localip.Set( n_localIP );
+    g_Core->Print( LOG_INFO, "Our local host name is '%s'\n", n_hostname );
+    g_Core->Print( LOG_INFO, "Our local address is %s\n", n_localIP );
+    
+    Network_LocalIPAddress.Set( n_localIP );
     
     memset( &DataAddr, 0, sizeof(struct sockaddr_in) );
 
-    port = network_port.GetInteger();
+    port = Network_Port.GetInteger();
 
     // Prevent the network socket blocking.
 #ifdef _WIN32
@@ -93,7 +100,7 @@ void ncNetwork::Initialize( void ) {
     blockmode = 1;
     
     if( ioctlsocket( _network.socket, FIONBIO, &blockmode ) == -1 ) {
-        _core.Error( ERC_NETWORK, "ioctl failed to make socket to non-blocking mode.\n");
+        g_Core->Error( ERC_NETWORK, "ioctl failed to make socket to non-blocking mode.\n");
         return;
     }
     
@@ -104,19 +111,19 @@ void ncNetwork::Initialize( void ) {
     fcntl( NetworkSocket, F_SETFL, flags );
 
     if( ioctl( NetworkSocket, FIONBIO, &g_allow ) == -1 ) {
-        _core.Error( ERC_NETWORK, "ioctl failed to make socket to non-blocking mode.\n");
+        g_Core->Error( ERR_NETWORK, "ioctl failed to make socket to non-blocking mode.\n");
 		return;
 	}
     
 #endif
 
-	if( setsockopt( NetworkSocket, SOL_SOCKET, SO_BROADCAST, (char *)&i, sizeof(i) ) == -1 ) {
-        _core.Error( ERC_NETWORK, "Failed to setup socket broadcasting.\n" );
+	if( setsockopt( NetworkSocket, SOL_SOCKET, SO_BROADCAST, (NString )&i, sizeof(i) ) == -1 ) {
+        g_Core->Error( ERR_NETWORK, "Failed to setup socket broadcasting.\n" );
 		return;
 	}
 
     // Scan for available ports.
-    _core.Print( LOG_INFO, "Binding socket with parameters..\n" );
+    g_Core->Print( LOG_INFO, "Binding socket with parameters..\n" );
     
     while( true ) {
         memset( &DataAddr, 0, sizeof(struct sockaddr_in) );
@@ -124,51 +131,51 @@ void ncNetwork::Initialize( void ) {
         DataAddr.sin_family = AF_INET;
         DataAddr.sin_port = htons( port );
         
-        switch( network_addrtype.GetInteger() ) {
+        switch( Network_AddressType.GetInteger() ) {
             case 0: // Any.
-                _core.Print( LOG_INFO, "Our network type is any.\n" );
+                g_Core->Print( LOG_INFO, "Our network type is any.\n" );
                 DataAddr.sin_addr.s_addr = INADDR_ANY;
                 break;
             case 1: // Set automatically.
-                _core.Print( LOG_INFO, "Our network type is automatic.\n" );
+                g_Core->Print( LOG_INFO, "Our network type is automatic.\n" );
                 
                 hp = gethostbyname(n_hostname);
                 if( !hp ) {
-                    _core.Error( ERC_NETWORK, "Couldn't resolve %s", n_hostname );
+                    g_Core->Error( ERR_NETWORK, "Couldn't resolve %s", n_hostname );
                 }
                 
                 // Copy address data.
                 memcpy( (void*)&DataAddr.sin_addr, hp->h_addr_list[0], hp->h_length );
                 break;
             case 2: // Manual
-                _core.Print( LOG_INFO, "Our network type is manual. Name: %s\n", network_ip.GetString() );
+                g_Core->Print( LOG_INFO, "Our network type is manual. Name: %s\n", Network_IPAddress.GetString() );
 
                 break;
         }
         
         if(bind(NetworkSocket, (struct sockaddr *)&DataAddr, sizeof(DataAddr)) != 0) {
-            _core.Print( LOG_WARN, "Bind failed, trying to change the port..\n" );
+            g_Core->Print( LOG_WARN, "Bind failed, trying to change the port..\n" );
             
             port++;
             
-            network_port.Set( _stringhelper.STR("%i", port) );
+            Network_Port.Set( _stringhelper.STR("%i", port) );
             continue;
         }
         
         break;
     }
 
-    network_ip.Set( _stringhelper.STR( "%s", inet_ntoa(DataAddr.sin_addr) ) );
-    network_port.Set( _stringhelper.STR("%i", port) );
+    Network_IPAddress.Set( _stringhelper.STR( "%s", inet_ntoa(DataAddr.sin_addr) ) );
+    Network_Port.Set( _stringhelper.STR("%i", port) );
 
-    if( network_addrtype.GetInteger() == 1 )
-        _core.Print( LOG_INFO, "Listening on '%s:%i'. \n", inet_ntoa(DataAddr.sin_addr), port );
+    if( Network_AddressType.GetInteger() == 1 )
+        g_Core->Print( LOG_INFO, "Listening on '%s:%i'. \n", inet_ntoa(DataAddr.sin_addr), port );
     else
-        _core.Print( LOG_INFO, "Listening on '%i' port. \n", port );
+        g_Core->Print( LOG_INFO, "Listening on '%i' port. \n", port );
 
 
     // Turn on the networking.
-    network_active.Set( "1" );
+    Network_Active.Set( "1" );
 }
 
 
@@ -178,11 +185,11 @@ void ncNetwork::Initialize( void ) {
 
 bool ncNetwork::Frame( void ) {
     
-    if( !network_active.GetInteger() )
+    if( !Network_Active.GetInteger() )
         return false;
 
     if( !NetworkSocket ) {
-        _core.Error( ERC_NETWORK, "ncNetwork::Frame - missing socket." );
+        g_Core->Error( ERR_NETWORK, "ncNetwork::Frame - missing socket." );
         return false;
     }
     
@@ -202,21 +209,18 @@ bool ncNetwork::Frame( void ) {
         if( errno == EWOULDBLOCK || errno == ECONNREFUSED )
             return false;
    
-        _core.Print( LOG_WARN, "ncNetwork::recvfrom() - %s\n", strerror( errno ) );
+        g_Core->Print( LOG_WARN, "ncNetwork::recvfrom() - %s\n", strerror( errno ) );
         
         return false;
     }
     
     assert( bytes < size );
 
-    if( bytes <= 0 )
-        return false;
-
-    if ( bytes <= 4 )
+    if( bytes <= 4 )
         return false;
 
     if( bytes >= MAX_UDP_PACKET ) {
-        _core.Print( LOG_WARN, "Too much data from %s\n", inet_ntoa( RecvAddr.sockaddr_in::sin_addr ) );
+        g_Core->Print( LOG_WARN, "Too much data from %s\n", inet_ntoa( RecvAddr.sockaddr_in::sin_addr ) );
         return false;
     }
 
@@ -226,7 +230,7 @@ bool ncNetwork::Frame( void ) {
         data[2] != (Byte)( ( PROTOCOL_ID >> 8 ) & 0xFF ) ||
         data[3] != (Byte)( PROTOCOL_ID & 0xFF ) ) {
         
-        _core.Print( LOG_WARN, "User from %s has wrong network protocolId.\n", inet_ntoa( RecvAddr.sockaddr_in::sin_addr) );
+        g_Core->Print( LOG_WARN, "User from %s has wrong network protocolId.\n", inet_ntoa( RecvAddr.sockaddr_in::sin_addr) );
         return false;
     }
     
@@ -273,7 +277,7 @@ bool ncNetwork::ProcessChannel( ncNetchannel *chan, byte *packet ) {
     Shutdown networking.
 */
 void ncNetwork::Shutdown( void ) {
-    if( !network_active.GetInteger() )
+    if( !Network_Active.GetInteger() )
         return;
 
     // 2 - Disable receiving/sending
@@ -285,7 +289,7 @@ void ncNetwork::Shutdown( void ) {
     WSACleanup();
 #endif
 
-    _core.Print( LOG_INFO, "Successfully closed the network socket.\n" );
+    g_Core->Print( LOG_INFO, "Successfully closed the network socket.\n" );
 }
 
 
@@ -293,15 +297,12 @@ void ncNetwork::Shutdown( void ) {
     Network manager.
 */
 void ncNetwork::Assign( ncNetdata *from, byte *buffer ) {
-    
-    if( !network_active.GetInteger() )
-        return;
 
     if( Server_Active.GetInteger() )
-        _server.Process( from, buffer );
+        n_server->Process( from, buffer );
 
     if( Client_Running.GetInteger() )
-        _client.Process( from, buffer );
+        n_client->Process( from, buffer );
 }
 
 /*
@@ -322,13 +323,13 @@ void ncNetwork::SendPacket( unsigned long len, const void *data, ncNetdata *from
     ret = sendto( NetworkSocket, packet, len + 4, 0, (struct sockaddr *)&from->SockAddress, sizeof(from->SockAddress) );
     
     if( ret == -1 )
-        _core.Print( LOG_ERROR, "Could not send packet to %s\n", inet_ntoa(from->SockAddress.sin_addr) );
+        g_Core->Print( LOG_ERROR, "Could not send packet to %s\n", inet_ntoa(from->SockAddress.sin_addr) );
 }
 
 /*
     Print Out Of band message.
 */
-void ncNetwork::PrintOutOfBand( ncNetdata *adr, const char *format, ... ) {
+void ncNetwork::PrintOutOfBand( ncNetdata *adr, const NString format, ... ) {
 	va_list		argptr;
 	char		string[1024];
 
@@ -407,8 +408,8 @@ bool ncNetwork::IsLanAddress( ncNetdata *adr ) {
 /*
     Resolve address.
 */
-bool ncNetwork::Resolve( ncNetdata *address, const char *host ) {
-    _core.Print( LOG_INFO, "ncNetwork::Resolve - %s\n", host );
+bool ncNetwork::Resolve( ncNetdata *address, const NString host ) {
+    g_Core->Print( LOG_INFO, "ncNetwork::Resolve - %s\n", host );
     
     struct hostent *hn;
     hn = gethostbyname( host );
@@ -417,22 +418,22 @@ bool ncNetwork::Resolve( ncNetdata *address, const char *host ) {
         switch( h_errno ) {
             // These are default.
             case HOST_NOT_FOUND:
-                _core.Print( LOG_INFO, "ncNetwork::Resolve - couldn't find host.\n" );
+                g_Core->Print( LOG_INFO, "ncNetwork::Resolve - couldn't find host.\n" );
                 return false;
             case NO_ADDRESS:
-                _core.Print( LOG_INFO, "ncNetwork::Resolve - host '%s' has no addresses.\n", host );
+                g_Core->Print( LOG_INFO, "ncNetwork::Resolve - host '%s' has no addresses.\n", host );
                 return false;
             case NO_RECOVERY:
-                _core.Print( LOG_INFO, "ncNetwork::Resolve - non-recoverable name server error.\n" );
+                g_Core->Print( LOG_INFO, "ncNetwork::Resolve - non-recoverable name server error.\n" );
                 return false;
             case TRY_AGAIN:
-                _core.Print( LOG_INFO, "ncNetwork::Resolve - host '%s' is temporarily unavailable.\n", host );
+                g_Core->Print( LOG_INFO, "ncNetwork::Resolve - host '%s' is temporarily unavailable.\n", host );
                 return false;
         }
     }
     else
     {
-        _core.Print( LOG_INFO, "ncNetwork::Resolve - Resolved as '%s'\n", inet_ntoa (*((struct in_addr *) hn->h_addr_list[0])) );
+        g_Core->Print( LOG_INFO, "ncNetwork::Resolve - Resolved as '%s'\n", inet_ntoa (*((struct in_addr *) hn->h_addr_list[0])) );
         memcpy( (void *)&address->SockAddress.sin_addr, hn->h_addr_list[0], hn->h_length );
         _stringhelper.Copy( address->IPAddress, inet_ntoa ( *((struct in_addr *) hn->h_addr_list[0]) ) );
         //address->port = -1; // Not assigned yet.

@@ -12,10 +12,10 @@
 
 class ncUtils {
 public:
-    static void OBJtoSM( const char *file );
+    static void OBJtoSM( const NString file );
     
-    static char *HexEncode( const char *data, unsigned int data_size );
-    static bool HexCharDecode( char hexdigit, unsigned char &value );
+    static NString HexEncode( const NString data, unsigned int data_size );
+    static bool HexCharDecode( char hexdigit, Byte &value );
 };
 
 #endif

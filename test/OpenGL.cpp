@@ -15,9 +15,10 @@
 #include "LocalGame.h"
 
 ncConsoleVariable  GLSL_Version("glsl", "version", "OpenGL Shading language version.", "400", CVFLAG_NEEDSREFRESH );
-ncConsoleVariable  render_openglversion("opengl", "version", "OpenGL version to be used.", "4.1c", CVFLAG_NEEDSREFRESH );
+ncConsoleVariable  OpenGL_Version("opengl", "version", "OpenGL version to be used.", "4.1c", CVFLAG_NEEDSREFRESH );
 
-ncOpenGL _opengl;
+ncOpenGL local_opengl;
+ncOpenGL *gl_Core = &local_opengl;
 
 // yes
 // well...
@@ -27,39 +28,41 @@ ncOpenGL _opengl;
 */
 
 void ncOpenGL::Initialize( void ) {
-    if( _core.UseGraphics ) {
-        glGetIntegerv( GL_MAJOR_VERSION, &_majorVersion );
-        glGetIntegerv( GL_MINOR_VERSION, &_minorVersion );
-        
-        _core.Print( LOG_INFO, "Initializing OpenGL parameters..\n" );
-        _core.Print( LOG_INFO, "OpenGL version: %d.%d\n", _majorVersion, _minorVersion );
-        
-        _renderer.renderHeight = render_modeHeight.GetInteger();
-        _renderer.renderWidth  = render_modeWidth.GetInteger();
 
-        // Initial values.
-        _renderer.windowHeight      = _renderer.renderHeight;
-        _renderer.windowWidth       = _renderer.renderWidth;
+    if( !g_Core->UseGraphics )
+        return;
+    
+    glGetIntegerv( GL_MAJOR_VERSION, &_majorVersion );
+    glGetIntegerv( GL_MINOR_VERSION, &_minorVersion );
+    
+    g_Core->Print( LOG_INFO, "Initializing OpenGL parameters..\n" );
+    g_Core->Print( LOG_INFO, "OpenGL version: %d.%d\n", _majorVersion, _minorVersion );
+    
+    g_mainRenderer->renderHeight = Render_Height.GetInteger();
+    g_mainRenderer->renderWidth  = Render_Width.GetInteger();
+    
+    // Initial values.
+    g_mainRenderer->windowHeight = g_mainRenderer->renderHeight;
+    g_mainRenderer->windowWidth = g_mainRenderer->renderWidth;
+    
+    glViewport( 0, 0, g_mainRenderer->renderWidth, g_mainRenderer->renderHeight );
+    
+    // 2.0f for OVR.
+    float aspectRatio = g_mainRenderer->windowWidth / ( Render_OVR.GetInteger() ? 2.0f : 1.0f ) / g_mainRenderer->windowHeight;
+    
+    g_playerCamera->ProjectionMatrix.CreatePerspective( GameView_FieldOfView.GetFloat(), aspectRatio, NEAR, FAR );
+    
+    glClearColor( 0.0f, 0.0f, 0.0f, 1.0f );
+    glClearDepthf( 1.0f );
+    glClearStencil( 1.0f );
 
-        glViewport( 0, 0, _renderer.renderWidth, _renderer.renderHeight );
-
-        // 2.0f for OVR.
-        float aspectRatio = _renderer.windowWidth / ( render_ovr.GetInteger() ? 2.0f : 1.0f ) / _renderer.windowHeight;
-        
-        _camera.ProjectionMatrix.CreatePerspective( clientgame_fov.GetFloat(), aspectRatio, NEAR, FAR );
-        
-        glClearColor( 0.0f, 0.0f, 0.0f, 1.0f );
-        glClearDepth( 1.0f );
-        glClearStencil( 1.0f );
-
-        glEnable( GL_DEPTH_TEST );
-        glDepthFunc( GL_LEQUAL );
-
-        glEnable( GL_CULL_FACE );
-    }
-
+    glEnable( GL_DEPTH_TEST );
+    glEnable( GL_CULL_FACE );
+    
+    //
     // Renderer initialization.
-    _renderer.Initialize();
+    //
+    g_mainRenderer->Initialize();
 }
 
 /*
@@ -69,11 +72,11 @@ void ncOpenGL::OnResize( int w, int h ) {
     if( !Initialized )
         return;
 
-    if( !_core.UseGraphics )
+    if( !g_Core->UseGraphics )
         return;
 
     if ( ( w <= 300 || h <= 300 ) ){
-        _core.Print( LOG_WARN, "Too small window size for resizing..\n" );
+        g_Core->Print( LOG_WARN, "Too small window size for resizing..\n" );
         w = 800;
         h = 600;
 
@@ -82,19 +85,20 @@ void ncOpenGL::OnResize( int w, int h ) {
 
     glViewport( 0, 0, w, h );
 
-    _renderer.windowWidth   = w;
-    _renderer.windowHeight  = h;
+    g_mainRenderer->windowWidth   = w;
+    g_mainRenderer->windowHeight  = h;
     
     // 2.0f for OVR.
-    float aspectRatio = w / ( render_ovr.GetInteger() ? 2.0f : 1.0f ) / h;
+    float aspectRatio = w / ( Render_OVR.GetInteger() ? 2.0f : 1.0f ) / h;
+    float fieldOfView = GameView_FieldOfView.GetFloat();
     
-    _camera.ProjectionMatrix.CreatePerspective( clientgame_fov.GetFloat(), aspectRatio, NEAR, FAR );
+    g_playerCamera->ProjectionMatrix.CreatePerspective( fieldOfView, aspectRatio, NEAR, FAR );
  
     /*
         TODO: Fix or remove me.
-        This crashes on window resize.
+        This crashes on multiple window resize.
     */
-    _renderer.UpdateFramebufferObject( w, h );
+    g_mainRenderer->UpdateFramebufferObject( w, h );
 }
 
 /*
@@ -102,14 +106,14 @@ void ncOpenGL::OnResize( int w, int h ) {
 */
 void ncOpenGL::ShowInfo( void ) {
 
-    if( !_core.UseGraphics )
+    if( !g_Core->UseGraphics )
         return;
 
-    _core.Print( LOG_INFO, "Graphic device information: \n" );
-    _core.Print( LOG_INFO, "OpenGL version: %s\n", glGetString(GL_VERSION) );
-    _core.Print( LOG_INFO, "GPU: %s\n", glGetString(GL_RENDERER) );
-    _core.Print( LOG_INFO, "Vendor: %s\n", glGetString(GL_VENDOR) );
-    _core.Print( LOG_INFO, "Shader model version: %s\n", glGetString(GL_SHADING_LANGUAGE_VERSION) );
+    g_Core->Print( LOG_INFO, "OpenGL information - \n" );
+    g_Core->Print( LOG_INFO, "OpenGL version: %s\n", glGetString( GL_VERSION ) );
+    g_Core->Print( LOG_INFO, "GPU: %s\n", glGetString( GL_RENDERER ) );
+    g_Core->Print( LOG_INFO, "Vendor: %s\n", glGetString( GL_VENDOR ) );
+    g_Core->Print( LOG_INFO, "Shader model version: %s\n", glGetString( GL_SHADING_LANGUAGE_VERSION ) );
 }
 
 /*

@@ -12,7 +12,9 @@
 #include "Console.h"
 #include "NCString.h"
 
-ncCommandManager _commandManager;
+ncCommandManager local_commandManager;
+ncCommandManager *c_CommandManager = &local_commandManager;
+
 ncConsoleCommand *cmds;
 
 static int argc;
@@ -20,7 +22,7 @@ static int argc;
 /*
     Add command, not its variable.
 */
-void ncCommandManager::Add( const char *cmd, functioncall_t command ) {
+void ncCommandManager::Add( const NString cmd, ncFunctionCall command ) {
     ncConsoleCommand   *c_temp;
     c_temp = &cmds[CommandCount];
 
@@ -33,12 +35,12 @@ void ncCommandManager::Add( const char *cmd, functioncall_t command ) {
 /*
     Get parameter at index
 */
-char *ncCommandManager::Arguments( int c ) {
+NString ncCommandManager::Arguments( int c ) {
     if( c > MAX_COMMAND_TOKENS )
         return NULL;
 
     // fix
-    return _gconsole.lastBuffer[c + 1];
+    return g_Console->lastBuffer[c + 1];
 }
 
 /*
@@ -54,23 +56,23 @@ int ncCommandManager::ArgCount( void ) {
 void ncCommandManager::Initialize( void ) {
     CommandCount = 0;
 
-    cmds = (ncConsoleCommand*)malloc( sizeof( ncConsoleCommand ) * MAX_CONSOLEVARIABLES );
+    cmds = new ncConsoleCommand[MAX_CONSOLEVARIABLES];
 
     if( !cmds )
-        _core.Error( ERC_FATAL, "No enough memory to allocate memory for %i commands.\n", MAX_CONSOLEVARIABLES );
+        g_Core->Error( ERR_FATAL, "No enough memory to allocate memory for %i commands.\n", MAX_CONSOLEVARIABLES );
 }
 
 /*
     Execute command or a console variable if found.
 */
-void ncCommandManager::Execute( const char *cmd[] ) {
+void ncCommandManager::Execute( const NString cmd[] ) {
     if( !cmd[0] )
         return;
 
     int g_argc, g_cmd;
 
     // Clear last buffer.
-    zeromem( _gconsole.lastBuffer, sizeof(_gconsole.lastBuffer) );
+    zeromem( g_Console->lastBuffer, sizeof(g_Console->lastBuffer) );
     argc = 0;
 
     /*
@@ -80,7 +82,7 @@ void ncCommandManager::Execute( const char *cmd[] ) {
     // Fill last buffer.
     for( g_argc = 0; g_argc < MAX_COMMAND_TOKENS; g_argc ++ ) {
         if( cmd[g_argc] != NULL ) {
-            _stringhelper.SPrintf( _gconsole.lastBuffer[g_argc], strlen(cmd[g_argc]) + 1, cmd[g_argc] );
+            _stringhelper.SPrintf( g_Console->lastBuffer[g_argc], strlen(cmd[g_argc]) + 1, cmd[g_argc] );
             argc ++;
         }
     }
@@ -95,7 +97,7 @@ void ncCommandManager::Execute( const char *cmd[] ) {
         if( !strcmp( cmd[0], cmds[g_cmd].name ) ) {
             for( g_argc = 0; g_argc < MAX_COMMAND_TOKENS; g_argc ++ ) {
                 if( cmd[g_argc] != NULL ) {
-                    _stringhelper.SPrintf( _gconsole.lastBuffer[g_argc], strlen(cmd[g_argc]) + 1, cmd[g_argc] );
+                    _stringhelper.SPrintf( g_Console->lastBuffer[g_argc], strlen(cmd[g_argc]) + 1, cmd[g_argc] );
                     argc ++;
                 }
             }
@@ -127,18 +129,18 @@ void ncCommandManager::Execute( const char *cmd[] ) {
     }
     
     if( strlen(token[1]) < 1  ) {
-        _core.Print( LOG_INFO, "Available commands.\n" );
+        g_Core->Print( LOG_INFO, "Available commands.\n" );
         for( i = 0; i < _cvarmngr.consoleVariableCount; i++ ) {
             if( !strcmp( _cvarmngr.consoleVariables[i]->GetGroup(), token[0] ) ) {
                 
-                _core.Print( LOG_INFO, "%s - %s\n", _cvarmngr.consoleVariables[i]->GetName(), _cvarmngr.consoleVariables[i]->GetDescription() );
+                g_Core->Print( LOG_INFO, "%s - %s\n", _cvarmngr.consoleVariables[i]->GetName(), _cvarmngr.consoleVariables[i]->GetDescription() );
             }
         }
         return;
     }
     
     if( !cmd[1] ) {
-        _core.Print( LOG_INFO, "USAGE: group.command <value>\n" );
+        g_Core->Print( LOG_INFO, "USAGE: group.command <value>\n" );
         return;
     }
     
@@ -146,7 +148,6 @@ void ncCommandManager::Execute( const char *cmd[] ) {
         
         if( !strcmp( _cvarmngr.consoleVariables[i]->GetGroup(), token[0] ) ) {
             if( !strcmp( _cvarmngr.consoleVariables[i]->GetName(), token[1] )) {
-                
                 // Okay, we got this variable.
                 _cvarmngr.consoleVariables[i]->Set( cmd[1] );
                 return;
@@ -155,7 +156,7 @@ void ncCommandManager::Execute( const char *cmd[] ) {
     }
     
     
-    // _core.Print( LOG_INFO, "Unknown command \"%s\".\n", cmd[0] );
+    // g_Core->Print( LOG_INFO, "Unknown command \"%s\".\n", cmd[0] );
 }
 
 

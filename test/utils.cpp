@@ -15,67 +15,28 @@
 
 #include "Utils.h"
 
-
-static const char hex_chars[] = "0123456789abcdef";
-
-inline char *ncUtils::HexEncode( const char *data, unsigned int data_size ) {
-    char *ret;
-    char buf2[3];
-    buf2[2] = '\0';
-    
-    for(unsigned int i = 0; i < data_size; i++)
-    {
-        unsigned char c = (unsigned char) data[i];
-        buf2[0] = hex_chars[(c & 0xf0) >> 4];
-        buf2[1] = hex_chars[c & 0x0f];
-        
-    
-        char* name_with_extension;
-        name_with_extension = (char*)malloc(strlen(ret)+1+4); /* make space for the new string (should check the return value ...) */
-        strcpy(name_with_extension, ret); /* copy name into the new var */
-        strcat(name_with_extension, buf2); /* add the extension */
-    }
-    
-    return ret;
-}
-
-inline bool ncUtils::HexCharDecode( char hexdigit, unsigned char &value )
-{
-    if(hexdigit >= '0' && hexdigit <= '9')
-        value = hexdigit - '0';
-    else if(hexdigit >= 'A' && hexdigit <= 'F')
-        value = hexdigit - 'A' + 10;
-    else if(hexdigit >= 'a' && hexdigit <= 'f')
-        value = hexdigit - 'a' + 10;
-    else
-        return false;
-    return true;
-}
-
-
-
 /*
     Model convertation tool.
 */
 void model_convert( void )
 {
-    if( _commandManager.ArgCount() < 2 ) {
-        _core.Print( LOG_NONE, "Model convert utility.\n" );
-        _core.Print( LOG_INFO, "Usage: cm <type> <name>" );
-        _core.Print( LOG_NONE, "Types available: \n" );
-        _core.Print( LOG_NONE, "\"1\" - convert .obj to .sm\n" );
+    if( c_CommandManager->ArgCount() < 2 ) {
+        g_Core->Print( LOG_NONE, "Model convert utility.\n" );
+        g_Core->Print( LOG_INFO, "Usage: cm <type> <name>" );
+        g_Core->Print( LOG_NONE, "Types available: \n" );
+        g_Core->Print( LOG_NONE, "\"1\" - convert .obj to .sm\n" );
 
         return;
     }
 
-    switch( atoi(_commandManager.Arguments(0) ) ) {
+    switch( atoi(c_CommandManager->Arguments(0) ) ) {
         case 1:
-            _core.Print( LOG_INFO, "Processing \"%s.obj\" ...\n", _commandManager.Arguments(1) );
+            g_Core->Print( LOG_INFO, "Processing \"%s.obj\" ...\n", c_CommandManager->Arguments(1) );
             
             break;
 
         default:
-            _core.Print( LOG_ERROR, "model_convert: unknown type\n" );
+            g_Core->Print( LOG_ERROR, "model_convert: unknown type\n" );
             break;
     }
 }
@@ -84,7 +45,7 @@ void model_convert( void )
     Wavefront .obj to sm
 */
 typedef struct { int v[3], t[3], n[3]; } polygon_type;
-void ncUtils::OBJtoSM( const char *filename ) {
+void ncUtils::OBJtoSM( const NString filename ) {
    int         vertex_num  = 0,
     normal_num  = 0,
     polygon_num = 0,
@@ -96,10 +57,10 @@ void ncUtils::OBJtoSM( const char *filename ) {
 
 
     // load the file
-    l_file = _filesystem.OpenRead( _stringhelper.STR("%s/%s/%s.obj", Filesystem_Path.GetString(), MODEL_FOLDER, filename) );
+    l_file = c_FileSystem->OpenRead( _stringhelper.STR("%s/%s/%s.obj", Filesystem_Path.GetString(), MODEL_FOLDER, filename) );
 
     if( !l_file  ){
-        _core.Print( LOG_ERROR, "Couldn't find \"%s.obj\"\n", filename );
+        g_Core->Print( LOG_ERROR, "Couldn't find \"%s.obj\"\n", filename );
         return;
     }
 
@@ -152,16 +113,16 @@ void ncUtils::OBJtoSM( const char *filename ) {
 
     fclose (l_file);
 
-	ncVec3     *tmp_vertices;
+	ncVec3     *tmp_m_vertices;
 	ncVec3      *tmp_normals;
     ncVec2      *tmp_uv;
 
 	GLuint      *tmp_faces;
 
-	tmp_vertices        = (ncVec3*)malloc( sizeof(ncVec3) * polygon_num * 3 );
-	tmp_normals         = (ncVec3*)malloc( sizeof(ncVec3) * polygon_num * 3 );
-    tmp_uv              = (ncVec2*)malloc( sizeof(ncVec2) * polygon_num * 3 );
-	tmp_faces           = (uint*)malloc( sizeof(uint) * polygon_num * 3 );
+    tmp_m_vertices        = new ncVec3[polygon_num * 3];
+    tmp_normals         = new ncVec3[polygon_num * 3];
+    tmp_uv              = new ncVec2[polygon_num * 3];
+	tmp_faces           = new uint[polygon_num * 3];
 
 	uint num_index = -1;
 
@@ -170,9 +131,9 @@ void ncUtils::OBJtoSM( const char *filename ) {
     	for ( i = 0; i < 3; i++ ) {
             num_index++;
 
-            tmp_vertices[num_index].x = vertex[ polygon[c].v[i] - 1].x;
-            tmp_vertices[num_index].y = vertex[ polygon[c].v[i] - 1].y;
-            tmp_vertices[num_index].z = vertex[ polygon[c].v[i] - 1].z;
+            tmp_m_vertices[num_index].x = vertex[ polygon[c].v[i] - 1].x;
+            tmp_m_vertices[num_index].y = vertex[ polygon[c].v[i] - 1].y;
+            tmp_m_vertices[num_index].z = vertex[ polygon[c].v[i] - 1].z;
 
             tmp_normals[num_index].x = normal_coord[ polygon[c].n[i] - 1].x;
             tmp_normals[num_index].y = normal_coord[ polygon[c].n[i] - 1].y;
@@ -191,7 +152,7 @@ void ncUtils::OBJtoSM( const char *filename ) {
 
     FILE            *g_file;
     int             len;
-    filechunk_t     *chunk1, *chunk2, *chunk3;
+    ncFileChunk     *chunk1, *chunk2, *chunk3;
 
     header = &outheader;
     memset( header, 0, sizeof(ncSM1Header) );
@@ -201,9 +162,9 @@ void ncUtils::OBJtoSM( const char *filename ) {
 
     _stringhelper.SPrintf( header->material, strlen(mat_name) + 1, mat_name );
 
-    g_file  = _filesystem.OpenWrite( _stringhelper.STR("%s/%s.sm1", Filesystem_Path.GetString(), filename) );
+    g_file  = c_FileSystem->OpenWrite( _stringhelper.STR("%s/%s.sm1", Filesystem_Path.GetString(), filename) );
 
-    _filesystem.Write(g_file, header, sizeof(ncSM1Header));
+    c_FileSystem->Write(g_file, header, sizeof(ncSM1Header));
 
     len = (num_index+1) * sizeof(ncVec3);
 
@@ -212,8 +173,8 @@ void ncUtils::OBJtoSM( const char *filename ) {
     chunk1->length      = len;
     header->chunk[0]    = *chunk1;
 
-    _core.Print(LOG_DEVELOPER, "Getting vertex data ( chunk ofs: %i len: %i )\n", header->chunk[0].offset, header->chunk[0].length);
-    _filesystem.Write( g_file, tmp_vertices, (len+3)&~3 );
+    g_Core->Print(LOG_DEVELOPER, "Getting vertex data ( chunk ofs: %i len: %i )\n", header->chunk[0].offset, header->chunk[0].length);
+    c_FileSystem->Write( g_file, tmp_m_vertices, (len+3)&~3 );
 
     len = (num_index+1) * sizeof(ncVec3);
 
@@ -222,8 +183,8 @@ void ncUtils::OBJtoSM( const char *filename ) {
     chunk2->length      = len;
     header->chunk[1]    = *chunk2;
 
-    _core.Print(LOG_DEVELOPER, "Getting normal data ( chunk2 ofs: %i len: %i )\n", header->chunk[1].offset, header->chunk[1].offset);
-    _filesystem.Write( g_file, tmp_normals, (len+3)&~3 );
+    g_Core->Print(LOG_DEVELOPER, "Getting normal data ( chunk2 ofs: %i len: %i )\n", header->chunk[1].offset, header->chunk[1].offset);
+    c_FileSystem->Write( g_file, tmp_normals, (len+3)&~3 );
 
     len = (num_index+1) * sizeof(ncVec2);
 
@@ -232,21 +193,21 @@ void ncUtils::OBJtoSM( const char *filename ) {
     chunk3->length      = len;
     header->chunk[2]    = *chunk3;
 
-    _core.Print( LOG_DEVELOPER, "Getting UV coordinates ( chunk3 ofs: %i len: %i )\n", header->chunk[2].offset, header->chunk[2].length );
-    _filesystem.Write( g_file, tmp_uv, (len+2)&~2 );
+    g_Core->Print( LOG_DEVELOPER, "Getting UV coordinates ( chunk3 ofs: %i len: %i )\n", header->chunk[2].offset, header->chunk[2].length );
+    c_FileSystem->Write( g_file, tmp_uv, (len+2)&~2 );
 
     // write all changes
     fseek(g_file, 0, SEEK_SET);
-    _filesystem.Write( g_file, header, sizeof(ncSM1Header) );
+    c_FileSystem->Write( g_file, header, sizeof(ncSM1Header) );
     fclose(g_file);
 
     // - -------------------------------------------------------------------
 
-    free(tmp_vertices); tmp_vertices    = NULL;
+    free(tmp_m_vertices); tmp_m_vertices    = NULL;
 	free(tmp_normals);  tmp_normals     = NULL;
 	free(tmp_faces);    tmp_faces       = NULL;
     free(tmp_uv);       tmp_uv          = NULL;
 
-    _core.Print( LOG_DEVELOPER, "Model \"%s.obj\" successfully converted to *.sm format ( '%i' polygon faces )\n", filename, polygon_num );
+    g_Core->Print( LOG_DEVELOPER, "Model \"%s.obj\" successfully converted to *.sm format ( '%i' polygon faces )\n", filename, polygon_num );
 }
 

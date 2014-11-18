@@ -11,7 +11,8 @@
 #include "NCString.h"
 #include "LevelEnvironment.h"
 
-ncLevelEnvironment _levelenvironment;
+ncLevelEnvironment local_levelenvironment;
+ncLevelEnvironment *g_LevelEnvironment = &local_levelenvironment;
 
 struct ncBaseLight
 {
@@ -60,46 +61,57 @@ struct ncPointLight : public ncBaseLight
 
 
 void ncLevelEnvironment::Prepare( void ) {
-    ncPointLight pl[2];
+    ncPointLight pl[4];
     pl[0].DiffuseIntensity = 2.5f;
-    pl[0].Color = ncVec3(1.0f, 1.0f, 1.0f);
-    pl[0].Position = ncVec3(-5.0, 27.0, -5.0);
+    pl[0].Color = ncVec3(0.2f, 0.2f, 1.0f);
+    pl[0].Position = ncVec3(-216.0, 216.0, 128.0);
     pl[0].Attenuation.Linear = 0.1f;
     pl[1].DiffuseIntensity = 0.5f;
-    pl[1].Color = ncVec3(0.0f, 0.0f, 0.5f);
-    pl[1].Position = ncVec3(0.0f, -5.0f, 20.0f);
+    pl[1].Color = ncVec3(0.9f, 0.2f, 0.6f);
+    pl[1].Position = ncVec3(-216.0f, -216.0f, 128.0f);
     pl[1].Attenuation.Linear = 0.1f;
+    pl[2].DiffuseIntensity = 0.5f;
+    pl[2].Color = ncVec3(0.5f, 0.9f, 0.4f);
+    pl[2].Position = ncVec3(216.0f, -216.0f, 128.0f);
+    pl[2].Attenuation.Linear = 0.1f;
+    pl[3].DiffuseIntensity = 0.5f;
+    pl[3].Color = ncVec3(0.0f, 1.0f, 0.5f);
+    pl[3].Position = ncVec3(0.0f, -5.0f, 20.0f);
+    pl[3].Attenuation.Linear = 0.1f;
+
+    g_staticWorld->bspShader->Use();
     
-    glUseProgram( _bspmngr.bspShader.shader_id );
     for( int i = 0; i < 2; i++ ) {
-        glUniform3f( glGetUniformLocation( _bspmngr.bspShader.shader_id, _stringhelper.STR("gPointLights[%d].Base.Color", i)), pl[i].Color.x, pl[i].Color.y, pl[i].Color.z );
+        g_staticWorld->bspShader->SetUniform( _stringhelper.STR("gPointLights[%d].Base.Color", i), pl[i].Color );
         
-        glUniform1f( glGetUniformLocation( _bspmngr.bspShader.shader_id, _stringhelper.STR("gPointLights[%d].Base.AmbientIntensity", i)), pl[i].AmbientIntensity );
+        g_staticWorld->bspShader->SetUniform( _stringhelper.STR("gPointLights[%d].Base.AmbientIntensity", i), pl[i].AmbientIntensity );
+        
+        g_staticWorld->bspShader->SetUniform( _stringhelper.STR("gPointLights[%d].Position", i), pl[i].Position );
+    
+        g_staticWorld->bspShader->SetUniform( _stringhelper.STR("gPointLights[%d].Base.DiffuseIntensity", i),  pl[i].DiffuseIntensity );
 
-        glUniform3f( glGetUniformLocation( _bspmngr.bspShader.shader_id, _stringhelper.STR("gPointLights[%d].Position", i)), pl[i].Position.x, pl[i].Position.y, pl[i].Position.z );
+        g_staticWorld->bspShader->SetUniform( _stringhelper.STR("gPointLights[%d].Atten.Constant", i), pl[i].Attenuation.Constant );
         
-        glUniform1f( glGetUniformLocation( _bspmngr.bspShader.shader_id, _stringhelper.STR("gPointLights[%d].Base.DiffuseIntensity", i)), pl[i].DiffuseIntensity );
-
-        glUniform1f( glGetUniformLocation( _bspmngr.bspShader.shader_id, _stringhelper.STR("gPointLights[%d].Atten.Constant", i)), pl[i].Attenuation.Constant );
+        g_staticWorld->bspShader->SetUniform( _stringhelper.STR("gPointLights[%d].Atten.Linear", i), pl[i].Attenuation.Linear );
         
-        glUniform1f( glGetUniformLocation( _bspmngr.bspShader.shader_id, _stringhelper.STR("gPointLights[%d].Atten.Linear", i)), pl[i].Attenuation.Linear );
-        
-        glUniform1f( glGetUniformLocation( _bspmngr.bspShader.shader_id, _stringhelper.STR("gPointLights[%d].Atten.Exp", i)), pl[i].Attenuation.Exp );
+        g_staticWorld->bspShader->SetUniform( _stringhelper.STR("gPointLights[%d].Atten.Exp", i), pl[i].Attenuation.Exp );
     }
     
     ncVec3 LightDir( 1.0f, -1.0f, 1.0f );
     LightDir.Normalize();
     
-    glUniform3f( glGetUniformLocation( _bspmngr.bspShader.shader_id, "gDirectionalLight.Direction"),  LightDir.x, LightDir.y, LightDir.z );
-    glUniform3f( glGetUniformLocation( _bspmngr.bspShader.shader_id, "gDirectionalLight.Base.Color"), 0.9f, 1.0f, 1.0f );
-    glUniform1f( glGetUniformLocation( _bspmngr.bspShader.shader_id, "gDirectionalLight.Base.AmbientIntensity"), 0.7f );
-    glUniform1f( glGetUniformLocation( _bspmngr.bspShader.shader_id, "gDirectionalLight.Base.DiffuseIntensity"), 0.001f );
+    g_staticWorld->bspShader->SetUniform( "gDirectionalLight.Direction", LightDir );
+
+    g_staticWorld->bspShader->SetUniform( "gDirectionalLight.Base.Color", 0.9f, 1.0f, 1.0f );
+    g_staticWorld->bspShader->SetUniform( "gDirectionalLight.Base.AmbientIntensity", 0.7f );
+    g_staticWorld->bspShader->SetUniform( "gDirectionalLight.Base.DiffuseIntensity", 0.001f );
+    g_staticWorld->bspShader->SetUniform( "light_position", -5.0f, 27.0f, -5.0f, 1.0f );
     
     glUseProgram(0);
 }
 
 void ncLevelEnvironment::PassShader( uint *id ) {
-    ncPointLight pl[2];
+    /*ncPointLight pl[2];
     pl[0].DiffuseIntensity = 2.5f;
     pl[0].Color = ncVec3(1.0f, 1.0f, 1.0f);
     pl[0].Position = ncVec3(-5.0, 27.0, -5.0);
@@ -129,10 +141,10 @@ void ncLevelEnvironment::PassShader( uint *id ) {
     ncVec3 LightDir( 1.0f, -1.0f, 1.0f );
     LightDir.Normalize();
     
-    glUniform3f( glGetUniformLocation( _bspmngr.bspShader.shader_id, "gDirectionalLight.Direction"),  LightDir.x, LightDir.y, LightDir.z );
-    glUniform3f( glGetUniformLocation( _bspmngr.bspShader.shader_id, "gDirectionalLight.Base.Color"), 0.9f, 1.0f, 1.0f );
-    glUniform1f( glGetUniformLocation( _bspmngr.bspShader.shader_id, "gDirectionalLight.Base.AmbientIntensity"), 0.7f );
-    glUniform1f( glGetUniformLocation( _bspmngr.bspShader.shader_id, "gDirectionalLight.Base.DiffuseIntensity"), 0.001f );
-    
+    glUniform3f( glGetUniformLocation( g_staticWorld->bspShader.Id, "gDirectionalLight.Direction"),  LightDir.x, LightDir.y, LightDir.z );
+    glUniform3f( glGetUniformLocation( g_staticWorld->bspShader.Id, "gDirectionalLight.Base.Color"), 0.9f, 1.0f, 1.0f );
+    glUniform1f( glGetUniformLocation( g_staticWorld->bspShader.Id, "gDirectionalLight.Base.AmbientIntensity"), 0.7f );
+    glUniform1f( glGetUniformLocation( g_staticWorld->bspShader.Id, "gDirectionalLight.Base.DiffuseIntensity"), 0.001f );
+    */
     //glUseProgram(0);
 }

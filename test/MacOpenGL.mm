@@ -20,40 +20,26 @@
 - (BOOL)canBecomeKeyWindow { return YES; }
 
 - (id)initWithFrame:(NSRect)frameRect {
-
+    
     // Stuff which must be loaded first.
-    _core.Preload( GetBundlePath() );
-    _renderer.Preload();
+    g_Core->Preload( GetBundlePath() );
+    g_mainRenderer->Preload();
     
-    const int swapInt = render_vsync.GetInteger();
+    const int swapInt = Render_VSync.GetInteger();
     
-    _gconsole.Execute( "readconfig config.nconf" );     // Load some settings
+    g_Console->Execute( "readconfig config.nconf" );     // Load some settings
     
-    _core.UseGraphics = Server_Dedicated.GetInteger() ? false : true;
+    g_Core->UseGraphics = Server_Dedicated.GetInteger() ? false : true;
     
-    _core.Print( LOG_INFO, "Initializing OpenGL context\n" );
+    g_Core->Print( LOG_INFO, "Initializing OpenGL context\n" );
     
     NSOpenGLPixelFormat      *w_pf;
     uint attributeCount = 0;
     uint version = 0;
     
-    _core.Print( LOG_INFO, "Chosen OpenGL version is %s\n", render_openglversion.GetString() );
-    
-    // The lowest version is 3.0.
-    // Uh, there are only core versions available.
-    if( !strcmp(render_openglversion.GetString(), "3.2" ) ) {
-        version = NSOpenGLProfileVersion3_2Core;
-    } else if( !strcmp(render_openglversion.GetString(), "3.2c" ) ) {
-        version = NSOpenGLProfileVersion3_2Core;
-    } else if( !strcmp(render_openglversion.GetString(), "4.1" ) ) {
-        version = NSOpenGLProfileVersion4_1Core;
-    } else if( !strcmp(render_openglversion.GetString(), "4.1c" ) ) {
-        version = NSOpenGLProfileVersion4_1Core;
-    } else {
-        version = NSOpenGLProfileVersion3_2Core;
-        _core.Print( LOG_WARN, "Unknown OpenGL version set, using 3.2 Core.\n" );
-        return nil;
-    }
+
+    version = NSOpenGLProfileVersion4_1Core;
+
     
 #define ADD_ATTR(x) { attributes[attributeCount++] = x; }
 #define ADD_ATTR2(x, y) { ADD_ATTR(x); ADD_ATTR(y); }
@@ -77,21 +63,21 @@
 #undef ADD_ATTR
 #undef ADD_ATTR2
     
-    _core.Print( LOG_INFO, "Initializing pixel format...\n" );
+    g_Core->Print( LOG_INFO, "Initializing pixel format...\n" );
     
     bzero(&w_pf, sizeof(w_pf));
     
     w_pf = [[NSOpenGLPixelFormat alloc] initWithAttributes:attributes];
     
     if( !w_pf )
-        _core.Error( ERC_GL, "Failed to initialize pixel format..\n" );
+        g_Core->Error( ERR_OPENGL, "Failed to initialize pixel format..\n" );
     
-    _core.Print( LOG_INFO, "Initializing OpenGL view..\n" );
+    g_Core->Print( LOG_INFO, "Initializing OpenGL view..\n" );
     
     self = [super initWithFrame:frameRect pixelFormat:w_pf];
     
     if ( !self )
-        _core.Error( ERC_GL, "Failed to create OpenGL view.\n" );
+        g_Core->Error( ERR_OPENGL, "Failed to create OpenGL view.\n" );
     
     [w_pf release];
     
@@ -111,14 +97,14 @@
     // Initialize context.
     cglContext = (CGLContextObj)[[self openGLContext] CGLContextObj];
     if( !cglContext ) {
-        _core.Error( ERC_GL, "Could not create cglContext." );
+        g_Core->Error( ERR_OPENGL, "Could not create cglContext." );
         return nil;
     }
     
     // Initialize pixel format.
     cglPixelFormat = (CGLPixelFormatObj)[[self pixelFormat] CGLPixelFormatObj];
     if( !cglPixelFormat ) {
-        _core.Error( ERC_GL, "Could not create cglPixelFormat." );
+        g_Core->Error( ERR_OPENGL, "Could not create cglPixelFormat." );
         return nil;
     }
     
@@ -137,7 +123,7 @@
     passedthru = ( fs_supported != 0 ) && (vs_supported != 0 );
     
     if( !passedthru ) {
-        _core.Error( ERC_GL, "Fragment or vertex shaders aren't supported." );
+        g_Core->Error( ERR_OPENGL, "Fragment or vertex shaders aren't supported." );
         return nil;
     }
     
@@ -146,8 +132,8 @@
     /*
         Initialize core.
     */
-    _core.Initialize();
-    _opengl.Initialize();
+    g_Core->Initialize();
+    gl_Core->Initialize();
     
     [self setNeedsDisplay:YES];
     
@@ -165,7 +151,7 @@
     
     location = [NSEvent mouseLocation];
     
-    _input.OnMouseMove( location.x, location.y );
+    g_Input->OnMouseMove( location.x, location.y );
 }
 
 - (void)mouseDown:(NSEvent *)theEvent {
@@ -173,9 +159,9 @@
     
     location = [NSEvent mouseLocation];
     
-    _input.OnMouseDown( location.x, location.y );
+    g_Input->OnMouseDown( location.x, location.y );
 
-    _imouse.Holding = true;
+    c_Mouse->Holding = true;
 }
 
 - (void) mouseDragged:(NSEvent *)theEvent {
@@ -187,17 +173,17 @@
     
     location = [NSEvent mouseLocation];
 
-    _input.OnMouseUp( location.x, location.y );
+    g_Input->OnMouseUp( location.x, location.y );
     
     //_mouse.holding = false;
 }
 
 -(void)keyUp:(NSEvent*)event {
-    _input.OnKeyUp( [[event characters] UTF8String][0] );
+    g_Input->OnKeyUp( [[event characters] UTF8String][0] );
 }
 
 -(void)keyDown:(NSEvent*)event {
-    _input.OnKeyPress( [[event characters] UTF8String][0] );
+    g_Input->OnKeyPress( [[event characters] UTF8String][0] );
 }
 
 /*
@@ -215,13 +201,13 @@ static CVReturn m_displaycallback(CVDisplayLinkRef displayLink, const CVTimeStam
 
 - (CVReturn)getFrameForTime:(const CVTimeStamp *)outputTime {
     
-    if( !_renderer.Initialized )
+    if( !g_mainRenderer->Initialized )
         return 0.0;
     
-    if( !_core.Initialized )
+    if( !g_Core->Initialized )
         return 0.0;
     
-    NSOpenGLContext    *currentContext;
+    NSOpenGLContext *currentContext;
     
     currentContext = [self openGLContext];
     
@@ -236,9 +222,7 @@ static CVReturn m_displaycallback(CVDisplayLinkRef displayLink, const CVTimeStam
     */
     CGLLockContext((CGLContextObj)[currentContext CGLContextObj]);
     
-    _core.Frame();
-    
-    CGLFlushDrawable([[self openGLContext] CGLContextObj]);
+    g_Core->Frame();
     
     [currentContext flushBuffer];
     
@@ -248,9 +232,12 @@ static CVReturn m_displaycallback(CVDisplayLinkRef displayLink, const CVTimeStam
 }
 
 - (void)dealloc {
+    
     [[self window] release];
     [[self window] dealloc];
-    CVDisplayLinkRelease(m_displayLink);
+    
+    CVDisplayLinkRelease( m_displayLink );
+    
     [super dealloc];
 }
 
@@ -260,36 +247,36 @@ static CVReturn m_displaycallback(CVDisplayLinkRef displayLink, const CVTimeStam
     
     //[self reshape];
     
-    CVDisplayLinkStart(m_displayLink);
+    CVDisplayLinkStart( m_displayLink );
 }
 
 - (void)reshape {
-    if( !_opengl.Initialized )
+    if( !gl_Core->Initialized )
         return;
     
-    NSOpenGLContext    *currentContext = [self openGLContext];
+    NSOpenGLContext *currentContext = [self openGLContext];
     [currentContext makeCurrentContext];
     
     CGLLockContext((CGLContextObj)[currentContext CGLContextObj]);
 
-    _opengl.OnResize( render_modeWidth.GetInteger(), render_modeHeight.GetInteger() );
+    gl_Core->OnResize( Render_Width.GetInteger(), Render_Height.GetInteger() );
     
     // Update.
     [[self openGLContext] update];
-    [[self window] setTitle: [NSString stringWithFormat:@"Nanocat ( OSX, OpenGL %i.%i )", _opengl.GetMajorVersion(), _opengl.GetMinorVersion()]];
+    [[self window] setTitle: [NSString stringWithFormat:@"Nanocat ( OSX, OpenGL %i.%i )", gl_Core->GetMajorVersion(), gl_Core->GetMinorVersion()]];
     
     // Change the window resolution.
     NSRect frame = [[self window] frame];
     
-    frame.size.width                    = render_modeWidth.GetInteger();
-    frame.size.height                   = render_modeHeight.GetInteger();
+    frame.size.width                    = Render_Water.GetInteger();
+    frame.size.height                   = Render_Height.GetInteger();
     [[self window] setFrame:frame display:YES];
     
     NSRect frame2 = [self frame];
     frame2.origin.x = 0;
     frame2.origin.y = 0;
-    frame2.size.width                    = render_modeWidth.GetInteger();
-    frame2.size.height                   = render_modeHeight.GetInteger();
+    frame2.size.width                    = Render_Width.GetInteger();
+    frame2.size.height                   = Render_Height.GetInteger();
     self.frame = frame2;
     
     CGLUnlockContext((CGLContextObj)[currentContext CGLContextObj]);

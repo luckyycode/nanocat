@@ -13,37 +13,33 @@
 #include "FileSystem.h"
 #include "NCString.h"
 #include "Core.h"
+#include "Renderer.h"
 
-ncConsoleVariable    system_gpu("sys", "gpu", "Graphics device name.", "Unknown", CVFLAG_SYS);
-ncConsoleVariable    system_glversion("sys", "glversion", "OpenGL version.", "0", CVFLAG_SYS);
-ncConsoleVariable    system_glslversion("sys", "glslversion", "OpenGL shading language version", "0", CVFLAG_SYS);
-ncConsoleVariable    system_minmemory("sys", "minmemory", "Minimum system memory required.", "256", CVFLAG_SYS);
-ncConsoleVariable    system_cpucores("sys", "cpucores", "Processor cores count.", "1", CVFLAG_SYS);
-ncConsoleVariable    system_cpuspeed("sys", "cpuspeed", "Processor clock speed.", "0", CVFLAG_SYS);
-ncConsoleVariable    system_physmem("sys", "physmem", "Physical memory available.", "0", CVFLAG_SYS);
-ncConsoleVariable    system_virtmem("sys", "virtmem", "Virtual memory available.", "0", CVFLAG_SYS);
+ncConsoleVariable    System_GPUname("sys", "gpu", "Graphics device name.", "Unknown", CVFLAG_SYS);
+ncConsoleVariable    System_MinimumMemory("sys", "minmemory", "Minimum system memory required.", "256", CVFLAG_SYS);
+ncConsoleVariable    System_CPUCores("sys", "cpucores", "Processor cores count.", "1", CVFLAG_SYS);
+ncConsoleVariable    System_CPUSpeed("sys", "cpuspeed", "Processor clock speed.", "0", CVFLAG_SYS);
+ncConsoleVariable    System_PhysMemory("sys", "physmem", "Physical memory available.", "0", CVFLAG_SYS);
+ncConsoleVariable    System_VirtMemory("sys", "virtmem", "Virtual memory available.", "0", CVFLAG_SYS);
 
-ncSystem _system;
-
-/*
-    System frame function.
-*/
-void ncSystem::Frame( void ) {
-    //system_updatemem( &_system );
-}
+ncSystem local_coreSystem;
+ncSystem *c_coreSystem = &local_coreSystem;
 
 /*
     System initialization.
 */
 void ncSystem::Initialize( void ) {
 
-    _core.Print( LOG_INFO, "System initializing..\n" );
+    g_Core->LoadState = NCCLOAD_SYSTEM;
+    g_Core->Print( LOG_INFO, "System initializing..\n" );
     
-    _system.mem_used = 0;
+    PrintSystemTime();
+    
+    c_coreSystem->mem_used = 0;
     
     // Non-blocking stdin.
     //fcntl (0, F_SETFL, fcntl (0, F_GETFL, 0) & ~FNDELAY);
-    fcntl(0, F_SETFL, fcntl (0, F_GETFL, 0) | FNDELAY);
+    fcntl( 0, F_SETFL, fcntl( 0, F_GETFL, 0 ) | FNDELAY );
     
 #ifdef __APPLE__
 
@@ -52,69 +48,75 @@ void ncSystem::Initialize( void ) {
     
     bool error;
 
-    _core.Print( LOG_INFO, "OSX Version: %s\n", GetSystemVersion() );
+    g_Core->Print( LOG_INFO, "OSX Version: %s\n", GetSystemVersion() );
 
+    // Memory size.
     error = GetSysCTLValue("hw.memsize", &ull);
-    
     if( error ) {
-        _core.Print( LOG_WARN, "Couldn't get physical memory size.\n" );
+        g_Core->Print( LOG_WARN, "Couldn't get physical memory size.\n" );
     } else {
-        _core.Print( LOG_INFO, "Physical memory installed: %d mb\n", (ull >> 20) );
-        system_physmem.Set( _stringhelper.STR("%u", ( ull >> 20 ) ) );
+        g_Core->Print( LOG_INFO, "Physical memory installed: %d mb\n", (ull >> 20) );
+        System_PhysMemory.Set( _stringhelper.STR("%u", ( ull >> 20 ) ) );
     }
     
+    g_Core->Print( LOG_INFO, "%i mb free memory available.\n", GetSysFreeMemory() );
+    
+    // User memory.
     error = GetSysCTLValue("hw.usermem", &ul);
-    
     if( error ) {
-        _core.Print( LOG_WARN, "Couldn't get user memory size.\n" );
+        g_Core->Print( LOG_WARN, "Couldn't get user memory size.\n" );
     } else {
-        _core.Print( LOG_INFO, "User memory: %d mb\n", (ul >> 20) / MEGABYTE );
+        g_Core->Print( LOG_INFO, "User memory: %d mb\n", (ul >> 20) / MEGABYTE );
     }
     
+    // CPU clock frequency.
     error = GetSysCTLValue("hw.cpufrequency", &ull);
-    
     if( error ) {
         ull = 0;
-        _core.Print( LOG_WARN, "Couldn't determine CPU frequency.\n" );
+        g_Core->Print( LOG_WARN, "Couldn't determine CPU frequency.\n" );
     } else {
         ull /= 1000000;
-        _core.Print( LOG_INFO, "Processor clock frequency: %d mhz\n", ull );
-        system_cpuspeed.Set( _stringhelper.STR( "%u", ull ) );
+        g_Core->Print( LOG_INFO, "Processor clock frequency: %d mhz\n", ull );
+        System_CPUSpeed.Set( _stringhelper.STR( "%u", ull ) );
     }
     
+#ifndef iOS_BUILD
+    
+    // Number of cores.
     error = GetSysCTLValue("hw.ncpu", &ul);
-    
     if( error ) {
-        _core.Print( LOG_WARN, "Couldn't determine CPU number of cores.\n" );
+        g_Core->Print( LOG_WARN, "Couldn't determine CPU number of cores.\n" );
     } else {
-        _core.Print( LOG_INFO, "Available processor cores: %i\n", ul );
-        system_cpucores.Set( _stringhelper.STR( "%u", ul ) );
+        g_Core->Print( LOG_INFO, "Available processor cores: %i\n", ul );
+        System_CPUCores.Set( _stringhelper.STR( "%u", ul ) );
     }
     
-#else
+#endif
+    
+#else   // WINDOWS
     
     MEMORYSTATUSEX statex;
     
     statex.dwLength = sizeof( statex );
     
     if( GlobalMemoryStatusEx( &statex ) ) {
-        consolevar_set( "system_physmem", _stringhelper.STR( "%u", statex.ullTotalPhys / MEGABYTE ), true );
-        consolevar_set( "system_virtmem", _stringhelper.STR( "%u", statex.ullTotalVirtual / MEGABYTE ), true );
+        consolevar_set( "System_PhysMemory", _stringhelper.STR( "%u", statex.ullTotalPhys / MEGABYTE ), true );
+        consolevar_set( "System_VirtMemory", _stringhelper.STR( "%u", statex.ullTotalVirtual / MEGABYTE ), true );
         
-        _core.Print( LOG_INFO, "Installed physical memory: %u\n", statex.ullTotalPhys / MEGABYTE );
-        _core.Print( LOG_INFO, "Available virtual memory: %u\n", statex.ullTotalVirtual / MEGABYTE );
+        g_Core->Print( LOG_INFO, "Installed physical memory: %u\n", statex.ullTotalPhys / MEGABYTE );
+        g_Core->Print( LOG_INFO, "Available virtual memory: %u\n", statex.ullTotalVirtual / MEGABYTE );
     } else {
-        _core.Print( LOG_WARN, "Could not get memory status.\n" );
+        g_Core->Print( LOG_WARN, "Could not get memory status.\n" );
     }
     
 #endif
     
-    _core.Print( LOG_INFO, "Not bad at all!\n" );
+    g_Core->Print( LOG_INFO, "Not bad at all!\n" );
 
-    unsigned int availableMemory = system_physmem.GetInteger();
+    unsigned int availableMemory = System_PhysMemory.GetInteger();
     
-    if( availableMemory < system_minmemory.GetInteger() ) {
-        _core.Error( ERC_FATAL, "Couldn't launch the game, your device should have more than %i MB of ram. You have %i MB.\n", system_minmemory.GetInteger(), availableMemory );
+    if( availableMemory < System_MinimumMemory.GetInteger() ) {
+        g_Core->Error( ERR_FATAL, "Couldn't launch the game, your device should have more than %i MB of ram. You have %i MB.\n", System_MinimumMemory.GetInteger(), availableMemory );
         return;
     }
 }
@@ -122,7 +124,7 @@ void ncSystem::Initialize( void ) {
 /*
     Get current user name.
 */
-const char *ncSystem::GetCurrentUsername( void ) {
+const NString ncSystem::GetCurrentUsername( void ) {
     
 #ifdef __WIN32
     
@@ -150,31 +152,33 @@ const char *ncSystem::GetCurrentUsername( void ) {
 /*
     Shutdown everything and quit safety.
 */
-void ncSystem::Quit( const char *rmsg ) {
+void ncSystem::Quit( const NString rmsg ) {
     
     // Notify the user.
-    _core.Print( LOG_NONE, "\n" );
-    _core.Print( LOG_INFO, "Game quit\n" );
-    _core.Print( LOG_INFO, "%s\n", rmsg );
+    g_Core->Print( LOG_NONE, "\n" );
+    g_Core->Print( LOG_INFO, "Application quit. %s\n", rmsg );
 
     // Disconnect from server. ( If connected )
-    _core.Disconnect();
+    g_Core->Disconnect();
 
     // Shutdown server.
-    _gconsole.Execute("lazykillserver");
+    g_Console->Execute("lazykillserver");
     
     // Shutdown the networking.
-    _netmanager.Shutdown();
+    g_networkManager->Shutdown();
 
     // Some information.
-    _core.Print( LOG_INFO, "Game was launched for %i minute(s)\n", ( _core.Time / 60000 ) );
-    _core.Print( LOG_INFO, "Seems like everything is okay.. quitting!\n" );
+    g_Core->Print( LOG_INFO, "Game was launched for %i minute(s)\n", ( g_Core->Time / 60000 ) );
+    g_Core->Print( LOG_INFO, "Seems like everything is okay.. quitting!\n" );
 
     // Shutdown the file system.
-    _filesystem.Shutdown();
+    c_FileSystem->Shutdown();
 
+    // Renderer shutdown.
+    g_mainRenderer->Shutdown();
+    
     // Clear the console buffer & write to the file.
-    _gconsole.Execute( "clear" );
+    g_Console->Execute( "clear" );
 
     // Remove console variables.
     _cvarmngr.Shutdown();
@@ -216,4 +220,42 @@ int ncSystem::GetSysCTLValue( const char key[], void *dest ) {
     }
     return err;
 }
+
+int ncSystem::GetSysFreeMemory( void ) {
+    // Get free memory.
+    vm_size_t g_pageSize;
+    host_page_size( mach_host_self(), &g_pageSize );
+    
+    // Get memory stats.
+    vm_statistics g_stats;
+    mach_msg_type_number_t g_statsSize = sizeof( g_stats );
+    host_statistics( mach_host_self(), HOST_VM_INFO, (host_info_t)&g_stats, &g_statsSize );
+    
+    return ( g_stats.free_count * g_pageSize ) / MEGABYTE;
+}
+
 #endif
+
+void ncSystem::PrintSystemTime( void ) {
+    struct tm *tmp;
+    time_t s;
+    
+
+    s = time( NULL );
+    tmp = localtime( &s );
+    
+    if( !tmp ) {
+        g_Core->Print( LOG_ERROR, "Unable to get system time.\n" );
+        return;
+    }
+    
+    g_Core->Print( LOG_INFO, "System local time: %i:%i:%i\n", tmp->tm_hour, tmp->tm_min, tmp->tm_sec );
+    
+}
+
+/*
+    System frame function.
+*/
+void ncSystem::Frame( void ) {
+    
+}

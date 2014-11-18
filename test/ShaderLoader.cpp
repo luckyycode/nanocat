@@ -14,51 +14,233 @@
 #include "System.h"
 #include "OpenGL.h"
 
-// Private stuff.
-ncShaderManager _shaderManager;
+
+/*
+ 
+ 
+    Shader functions.
+ 
+ 
+*/
+
+// Use current shader.
+void ncGLShader::Use() {
+    glUseProgram( Id );
+}
+
+// Stop using current shader.
+void ncGLShader::Next() {
+    glUseProgram( 0 );
+}
+
+// Shader Id.
+GLuint ncGLShader::GetId() {
+    return Id;
+}
+
+// Shader name.
+const NString ncGLShader::GetName() {
+    return Name;
+}
+
+// Get uniform location.
+GLint ncGLShader::UniformLocation( const NString uniname ) {
+    return glGetUniformLocation( Id, uniname );
+}
+
+// Float methods.
+void ncGLShader::SetUniform( const NString uniname,
+                            GLfloat value ) {
+    glUniform1f( glGetUniformLocation( Id, uniname ), value );
+}
+
+void ncGLShader::SetUniform( const NString uniname,
+                            GLfloat v0, GLfloat v1 ) {
+    glUniform2f( glGetUniformLocation( Id, uniname ), v0, v1 );
+}
+
+void ncGLShader::SetUniform( const NString uniname,
+                            GLfloat v0, GLfloat v1, GLfloat v2 ) {
+    glUniform3f( glGetUniformLocation( Id, uniname ), v0, v1, v2 );
+}
+
+void ncGLShader::SetUniform( const NString uniname,
+                            GLfloat v0, GLfloat v1, GLfloat v2, GLfloat v3 ) {
+    glUniform4f( glGetUniformLocation( Id, uniname ), v0, v1, v2, v3 );
+}
+
+void ncGLShader::SetUniform( const NString uniname, GLsizei count, const GLfloat *values ) {
+    glUniform1fv( glGetUniformLocation( Id, uniname ), count, values );
+}
+
+// Integer operations.
+void ncGLShader::SetUniform( const NString uniname, GLint value ) {
+    glUniform1i( glGetUniformLocation( Id, uniname), value );
+}
+
+void ncGLShader::SetUniform( const NString uniname, GLint v0, GLint v1 ) {
+    glUniform2i( glGetUniformLocation( Id, uniname ), v0, v1 );
+}
+
+void ncGLShader::SetUniform( const NString uniname, GLint v0, GLint v1, GLint v2 ) {
+    glUniform3i( glGetUniformLocation( Id, uniname ), v0, v1, v2 );
+}
+
+void ncGLShader::SetUniform( const NString uniname, GLint v0, GLint v1, GLint v2, GLint v3 ) {
+    glUniform4i( glGetUniformLocation( Id, uniname ), v0, v1, v2, v3 );
+}
+
+void ncGLShader::SetUniform( const NString uniname, GLsizei count, const GLint *values ) {
+    glUniform1iv( glGetUniformLocation( Id, uniname ), count, values );
+}
+
+// Matrix.
+void ncGLShader::SetUniform( const NString uniname, GLsizei count, GLboolean transpose, const GLfloat *values ) {
+    glUniformMatrix4fv( glGetUniformLocation( Id, uniname ), count, transpose, values );
+}
+
+// With glGetUniformLocation outside.
+
+// Float methods.
+void ncGLShader::SetUniform( GLint loc,
+                            GLfloat value ) {
+    glUniform1f( loc, value );
+}
+
+void ncGLShader::SetUniform( GLint loc,
+                            GLfloat v0, GLfloat v1 ) {
+    glUniform2f( loc, v0, v1 );
+}
+
+void ncGLShader::SetUniform( GLint loc,
+                            GLfloat v0, GLfloat v1, GLfloat v2 ) {
+    glUniform3f( loc, v0, v1, v2 );
+}
+
+void ncGLShader::SetUniform( GLint loc,
+                            GLfloat v0, GLfloat v1, GLfloat v2, GLfloat v3 ) {
+    glUniform4f( loc, v0, v1, v2, v3 );
+}
+
+void ncGLShader::SetUniform( GLint loc,
+                            GLsizei count, const GLfloat *values ) {
+    glUniform1fv( loc, count, values );
+}
+
+// Integer operations.
+void ncGLShader::SetUniform( GLint loc, GLint value ) {
+    glUniform1i( loc, value );
+}
+
+void ncGLShader::SetUniform( GLint loc,
+                            GLint v0, GLint v1 ) {
+    glUniform2i( loc, v0, v1 );
+}
+
+void ncGLShader::SetUniform( GLint loc,
+                            GLint v0, GLint v1, GLint v2 ) {
+    glUniform3i( loc, v0, v1, v2 );
+}
+
+void ncGLShader::SetUniform( GLint loc,
+                            GLint v0, GLint v1, GLint v2, GLint v3 ) {
+    glUniform4i( loc, v0, v1, v2, v3 );
+}
+
+void ncGLShader::SetUniform( GLint loc,
+                            GLsizei count, const GLint *values ) {
+    glUniform1iv( loc, count, values );
+}
+
+// Matrix.
+void ncGLShader::SetUniform( GLint loc,
+                            GLsizei count, GLboolean transpose, const GLfloat *values ) {
+    glUniformMatrix4fv( loc, count, transpose, values );
+}
+
+// Advanced.
+void ncGLShader::SetUniform( const NString uniname, ncVec2 to ) {
+    glUniform2f( glGetUniformLocation( Id, uniname ), to.x, to.y );
+}
+
+void ncGLShader::SetUniform( const NString uniname, ncVec3 to ) {
+    glUniform3f( glGetUniformLocation( Id, uniname ), to.x, to.y, to.z );
+}
+
+void ncGLShader::SetUniform( const NString uniname, ncVec4 to ) {
+    glUniform4f( glGetUniformLocation( Id, uniname ), to.x, to.y, to.z, to.w );
+}
+
+void ncGLShader::SetUniform( GLint loc, ncVec2 to ) {
+    glUniform2f( loc, to.x, to.y );
+}
+
+void ncGLShader::SetUniform( GLint loc, ncVec3 to ) {
+    glUniform3f( loc, to.x, to.y, to.z );
+}
+
+void ncGLShader::SetUniform( GLint loc, ncVec4 to ) {
+    glUniform4f( loc, to.x, to.y, to.z, to.w );
+}
+
+// Nice stuff.
+ncShaderManager local_shaderManager;
+ncShaderManager *g_shaderManager = &local_shaderManager;
 
 /*
     Precache shader stuff.
 */
 void ncShaderManager::Initialize( void ) {
     shaderCount = 0;
-    shaders = (ncGLShader*)malloc( sizeof(ncGLShader) * MAX_SHADERS );
+    shaders = new ncGLShader[MAX_SHADERS];
 }
 
 /* 
     Compile shader.
 */
-GLuint ncShaderManager::Compile( const char *shadername, char *data, GLenum type ) {
-    int          status;
+GLuint ncShaderManager::Compile( const NString shadername, NString data, GLenum type ) {
+    int          status, info_log;
     long         length;
     
     GLuint       shader;
+
+    shader = glCreateShader( type );
+    length = strlen( data );
     
-    shader = glCreateShader(type);
-    length = strlen(data);
-    
-    const char *versionId = _stringhelper.STR( "#version %i\n", GLSL_Version.GetInteger() );
-    const char *sources[2] = { versionId, data };
+    const NString versionId = _stringhelper.STR( "#version %s\n", GLSL_Version.GetString() );
+    const NString sources[2] = { versionId, data };
     
     glShaderSource( shader, 2, (const char**)&sources, NULL );
     glCompileShader( shader );
     glGetShaderiv( shader, GL_COMPILE_STATUS, &status );
 
+    glGetProgramiv( shader, GL_INFO_LOG_LENGTH, &info_log );
+
     if( !status ) {
-        char error[1024];
+
+        if( info_log > 1 ) {
+            NString error_log = new char[info_log + 1];
         
-        glGetProgramInfoLog(shader, 1024, NULL, error);
+            glGetProgramInfoLog( shader, 1024, NULL, error_log );
         
-        _core.Print( LOG_ERROR, "Could not compile %s shader. Here's log:\n", shadername );
-        _core.Print( LOG_NONE, error );
+            g_Core->Print( LOG_ERROR, "Could not compile %s shader. Here's log:\n", shadername );
+            g_Core->Print( LOG_NONE, error_log );
+
+            g_Core->Error( ERR_ASSET, "Could not compile shader %s.\n See console log for more information.\n", shadername );
+
+            glDeleteShader( shader );
+    
+            delete [] error_log;
         
-#ifdef WARN_LEVEL_ERROR
-        _core.Error( ERC_ASSET, "Could not compile shader %s.\n See console log for more information.\n", shadername );
-#endif
-        
-        glDeleteShader(shader);
-        
-        return 0;
+            return 0;
+            
+        } else {
+            g_Core->Error( ERR_ASSET, "Could not compile shader %s.\n No log available.\n", shadername );
+            
+            glDeleteShader( shader );
+            return 0;
+            
+        }
     }
     
     return shader;
@@ -67,7 +249,7 @@ GLuint ncShaderManager::Compile( const char *shadername, char *data, GLenum type
 /*
     Load shader from file.
 */
-void ncShaderManager::CompileFromFile( const char *file, GLuint *vs, GLuint *fs, GLuint *gs ) {
+void ncShaderManager::CompileFromFile( const NString file, GLuint *vs, GLuint *fs, GLuint *gs ) {
 
     long    result;
     int     i;
@@ -76,7 +258,7 @@ void ncShaderManager::CompileFromFile( const char *file, GLuint *vs, GLuint *fs,
     char    *data;
     char    *shaders[3];
     
-    result = _filesystem.Load( _stringhelper.STR("%s/%s/%s.nshdr", Filesystem_Path.GetString(), SHADER_FOLDER, file), (void**)&data );
+    result = c_FileSystem->Load( _stringhelper.STR("%s/%s/%s.nshdr", Filesystem_Path.GetString(), SHADER_FOLDER, file), (void**)&data );
     
     zeromem( shaders, sizeof(shaders) );
     
@@ -89,7 +271,7 @@ void ncShaderManager::CompileFromFile( const char *file, GLuint *vs, GLuint *fs,
     }
     
     if( (!shaders[0] || !shaders[1] ) ) {
-        _core.Error( ERC_ASSET, "Could not load %s shader. Syntax error.\n", file );
+        g_Core->Error( ERR_ASSET, "Could not load %s/%s/%s.nshdr shader. Syntax error.", Filesystem_Path.GetString(), SHADER_FOLDER, file );
         return;
     }
 
@@ -97,28 +279,28 @@ void ncShaderManager::CompileFromFile( const char *file, GLuint *vs, GLuint *fs,
     *fs = Compile( file, shaders[1], GL_FRAGMENT_SHADER );
     
     
-    if( shaders[2] )
-        *gs = Compile( file, shaders[2], GL_GEOMETRY_SHADER );
-    else *gs = 0;
+    //if( shaders[2] )
+    //    *gs = Compile( file, shaders[2], GL_GEOMETRY_SHADER );
+    *gs = 0;
 }
 
 /*
     Simply load shader.
 */
-void ncShaderManager::Load( const char *file ) {
+void ncShaderManager::Load( const NString file ) {
 
-    uint    program, vs, fs, gs;
+    GLuint    program, vs, fs, gs;
     float   t1, t2;
     int     err, infolen;
 
     ncGLShader *s_temp;
 
     if( shaderCount > MAX_SHADERS ) {
-        _core.Error( ERC_ASSET, "Could not load %s shader. Limit %i exceeded.\n", file, MAX_SHADERS );
+        g_Core->Error( ERR_ASSET, "Could not load %s shader. %i shaders exceeded.\n", file, MAX_SHADERS );
         return;
     }
 
-    t1 = _system.Milliseconds();
+    t1 = c_coreSystem->Milliseconds();
 
     CompileFromFile( file, &vs, &fs, &gs );
     
@@ -133,30 +315,28 @@ void ncShaderManager::Load( const char *file ) {
     glLinkProgram(program);
     glGetProgramiv(program, GL_LINK_STATUS, &err);
 
-    if(!err) {
-        _core.Print( LOG_ERROR, "Could not link %s shader.\n", file );
-
+    if( !err ) {
         infolen = 0;
         glGetProgramiv(program, GL_INFO_LOG_LENGTH, &infolen);
 
-        if(infolen > 0) {
+        if( infolen > 1 ) {
 
-            char error[1024];
-            glGetProgramInfoLog(program, 1024, NULL, error);
+            NString log_string = new char[infolen + 1];
+            glGetProgramInfoLog(program, infolen, NULL, log_string);
 
-            _core.Print( LOG_ERROR, "Could not link %s shader. Here's log for you.\n", file );
-            _core.Print( LOG_NONE, "%s\n", error );
+            g_Core->Print( LOG_ERROR, "Could not link %s shader. Here's log for you.\n", file );
+            g_Core->Print( LOG_NONE, "%s\n", log_string );
 
-#ifdef WARN_LEVEL_ERROR
-            _core.Error( ERC_ASSET, "Could not link %s shader.\nLook console for shader log.\n", file );
-#endif
-            //free(error);
+            g_Core->Error( ERR_ASSET, "Could not link %s shader.\nLook console for shader log.\n", file );
+        
+            delete [] log_string;
+            
             return;
         }
     }
     else {
         if( strlen(file) > MAX_SHADERNAME_LENGTH ) {
-            _core.Error( ERC_ASSET, "LoadShader: Too long shader name.\n" );
+            g_Core->Error( ERR_ASSET, "LoadShader: Too long shader name.\n" );
             return;
         }
         
@@ -164,15 +344,15 @@ void ncShaderManager::Load( const char *file ) {
 
         //memset( s_temp, 0, sizeof(ncGLShader) );
 
-        s_temp->fragment = fs;
-        s_temp->vertex = vs;
-        s_temp->geometry = gs;
-        s_temp->shader_id = program;
+        s_temp->Fragment = fs;
+        s_temp->Vertex = vs;
+        s_temp->Geom = gs;
+        s_temp->Id = program;
 
-        _stringhelper.Copy( s_temp->s_name, file );
+        _stringhelper.Copy( s_temp->Name, file );
 
-        t2 = _system.Milliseconds();
-        _core.Print( LOG_DEVELOPER, "LoadShader: %s loaded.. ( %4.2f ms )\n", file, t2-t1 );
+        t2 = c_coreSystem->Milliseconds();
+        g_Core->Print( LOG_DEVELOPER, "LoadShader: %s loaded.. ( %4.2f ms )\n", file, t2-t1 );
 
         shaderCount++;
     }
@@ -182,14 +362,22 @@ void ncShaderManager::Load( const char *file ) {
     Remove the shader.
 */
 void ncShaderManager::Delete( ncGLShader *shader ) {
-    glDetachShader(shader->shader_id, shader->vertex);
-    glDetachShader(shader->shader_id, shader->fragment);
+    glDetachShader( shader->Id, shader->Vertex );
+    glDetachShader( shader->Id, shader->Fragment );
 
-    glDeleteShader(shader->vertex);
-    glDeleteShader(shader->fragment);
+    glDeleteShader( shader->Vertex );
+    glDeleteShader( shader->Fragment );
 
-    glDeleteProgram(shader->shader_id);
+    glDeleteProgram( shader->Id );
 
     bzero( &shader, sizeof( shader ) );
 }
 
+/*
+    Mostly called on application shutdown.
+*/
+void ncShaderManager::Shutdown( void ) {
+    if( shaders ) delete [] shaders;
+    
+    shaderCount = 0;
+}

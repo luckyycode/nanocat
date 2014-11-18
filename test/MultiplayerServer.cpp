@@ -32,7 +32,8 @@
         * SERVER_BAD_RESPONSE - Bad client response.
 */
 
-ncServer _server;
+ncServer local_mainServer;
+ncServer *n_server = &local_mainServer;
 
 // Maximum clients on server.
 ncConsoleVariable  Server_Maxclients( "server", "maxclients", "Maximum server clients.", "2", CVFLAG_NEEDSREFRESH );
@@ -64,27 +65,27 @@ void server_tests (void) {
 }
 
 void lazyServerMap( void ) {
-    _server.Loadmap();
+    n_server->Loadmap();
 }
 
 void lazyServerKick( void ) {
-    _server.KickClient();
+    n_server->KickClient();
 }
 
 void lazyServerPrintStatus( void ) {
-    _server.PrintStatus();
+    n_server->PrintStatus();
 }
 
 void lazyServerAddbot( void ) {
-    _server.AddBot();
+    n_server->AddBot();
 }
 
 void lazyServerLaunch( void ) {
-    _server.Launchmap();
+    n_server->Launchmap();
 }
 
 void lazyServerShutdown( void ) {
-    _server.Shutdown("Game quit.\n");
+    n_server->Shutdown("Game quit.\n");
 }
 
 ncServerClient::ncServerClient( void ) {
@@ -109,11 +110,13 @@ ncServerClient::ncServerClient( void ) {
 void ncServer::Initialize( void ) {
     float   t1, t2; // Load time.
 
-    t1 = _system.Milliseconds();
-    _core.Print( LOG_INFO, "Server initializing	...\n" );
+    t1 = c_coreSystem->Milliseconds();
+    
+    g_Core->LoadState = NCCLOAD_SERVER;
+    g_Core->Print( LOG_INFO, "Server initializing	...\n" );
 
     if( Initialized ) {
-        _core.Print( LOG_DEVELOPER, "Uh, someone tried to call me, but I have already initialized.\n" );
+        g_Core->Print( LOG_DEVELOPER, "Uh, someone tried to call me, but I have already initialized.\n" );
         return;
     }
     
@@ -126,40 +129,40 @@ void ncServer::Initialize( void ) {
     zeromem( Response, sizeof(ncServerResponseData) );
 
     // Execute server file.
-    _gconsole.Execute( "readconfig server.nconf" );
+    g_Console->Execute( "readconfig server.nconf" );
 
     // Check server console variables.
     CheckParams();
 
     MaxClients = Server_Maxclients.GetInteger();
-    Port  = network_port.GetInteger();
+    Port  = Network_Port.GetInteger();
     ClientNum = 0;
     
     _stringhelper.Copy( Name, Server_Name.GetString() );
 
-    _core.Print( LOG_INFO, "Initializing server client data...\n" );
+    g_Core->Print( LOG_INFO, "Initializing server client data...\n" );
 
     // Initialize client slots.
     SetupClients( Server_Maxclients.GetInteger() );
 
     // Let user know some stuff.
-    _core.Print( LOG_INFO, "Our server name is '%s'\n", Server_Name.GetString() );
-    _core.Print( LOG_INFO, "Maximum client allowed - '%i'\n", Server_Maxclients.GetInteger() );
-    _core.Print( LOG_INFO, "Our network port is '%i'\n\n", network_port.GetInteger() );
+    g_Core->Print( LOG_INFO, "Our server name is '%s'\n", Server_Name.GetString() );
+    g_Core->Print( LOG_INFO, "Maximum client allowed - '%i'\n", Server_Maxclients.GetInteger() );
+    g_Core->Print( LOG_INFO, "Our network port is '%i'\n\n", Network_Port.GetInteger() );
 
     // Add server commands.
-    _commandManager.Add( "map",             lazyServerMap );
-    _commandManager.Add( "kick",            lazyServerKick );
-    _commandManager.Add( "status",          lazyServerPrintStatus );
-    _commandManager.Add( "addbot",          lazyServerAddbot );
-    _commandManager.Add( "launch",          lazyServerLaunch );
-    _commandManager.Add( "s",               server_tests );
-    _commandManager.Add( "lazykillserver",  lazyServerShutdown );
+    c_CommandManager->Add( "map",             lazyServerMap );
+    c_CommandManager->Add( "kick",            lazyServerKick );
+    c_CommandManager->Add( "status",          lazyServerPrintStatus );
+    c_CommandManager->Add( "addbot",          lazyServerAddbot );
+    c_CommandManager->Add( "launch",          lazyServerLaunch );
+    c_CommandManager->Add( "s",               server_tests );
+    c_CommandManager->Add( "lazykillserver",  lazyServerShutdown );
 
     Initialized      = true;
-    t2 = _system.Milliseconds();
+    t2 = c_coreSystem->Milliseconds();
 
-    _core.Print( LOG_INFO, "Server took %4.2f ms to initialize.\n", t2 - t1 );
+    g_Core->Print( LOG_INFO, "Server took %4.2f ms to initialize.\n", t2 - t1 );
 }
 
 /*
@@ -167,33 +170,33 @@ void ncServer::Initialize( void ) {
 */
 void ncServer::CreateSession( void ) {
     if( !Initialized ) {
-        _core.Print( LOG_WARN, "Server was not initialized while I was creating session, initializing server..\n" );
+        g_Core->Print( LOG_WARN, "Server was not initialized while I was creating session, initializing server..\n" );
         Initialize();
     }
 
-    _core.Print( LOG_INFO, "Creating server session..\n" );
+    g_Core->Print( LOG_INFO, "Creating server session..\n" );
 
     // Default server configuration.
-    _gconsole.Execute( "readconfig server.nconf" );
+    g_Console->Execute( "readconfig server.nconf" );
 
-    _core.Print( LOG_INFO, "Server name: %s\n", Server_Name.GetString() );
+    g_Core->Print( LOG_INFO, "Server name: %s\n", Server_Name.GetString() );
 
     // Will be reseted to default value if needed.
     SetupClients( Server_Maxclients.GetInteger() );
 
-    _core.Print( LOG_NONE, "\n");
-    _core.Print( LOG_INFO, "Our server name is '%s'\n", Server_Name.GetString() );
+    g_Core->Print( LOG_NONE, "\n");
+    g_Core->Print( LOG_INFO, "Our server name is '%s'\n", Server_Name.GetString() );
 
     // Some user information.
-    _core.Print( LOG_INFO, "Max clients allowed - '%i'\n", Server_Maxclients.GetInteger() );
-    _core.Print( LOG_INFO, "Our network port is '%i'\n", network_port.GetInteger() );
-    _core.Print( LOG_NONE, "\n");
+    g_Core->Print( LOG_INFO, "Max clients allowed - '%i'\n", Server_Maxclients.GetInteger() );
+    g_Core->Print( LOG_INFO, "Our network port is '%i'\n", Network_Port.GetInteger() );
+    g_Core->Print( LOG_NONE, "\n");
 
     // Reset server session id, so we don't get fcked up.
-    ServerIdentificator = 0xFFFF ^ _core.Time;
+    ServerIdentificator = 0xFFFF ^ g_Core->Time;
 
     // Everything went okay, set game to be active.
-    _core.Print( LOG_DEVELOPER, "Server is active now.\n" );
+    g_Core->Print( LOG_DEVELOPER, "Server is active now.\n" );
 
     // Time warp fix.
     State   = SERVER_GAME;
@@ -210,36 +213,36 @@ void ncServer::SetupClients( int maxclients ) {
     int cl;
 
     if( maxclients >= MAX_CLIENTS_NUM ) {
-        _core.Print( LOG_WARN, "Could not set max clients value, maximum %i clients.\n", MAX_CLIENTS_NUM );
+        g_Core->Print( LOG_WARN, "Could not set max clients value, maximum %i clients.\n", MAX_CLIENTS_NUM );
         Server_Maxclients.Set( "512" );
 
-        _core.Print( LOG_INFO, "Maximum clients value set to 512\n" );
+        g_Core->Print( LOG_INFO, "Maximum clients value set to 512\n" );
     }
     else if(maxclients < 1) {
-        _core.Print( LOG_WARN, "Could not set max clients value to 0, minimum one client.\n" );
+        g_Core->Print( LOG_WARN, "Could not set max clients value to 0, minimum one client.\n" );
         Server_Maxclients.Set( "24" );
         
-        _core.Print( LOG_INFO, "Maximum clients value set to 24 clients.\n" );
+        g_Core->Print( LOG_INFO, "Maximum clients value set to 24 clients.\n" );
     }
 
     // We got nice checking here.
-    if(!Clients)
+    if( !Clients )
         Clients = new ncServerClient[Server_Maxclients.GetInteger()];
 
-    if(!Clients) {
-        _core.Error( ERC_FATAL, "Could not allocate memory for %i clients.\n", Server_Maxclients.GetInteger() );
+    if( !Clients ) {
+        g_Core->Error( ERR_FATAL, "Could not allocate memory for %i clients.\n", Server_Maxclients.GetInteger() );
         return;
     }
 
     for( cl = 0; cl < Server_Maxclients.GetInteger(); cl ++ ) {
         if( !&Clients[cl] )
-            _core.Error( ERC_SERVER, "Could not load client slots. No enough memory." );
+            g_Core->Error( ERR_SERVER, "Could not load client slots. No enough memory." );
 
         // Set initial values.
         memset( &Clients[cl], 0, sizeof(ncServerClient) );
     }
 
-    _core.Print( LOG_DEVELOPER, "%i client slots loaded.\n", Server_Maxclients.GetInteger() );
+    g_Core->Print( LOG_DEVELOPER, "%i client slots loaded.\n", Server_Maxclients.GetInteger() );
 }
 
 /*
@@ -248,7 +251,7 @@ void ncServer::SetupClients( int maxclients ) {
 void ncServer::ProcessClientMessage( ncServerClient *client, ncBitMessage *msg ) {
 
     int commandSequence = msg->ReadInt32();
-    char *command = msg->ReadString();
+    NString command = msg->ReadString();
     
     if( commandSequence > client->lastExecutedackCommand ) {
     
@@ -275,7 +278,7 @@ void ncServer::ProcessClientMessage( ncServerClient *client, ncBitMessage *msg )
         }
 
         if( !strcmp( token[0], "say" ) ) {
-            _core.Print( LOG_NONE, "%s said \"%s\"\n", client->name, token[1] );
+            g_Core->Print( LOG_NONE, "%s said \"%s\"\n", client->name, token[1] );
         }
 
         client->lastReceivedackCommand = commandSequence;
@@ -286,30 +289,31 @@ void ncServer::ProcessClientMessage( ncServerClient *client, ncBitMessage *msg )
 /*
     Create a new client.
 */
-void ncServer::CreateClient( ncNetdata *from, int response, const char *name, const char *version ) {
+void ncServer::CreateClient( ncNetdata *from, int response, const NString name, const NString version ) {
     int     x, i;
     int		ping;
 
-    for ( i = 0; i < MAX_RESPONSES; i++ ) {
+    for( i = 0; i < MAX_RESPONSES; i++ ) {
         // Compare addresses.
-        if ( _netmanager.CompareAddress(from, &Response[i].Address) ) {
+        if ( g_networkManager->CompareAddress(from, &Response[i].Address) ) {
             // We found what we need.
             if ( response == Response[i].Response ) {
-                _core.Print( LOG_DEVELOPER, "ncServer::CreateClient - Found connect data for %s\n", inet_ntoa(from->SockAddress.sin_addr) );
+                g_Core->Print( LOG_DEVELOPER, "ncServer::CreateClient - Found connect data for %s\n", inet_ntoa(from->SockAddress.sin_addr) );
                 break;
             }
         }
     }
 
     // This may happen.
-    if ( i == MAX_RESPONSES ) {
-        _netmanager.PrintOutOfBand( from, "print SERVER_BAD_RESPONSE" );
+    if( i == MAX_RESPONSES ) {
+        g_networkManager->PrintOutOfBand( from, "print SERVER_BAD_RESPONSE" );
         return;
     }
 
     ping = (Time - Response[i].PingAt);
     
-    _core.Print( LOG_DEVELOPER, "Client is connecting...\n" );
+    g_Core->Print( LOG_DEVELOPER, "Client is connecting...\n" );
+    
     Response[i].Connected = true;
 
     // TODO: remove loop.
@@ -317,7 +321,7 @@ void ncServer::CreateClient( ncNetdata *from, int response, const char *name, co
         ncServerClient *p_temp = new ncServerClient();
 
         if( !p_temp ) {
-            _core.Error( ERC_SERVER, "Could not create a new client. Out of memory.\n" );
+            g_Core->Error( ERR_SERVER, "Could not create a new client. Out of memory.\n" );
             return;
         }
 
@@ -335,11 +339,11 @@ void ncServer::CreateClient( ncNetdata *from, int response, const char *name, co
         p_temp->address.SockAddress = from->SockAddress;
         p_temp->state = SVCL_CONNECTED;
 
-        if( _netmanager.IsLanAddress( &p_temp->address )
-           && (network_port.GetInteger() == ntohs(p_temp->address.Port))  ) {
+        if( g_networkManager->IsLanAddress( &p_temp->address )
+           && (Network_Port.GetInteger() == ntohs(p_temp->address.Port))  ) {
             
             p_temp->type = ADDR_LOOPBACK;
-            _core.Print( LOG_DEVELOPER, "ncServer::CreateClient - Client has local address.\n" );
+            g_Core->Print( LOG_DEVELOPER, "ncServer::CreateClient - Client has local address.\n" );
         }
         else
             p_temp->type = ADDR_IP;
@@ -356,7 +360,7 @@ void ncServer::CreateClient( ncNetdata *from, int response, const char *name, co
         p_temp->player.g_vUp = ncVec3( 1.0, 1.0, 0.0 );
 
         // Create network channel.
-        _netmanager.CreateChannel( &p_temp->channel, &p_temp->address );
+        g_networkManager->CreateChannel( &p_temp->channel, &p_temp->address );
 
         if( Clients[x].state != SVCL_CONNECTED ) {
             Clients[x] = *p_temp;
@@ -369,8 +373,8 @@ void ncServer::CreateClient( ncNetdata *from, int response, const char *name, co
     }
 
 
-    _netmanager.PrintOutOfBand( from, "connectResponse %i", ClientNum );
-    _core.Print( LOG_INFO, "%s has joined the adventure. \n", name );
+    g_networkManager->PrintOutOfBand( from, "connectResponse %i", ClientNum );
+    g_Core->Print( LOG_INFO, "%s has joined the adventure. \n", name );
     
     memset( &Response[i], 0, sizeof( ncServerResponseData ) );
 
@@ -419,7 +423,7 @@ void ncServer::ParseClients( ncNetdata *from, ncBitMessage *packet ) {
     
     // Should never happen.
     if( !packet ) {
-        _core.Print( LOG_ERROR, "ncServer::ParseClient - empty message packet pointed.\n" );
+        g_Core->Print( LOG_ERROR, "ncServer::ParseClient - empty message packet pointed.\n" );
         return;
     }
 
@@ -429,12 +433,12 @@ void ncServer::ParseClients( ncNetdata *from, ncBitMessage *packet ) {
     p_temp = GetClientByAddress( from->SockAddress );
 
     if( !p_temp ) {
-        _core.Print( LOG_INFO, "Couldn't find client by ip %s\n", inet_ntoa( from->SockAddress.sin_addr) );
+        g_Core->Print( LOG_INFO, "Couldn't find client by ip %s\n", inet_ntoa( from->SockAddress.sin_addr) );
         return;
     }
 
     if( p_temp->state != SVCL_CONNECTED ) {
-        _core.Print( LOG_INFO, "Found client, but user isn't connected.\n" );
+        g_Core->Print( LOG_INFO, "Found client, but user isn't connected.\n" );
         return;
     }
 
@@ -476,7 +480,7 @@ void ncServer::ParseClients( ncNetdata *from, ncBitMessage *packet ) {
                     ncVec3 tmpLook  = Clients[p_temp->clientnum].player.g_vLook;
                     ncVec3 tmpRight = Clients[p_temp->clientnum].player.g_vRight;
 
-                    float speed = cam_speed.GetFloat();
+                    float speed = GCamera_Speed.GetFloat();
                     
                     switch( delta ) {
                         case 0: // Nothing, standing still.
@@ -590,7 +594,7 @@ void ncServer::SendFrame( ncServerClient *cl ) {
     /* End byte for entity data. */
     msg->WriteInt32( MAX_SERVER_ENTITIES );
 
-    _netmanager.SendMessageChannel( &cl->channel, msg );
+    g_networkManager->SendMessageChannel( &cl->channel, msg );
 }
 
 /*
@@ -618,7 +622,7 @@ void ncServer::Process( ncNetdata *from, byte *buffer ) {
     
     // Should never happen. But I am still afraid.
     if( strlen((const char*)buffer) > MAX_SERVER_COMMAND ) {
-        _core.Print( LOG_DEVELOPER, "Exceeded packet length from %s.\n", from->IPAddress );
+        g_Core->Print( LOG_DEVELOPER, "Exceeded packet length from %s.\n", from->IPAddress );
         return;
     }
 
@@ -641,13 +645,13 @@ void ncServer::Process( ncNetdata *from, byte *buffer ) {
 */
 void ncServer::CheckParams( void ) {
     if( strlen( Server_Name.GetString() ) > 64 ) {
-        _core.Print( LOG_WARN, "Current server name is too long. Resetting to the default.\n" );
+        g_Core->Print( LOG_WARN, "Current server name is too long. Resetting to the default.\n" );
         Server_Name.Set( DEFAULT_SERVER_NAME );
     }
     
     // Already checked in SetupClients, but nevermind...
     if( Server_Maxclients.GetInteger() ) {
-        _core.Print( LOG_INFO, "Server has too much client number, resetting..\n" );
+        g_Core->Print( LOG_INFO, "Server has too much client number, resetting..\n" );
         Server_Maxclients.Set( _stringhelper.STR( "%i", SERVER_DEFAULT_CLIENTNUM ) );
         return;
     }
@@ -656,13 +660,13 @@ void ncServer::CheckParams( void ) {
 /*
      Clear the world.
 */
-void ncServer::ClearWorld( const char *msg ) {
+void ncServer::ClearWorld( const NString msg ) {
     if( !Server_Active.GetInteger() ) {
-        _core.Print( LOG_WARN, "ClearWorld - I've tried to clear the world, but there's no server running!\n" );
+        g_Core->Print( LOG_WARN, "ClearWorld - I've tried to clear the world, but there's no server running!\n" );
         return;
     }
 
-    _renderer.RemoveWorld( "Server" );
+    g_mainRenderer->RemoveWorld( "Server" );
 }
 
 /*
@@ -675,10 +679,10 @@ void ncServer::PrintInfo( void ) {
     if( Time - LastInfoPrintTime > (Server_Statusperiod.GetInteger() * 1000) ) {
         LastInfoPrintTime = Time;
 
-        _core.Print( LOG_INFO, "\n" );
-        _core.Print( LOG_INFO, "------------------ Server status ---------------------\n" );
-        _core.Print( LOG_INFO, "Server: \"%s\". We got %i users online.\n", Server_Name.GetString(), ClientNum );
-        _core.Print( LOG_INFO, "We are alive for %i minute(s).\n", (Time / 60000) );
+        g_Core->Print( LOG_INFO, "\n" );
+        g_Core->Print( LOG_INFO, "------------------ Server status ---------------------\n" );
+        g_Core->Print( LOG_INFO, "Server: \"%s\". We got %i users online.\n", Server_Name.GetString(), ClientNum );
+        g_Core->Print( LOG_INFO, "We are alive for %i minute(s).\n", (Time / 60000) );
     }
 }
 
@@ -702,7 +706,7 @@ void ncServer::CheckTimeouts( void ) {
          }
 
         if( Time - Clients[i].lastMessageReceivedAt > Server_Clienttimeout.GetInteger() * 10000 ) {
-            _core.Print( LOG_INFO, "%s timed out.\n", Clients[i].name );
+            g_Core->Print( LOG_INFO, "%s timed out.\n", Clients[i].name );
             DisconnectClient( &Clients[i], "Connection timed out." );
         }
     }
@@ -725,8 +729,8 @@ void ncServer::Frame( int msec ) {
         Twentyfour hours reset.
     */
     if( Time > 0x86400000 ) {
-        _core.Print( LOG_INFO, "Long time passed since server load. Server restarting.\n" );
-        _gconsole.Execute("map_restart");
+        g_Core->Print( LOG_INFO, "Long time passed since server load. Server restarting.\n" );
+        g_Console->Execute("map_restart");
     }
 
     frameMsec = 1000 / Server_Maxfps.GetInteger();
@@ -754,28 +758,28 @@ void ncServer::Frame( int msec ) {
     Load server map.
 */
 void ncServer::Loadmap( void ) {
-    if(_commandManager.ArgCount() < 1) {
-        _core.Print( LOG_INFO, "USAGE: map <World_Name>\n" );
+    if(c_CommandManager->ArgCount() < 1) {
+        g_Core->Print( LOG_INFO, "USAGE: map <World_Name>\n" );
         return;
     }
 
-    _core.Print( LOG_NONE, "\n" );
-    _core.Print( LOG_NONE, "\n" );
-    _core.Print( LOG_NONE, "SERVER LOADING...\n" );
-    _core.Print( LOG_NONE, "\n" );
-    _core.Print( LOG_NONE, "\n" );
+    g_Core->Print( LOG_NONE, "\n" );
+    g_Core->Print( LOG_NONE, "\n" );
+    g_Core->Print( LOG_NONE, "SERVER LOADING...\n" );
+    g_Core->Print( LOG_NONE, "\n" );
+    g_Core->Print( LOG_NONE, "\n" );
 
-    _core.Print( LOG_INFO, "Loading server map...\n" );
-    _core.Print( LOG_INFO, "Requested map: %s\n", _commandManager.Arguments(0) );
+    g_Core->Print( LOG_INFO, "Loading server map...\n" );
+    g_Core->Print( LOG_INFO, "Requested map: %s\n", c_CommandManager->Arguments(0) );
 
     State = SERVER_LOADING;
 
-    _renderer.RemoveWorld( "server_map" );
+    g_mainRenderer->RemoveWorld( "server_map" );
 
     // Note:
     // Don't load the map file while server is dedicated.
     if( !Server_Dedicated.GetInteger() ) {
-            if( _clientgame.Loadmap( _commandManager.Arguments(0) )) {
+            if( cg_LocalGame->Loadmap( c_CommandManager->Arguments(0) )) {
             CreateSession();
         }
         else {
@@ -786,13 +790,13 @@ void ncServer::Loadmap( void ) {
         }
     } else {
         Server_Active.Set( "1" );
-        World_Name.Set(  _commandManager.Arguments(0) );
+        World_Name.Set(  c_CommandManager->Arguments(0) );
         
         CreateSession();
     }
 
-    _core.Print( LOG_INFO, "....world has been created!\n" );
-    _core.Print( LOG_NONE, "\n" );
+    g_Core->Print( LOG_INFO, "....world has been created!\n" );
+    g_Core->Print( LOG_NONE, "\n" );
 }
 
 /*
@@ -800,13 +804,13 @@ void ncServer::Loadmap( void ) {
     Different from server_spawnserver and server_map.
 */
 void ncServer::Launchmap( void )  {
-    _core.Print( LOG_NONE, "\n" );
-    _core.Print( LOG_NONE, "\n" );
-    _core.Print( LOG_NONE, "Server loading...\n" );
-    _core.Print( LOG_NONE, "\n" );
-    _core.Print( LOG_NONE, "\n" );
+    g_Core->Print( LOG_NONE, "\n" );
+    g_Core->Print( LOG_NONE, "\n" );
+    g_Core->Print( LOG_NONE, "Server loading...\n" );
+    g_Core->Print( LOG_NONE, "\n" );
+    g_Core->Print( LOG_NONE, "\n" );
 
-    _core.Print( LOG_INFO, "Creating world...\n" );
+    g_Core->Print( LOG_INFO, "Creating world...\n" );
     
     Server_Active.Set( "1" );
     World_Name.Set( "world" );
@@ -815,14 +819,14 @@ void ncServer::Launchmap( void )  {
     CreateSession();
     State = SERVER_GAME;
 
-    _core.Print( LOG_INFO, "World has been created and server spawned!\n" );
-    _core.Print( LOG_NONE, "\n" );
+    g_Core->Print( LOG_INFO, "World has been created and server spawned!\n" );
+    g_Core->Print( LOG_NONE, "\n" );
 }
 
 /*
     Disconnect client with a reason.
 */
-void ncServer::DisconnectClient( ncServerClient *client, const char *message ) {
+void ncServer::DisconnectClient( ncServerClient *client, const NString message ) {
     if( client->state == SVCL_ZOMBIE )
         return;
     
@@ -832,7 +836,7 @@ void ncServer::DisconnectClient( ncServerClient *client, const char *message ) {
     SendAcknowledgeCommand( client, true, "disconnect \"%s\"", message );
     SendFrame( client );
 
-    _core.Print( LOG_INFO, "%s disconnected from server. %s\n", client->name, message );
+    g_Core->Print( LOG_INFO, "%s disconnected from server. %s\n", client->name, message );
 
     SendAcknowledgeCommand( NULL, "print \"%s disconnected. %s\"", client->name, message );
     SendFrame( client );
@@ -859,7 +863,7 @@ void ncServer::GetResponse( ncNetdata *from ) {
     
     // Don't overflow.
     for ( i = 0 ; i < MAX_RESPONSES; i++, response++ ) {
-        if ( !response->Connected && _netmanager.CompareAddress( from, &response->Address ) )
+        if ( !response->Connected && g_networkManager->CompareAddress( from, &response->Address ) )
             break;
 		
         if ( response->Time < previousTime ) {
@@ -884,18 +888,18 @@ void ncServer::GetResponse( ncNetdata *from ) {
     }
 
     if ( Time - response->FirstAt > SERVER_CLIENTAUTHORIZE_TIME ) {
-            _core.Print( LOG_INFO, "Authorizing client... ( %s, %i )\n", inet_ntoa(response->Address.SockAddress.sin_addr), response->Response );
+            g_Core->Print( LOG_INFO, "Authorizing client... ( %s, %i )\n", inet_ntoa(response->Address.SockAddress.sin_addr), response->Response );
         
             // TODO: authorizing on server database!
         
         
             response->PingAt = Time;
-            _netmanager.PrintOutOfBand( &response->Address, "requestResponse %i", response->Response );
+            g_networkManager->PrintOutOfBand( &response->Address, "requestResponse %i", response->Response );
             return;
     }
     
     // Kick client if get here.
-    _core.Print( LOG_WARN, "Couldn't authorize %s ( %i authtime )\n", inet_ntoa(response->Address.SockAddress.sin_addr), Time - response->FirstAt );
+    g_Core->Print( LOG_WARN, "Couldn't authorize %s ( %i authtime )\n", inet_ntoa(response->Address.SockAddress.sin_addr), Time - response->FirstAt );
     // zeromem( response, sizeof(ncResponse) );
 }
 
@@ -923,18 +927,18 @@ void ncServer::CheckZombies( void ) {
 void ncServer::PrintStatus( void )
 {
     if( !Server_Active.GetInteger() ) {
-        _core.Print( LOG_INFO, "Server is not active!\n" );
+        g_Core->Print( LOG_INFO, "Server is not active!\n" );
         return;
     }
 
     int i;
-    const char *state;
+    const NString state;
 
     // Print server information first.
-    _core.Print( LOG_INFO, "Our server name is '%s'\n", Server_Name.GetString() );
-    _core.Print( LOG_INFO, "Our server address is '%s:%i'\n", network_ip.GetString(), network_port.GetInteger() );
-    _core.Print( LOG_INFO, "We got %i clients online\n", ClientNum );
-    _core.Print( LOG_NONE, "\n" );
+    g_Core->Print( LOG_INFO, "Our server name is '%s'\n", Server_Name.GetString() );
+    g_Core->Print( LOG_INFO, "Our server address is '%s:%i'\n", Network_IPAddress.GetString(), Network_Port.GetInteger() );
+    g_Core->Print( LOG_INFO, "We got %i clients online\n", ClientNum );
+    g_Core->Print( LOG_NONE, "\n" );
 
     // Print player information now.
 
@@ -957,7 +961,7 @@ void ncServer::PrintStatus( void )
         }
 
         int percent = (Clients[i].channel.sequenceOut - Clients[i].lastAcknowledgedMessage) * 10;
-        _core.Print( LOG_NONE, "%i. %s - %s (%i)\n", Clients[i].clientnum, Clients[i].name, state, percent );
+        g_Core->Print( LOG_NONE, "%i. %s - %s (%i)\n", Clients[i].clientnum, Clients[i].name, state, percent );
     }
 }
 
@@ -994,8 +998,8 @@ ncServerClient *ncServer::GetClientByAddress( struct sockaddr_in data ) {
 /*
     Send Bye-bye message to all clients.
 */
-void ncServer::SendByeMessage( const char *msg ) {
-    _core.Print( LOG_INFO, "SendByeMessage: Implement me!\n" );
+void ncServer::SendByeMessage( const NString msg ) {
+    g_Core->Print( LOG_INFO, "SendByeMessage: Implement me!\n" );
 }
 
 /*
@@ -1004,16 +1008,16 @@ void ncServer::SendByeMessage( const char *msg ) {
 void ncServer::KickClient( void ) {
     
     if( !Server_Active.GetInteger() ) {
-        _core.Print( LOG_INFO, "Server is not active.\n" );
+        g_Core->Print( LOG_INFO, "Server is not active.\n" );
         return;
     }
 
-    if( _commandManager.ArgCount() < 1 ) {
-        _core.Print( LOG_INFO, "USAGE for 'kick' command: \n" );
+    if( c_CommandManager->ArgCount() < 1 ) {
+        g_Core->Print( LOG_INFO, "USAGE for 'kick' command: \n" );
         
-        _core.Print( LOG_INFO, " * Use 'kick all' to disconnect every client on server.\n" );
-        _core.Print( LOG_INFO, " * Use 'kick <client id>' to disconnect selected client.\n" );
-        _core.Print( LOG_INFO, "You can also use third parameter to set reason.\n" );
+        g_Core->Print( LOG_INFO, " * Use 'kick all' to disconnect every client on server.\n" );
+        g_Core->Print( LOG_INFO, " * Use 'kick <client id>' to disconnect selected client.\n" );
+        g_Core->Print( LOG_INFO, "You can also use third parameter to set reason.\n" );
         return;
     }
     
@@ -1023,7 +1027,7 @@ void ncServer::KickClient( void ) {
 /*
     Add ack command.
 */
-void ncServer::AddAcknowledgeCommand( ncServerClient *cl, bool isDisconnect, char *message ) {
+void ncServer::AddAcknowledgeCommand( ncServerClient *cl, bool isDisconnect, NString message ) {
     uint unAcked = cl->ackSequence - cl->ackAcknowledged;
     int ackCommands = sizeof(cl->ackCommands) / sizeof( cl->ackCommands[0] );
     
@@ -1043,13 +1047,13 @@ void ncServer::AddAcknowledgeCommand( ncServerClient *cl, bool isDisconnect, cha
     all clients.
 */
 
-void ncServer::SendAcknowledgeCommand( ncServerClient *cl, bool isDisconnect, const char *cmd, ... ) {
+void ncServer::SendAcknowledgeCommand( ncServerClient *cl, bool isDisconnect, const NString cmd, ... ) {
 
     va_list argptr;
     static char message[1024];
 
     va_start( argptr, cmd );
-    vsnprintf( (char *)message, sizeof(message), cmd, argptr );
+    vsnprintf( (NString )message, sizeof(message), cmd, argptr );
     va_end( argptr );
 
     if( !cl ) {
@@ -1072,13 +1076,13 @@ void ncServer::RemoveBots( void ) {
     if( !Server_Active.GetInteger() )
         return;
 
-    _core.Print( LOG_INFO, "Removing all bots from the game.\n" );
+    g_Core->Print( LOG_INFO, "Removing all bots from the game.\n" );
 
     int x;
 
     for( x = ClientNum-1; x > 0; x-- ) {
         if(Clients[x].type == ADDR_BOT) {
-            _core.Print( LOG_INFO, "%s kicked..\n", Clients[x].name );
+            g_Core->Print( LOG_INFO, "%s kicked..\n", Clients[x].name );
             DisconnectClient(&Clients[x], "svr");
         }
     }
@@ -1099,20 +1103,20 @@ void ncServer::Disconnect( void ) {
     Server_Active.Set( "0" );
     
     // Disconnect local client. ( If exists ).
-    _core.Disconnect();
+    g_Core->Disconnect();
 }
 
 /*
      Server shutdown.
      Called on application quit.
 */
-void ncServer::Shutdown( const char *finalmsg ) {
+void ncServer::Shutdown( const NString finalmsg ) {
     if( !Server_Active.GetInteger() ) {
-        _core.Print( LOG_INFO, "No server running!\n" );
+        g_Core->Print( LOG_INFO, "No server running!\n" );
         return;
     }
 
-    _core.Print( LOG_INFO, "Server shutting down...\n" );
+    g_Core->Print( LOG_INFO, "Server shutting down...\n" );
 
     // Send last message to all clients and disconnect them.
     SendByeMessage(finalmsg);
@@ -1121,13 +1125,13 @@ void ncServer::Shutdown( const char *finalmsg ) {
     // We must forget all information about clients.
     delete [] Clients;
 
-    _core.Print( LOG_INFO, "Server quit after %i minute(s) since last session launch.\n", ( Time / 60000 ) );
+    g_Core->Print( LOG_INFO, "Server quit after %i minute(s) since last session launch.\n", ( Time / 60000 ) );
 
     Time    =   0;
     State   =   SERVER_IDLE;
 
     // Clear server data.
-    zeromem( &_server, sizeof(_server) );
+    zeromem( &n_server, sizeof(n_server) );
 }
 
 /*
@@ -1135,5 +1139,5 @@ void ncServer::Shutdown( const char *finalmsg ) {
      Takes one client slot.
 */
 void ncServer::AddBot( void ) {
-    _core.Print( LOG_INFO, "Implement me!\n" );
+    g_Core->Print( LOG_INFO, "Implement me!\n" );
 }

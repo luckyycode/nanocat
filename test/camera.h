@@ -14,7 +14,7 @@
 #include "SystemShared.h"
 
 // (Dev) Uncomment to use non-server based player control.
-// #define PLAYER_SERVERLESS_CONTROL
+#define PLAYER_SERVERLESS_CONTROL
 
 class ncCamera {
 public:
@@ -31,17 +31,27 @@ public:
     void Initialize( void );
     void Reset( void );
     void Movement( char key );
-
-    ncMatrix4 ProjectionMatrix;
-    ncMatrix4 RotationMatrix;
-    ncMatrix4 ViewMatrix;
+    void Frame( float msec );
  
     int deltaMove;
     
     ncVec2  g_lastMousePosition;
     ncVec2  g_curMousePosition;
+    
+    float GetLastMoveTime( void );
+    ncVec3 GetLastMovePosition( void );
+    
+    ncMatrix4 RotationMatrix;
+    ncMatrix4 ProjectionMatrix;
+    ncMatrix4 ViewMatrix;
+   
+private:
+    float lastMoveAt;
+    ncVec3 lastPosition;
 };
 
-extern ncCamera _camera;
+extern ncCamera *g_playerCamera;
+
+extern ncConsoleVariable GCamera_Speed;
 
 #endif

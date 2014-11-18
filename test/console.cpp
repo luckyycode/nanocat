@@ -8,24 +8,24 @@
 //
 
 
-#include "MultiplayerClient.h"
 #include "Core.h"
 #include "ConsoleCommand.h"
 #include "Console.h"
 #include "FileSystem.h"
 #include "CoreFont.h"
-#include "Camera.h"
+#include "Camera.h" // Movement.
 #include "System.h"
 #include "Input.h" // For console input.
 #include "GameMath.h" // Colors.
 
-ncGameConsole _gconsole;
+ncGameConsole local_gconsole;
+ncGameConsole *g_Console = &local_gconsole;
 
 /*
     Console input from external/internal sources.
 */
 
-void ncGameConsole::Execute( const char *msg, ... ) {
+void ncGameConsole::Execute( const NString msg, ... ) {
     va_list             argptr;
     static char         g_message[MAX_COMMAND_SIZE];
 
@@ -34,28 +34,28 @@ void ncGameConsole::Execute( const char *msg, ... ) {
     va_end( argptr );
 
     if( strlen(g_message) > MAX_COMMAND_SIZE ) {
-        _core.Print( LOG_DEVELOPER, "Too long command.\n", MAX_COMMAND_SIZE );
+        g_Core->Print( LOG_DEVELOPER, "Too long command.\n", MAX_COMMAND_SIZE );
         return;
     }
 
     // We need to make our input string as char array.
-    const char *cmds[MAX_COMMAND_TOKENS];
+    const NString cmds[MAX_COMMAND_TOKENS];
 
     int i;
-    char *p;
+    NString p;
 
     zeromem( cmds, sizeof(cmds) );
 
     i = 0;
-    p = strtok (g_message, " ");
+    p = strtok( g_message, " " );
 
     while ( p ) {
         cmds[i++] = p;
-        p = strtok (NULL, " ");
+        p = strtok( NULL, " " );
     }
 
     // Execute our commands now.
-    _commandManager.Execute( cmds );
+    c_CommandManager->Execute( cmds );
 }
 
 /*
@@ -67,23 +67,24 @@ void ncGameConsole::Render( void )
 
     if( !IsShown() ) {
         if( !IsUIShown() ) {
-            _font.Print2D( COLOR_WHITE, 10, 15, 10, "Nanocat, %s", _core.GetVersionString() );
+            g_coreFont->Print2D( ncVec4(0.9, 0.2, 0.6, 1.0), 10, 15, 10, "Nanocat, %s", g_Core->GetVersioNString () );
+            g_coreFont->Print2D( COLOR_GREEN, 10, 45, 10, "look: x: %4.2f y: %4.2f z: %4.2f", g_playerCamera->g_vLook.x, g_playerCamera->g_vLook.y, g_playerCamera->g_vLook.z );
+            g_coreFont->Print2D( COLOR_GREEN, 10, 35, 10, "eye: x: %4.2f y: %4.2f z: %4.2f", g_playerCamera->g_vEye.x, g_playerCamera->g_vEye.y, g_playerCamera->g_vEye.z );
         }
         else {
-            _font.Print2D( COLOR_GREEN, 10, 45, 10, "look: x: %4.2f y: %4.2f z: %4.2f", _camera.g_vLook.x, _camera.g_vLook.y, _camera.g_vLook.z );
-            _font.Print2D( COLOR_GREEN, 10, 35, 10, "eye: x: %4.2f y: %4.2f z: %4.2f", _camera.g_vEye.x, _camera.g_vEye.y, _camera.g_vEye.z );
+           
         }
     }
     else {
         // Version > buffer
-        _font.Print2D( COLOR_RED, 10, 70, 8, "%s > %s", Prefix, Buffer );
+        g_coreFont->Print2D( COLOR_RED, 10, 70, 8, "%s > %s", Prefix, Buffer );
 
         // Console log.
         for( i = 0; i < logCount; i++ ) {
             // Causes strange symbol on line end.
             strtok( Log[i + 1], "\n" );
             
-            _font.Print2D( COLOR_WHITE, 10, 470 - ( i * CONSOLE_LINE_SKIP ), 8, "%s", Log[i + 1] );
+            g_coreFont->Print2D( COLOR_WHITE, 10, 470 - ( i * CONSOLE_LINE_SKIP ), 8, "%s", Log[i + 1] );
         }
     }
 }
@@ -91,9 +92,9 @@ void ncGameConsole::Render( void )
 /*
     Change console prefix.
 */
-void ncGameConsole::SetPrefix( const char *prefix ) {
+void ncGameConsole::SetPrefix( const NString prefix ) {
     if( !prefix ) {
-        _core.Print( LOG_WARN, "Empty console prefix set.\n" );
+        g_Core->Print( LOG_WARN, "Empty console prefix set.\n" );
         Prefix = "Nanocat";
         
         return;
@@ -111,7 +112,7 @@ void ncGameConsole::Clear( void ) {
     // Write a log piece to the log file.
     if( Filesystem_Logging.GetInteger() )
         for( j = 0; j < logFill; j++ )
-            _filesystem.WriteLog( Log[j] );
+            c_FileSystem->WriteLog( Log[j] );
 
     // Clean the console buffer.
     for( h = 0; h < 256; h++ )
@@ -121,7 +122,7 @@ void ncGameConsole::Clear( void ) {
     logCount = 1;
     logFill = 0;
 
-    if( _commandManager.ArgCount() > 1 ) {
+    if( c_CommandManager->ArgCount() > 1 ) {
         #ifdef _WIN32 // Clear Windows console.
             SendMessage( _con32.hwndBuffer, EM_SETSEL, 0, -1 );
             SendMessage( _con32.hwndBuffer, EM_REPLACESEL, FALSE, ( LPARAM ) "" );
@@ -133,12 +134,12 @@ void ncGameConsole::Clear( void ) {
 void ncGameConsole::Initialize( void ) {
     int h, j;
     
-    _core.Print( LOG_INFO, "Game console initializing...\n" );
+    g_Core->Print( LOG_INFO, "Game console initializing...\n" );
     
     // Initialize console buffer - looks ugly but it's okaaay.
     for(  h = 0; h < CONSOLELOG_LINES; h++ )
         for( j = 0; j < CONSOLELOG_LINE_CHAR; j++ )
-            Log[h][j] = '\0';
+            Log[h][j] = '\0'; // Clear console text ( [line][character] )
     
     // Some initial values.
     logCount    = 0;
@@ -155,7 +156,7 @@ void ncGameConsole::KeyInput( char key ) {
     // Console visibility.
     if( isShown ){
         if( key != KEY_ENTER ) {
-            Buffer[charFill]  = key;//_input.GetKeyFromNum(key);
+            Buffer[charFill] = key;//g_Input->GetKeyFromNum(key);
             
             if( key == KEY_BACKSPACE ) {
                 charFill--;
@@ -180,7 +181,7 @@ void ncGameConsole::KeyInput( char key ) {
         // Execute command buffer.
         case KEY_ENTER:
             if( isShown ) {
-                _core.Print( LOG_NONE, "> %s\n", Buffer );
+                g_Core->Print( LOG_NONE, "> %s\n", Buffer );
                 
                 Execute( Buffer );
                 zeromem( Buffer, MAX_COMMAND_SIZE );
@@ -226,10 +227,10 @@ FILE *ncGameConsole::GetLogFile( void ) {
 /*
     Add text to console window.
 */
-void ncGameConsole::PrintExternal( const char *msg ) {
+void ncGameConsole::PrintExternal( const NString msg ) {
     
     static char buffer[CONSOLE_BUFFER_SIZE * 2];
-    char *b = buffer;
+    NString b = buffer;
     
     int i = 0;
     

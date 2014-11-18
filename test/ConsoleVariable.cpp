@@ -26,9 +26,11 @@ ncConsoleVariableManager::ncConsoleVariableManager( void ) {
     Initialize console variable stuff.
 */
 void ncConsoleVariableManager::Initialize( void ) {
-    _core.Print( LOG_INFO, "Preparing memory for %i console variables.\n", MAX_CONSOLEVARIABLES );
+    
+    g_Core->LoadState = NCCLOAD_CONSOLEVARIABLES;
+    g_Core->Print( LOG_INFO, "Preparing memory for %i console variables.\n", MAX_CONSOLEVARIABLES );
 
-    _commandManager.Add( "cvarlist", lazyVariablelist );
+    c_CommandManager->Add( "cvarlist", lazyVariablelist );
 }
 
 void ncConsoleVariableManager::AddToList( ncConsoleVariable *var ) {
@@ -36,13 +38,13 @@ void ncConsoleVariableManager::AddToList( ncConsoleVariable *var ) {
     ++consoleVariableCount;
 }
 
-void ncConsoleVariable::Set( const char *value ) {
+void ncConsoleVariable::Set( const NString value ) {
     _stringhelper.Copy(StringValue, value);
     FloatValue = atof(value);
     Integer = atoi(value);
 }
 
-ncConsoleVariable::ncConsoleVariable( const char *group, const char *name, const char *desc, const char *value, CVFlag flags ) {
+ncConsoleVariable::ncConsoleVariable( const NString group, const NString name, const NString desc, const NString value, CVFlag flags ) {
     int     c_flag;
 
     if(flags < 1) c_flag = CVFLAG_NONE;
@@ -75,7 +77,7 @@ void ncConsoleVariable::SetFlag( int flag ) {
     Flag = flag;
 }
 
-const char *ncConsoleVariable::GetString( void ) {
+const NString ncConsoleVariable::GetString( void ) {
     return StringValue;
 }
 
@@ -99,19 +101,19 @@ void ncConsoleVariable::SetModified( bool value ) {
     Modified = value;
 }
 
-const char *ncConsoleVariable::GetName( void ) {
+const NString ncConsoleVariable::GetName( void ) {
     return this->Name;
 }
 
-const char *ncConsoleVariable::GetGroup( void ) {
+const NString ncConsoleVariable::GetGroup( void ) {
     return this->Group;
 }
 
-const char *ncConsoleVariable::GetDescription( void ) {
+const NString ncConsoleVariable::GetDescription( void ) {
     return Description;
 }
 
-const char *ncConsoleVariable::GetDefaultValue( void ) {
+const NString ncConsoleVariable::GetDefaultValue( void ) {
     return DefaultValue;
 }
 
@@ -126,8 +128,6 @@ void ncConsoleVariableManager::Printlist( void ) {
     Remove console variables from a memory
 */
 void ncConsoleVariableManager::Shutdown( void ) {
-    _core.Print( LOG_DEVELOPER, "Removing console variables..\n");
-
 }
 
 /*
@@ -142,7 +142,7 @@ void ncConsoleVariable::Lock( void ) {
 */
 
 
-bool ncConsoleVariableManager::Exists( const char **var ) {
+bool ncConsoleVariableManager::Exists( const NString *var ) {
     
  
     return false;

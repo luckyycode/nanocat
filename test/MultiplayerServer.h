@@ -129,30 +129,30 @@ public:
     void SetupClients( int maxclients );
     void Maprestart( void );
     void ProcessClientMessage( ncServerClient *client, ncBitMessage *msg );
-    void CreateClient( ncNetdata *from, int response, const char *name, const char *version );
+    void CreateClient( ncNetdata *from, int response, const NString name, const NString version );
     void Connectionless( ncNetdata *from, byte *data );
     void ParseClients( ncNetdata *from, ncBitMessage *packet );
     void SendFrame( ncServerClient *cl );
     void SendFrames( void );
     void Process( ncNetdata *from, byte *buffer );
     void CheckParams( void );
-    void ClearWorld( const char *msg );
+    void ClearWorld( const NString msg );
     void PrintInfo( void );
     void CheckTimeouts( void );
     void Frame( int msec );
     void Loadmap( void );
     void Launchmap( void );
-    void DisconnectClient( ncServerClient *client, const char *message );
+    void DisconnectClient( ncServerClient *client, const NString message );
     void GetResponse( ncNetdata *from );
     void CheckZombies( void );
     void PrintStatus( void );
-    void SendByeMessage( const char *msg );
+    void SendByeMessage( const NString msg );
     void KickClient( void );
-    void AddAcknowledgeCommand( ncServerClient *cl, bool isDisconnect, char *message );
-    void SendAcknowledgeCommand( ncServerClient *cl, bool isDisconnect, const char *cmd, ... );
+    void AddAcknowledgeCommand( ncServerClient *cl, bool isDisconnect, NString message );
+    void SendAcknowledgeCommand( ncServerClient *cl, bool isDisconnect, const NString cmd, ... );
     void RemoveBots( void );
     void Disconnect( void );
-    void Shutdown( const char *finalmsg );
+    void Shutdown( const NString finalmsg );
     void AddBot( void );
     
     ncServerClient *GetClientByNum( int num );
@@ -176,8 +176,7 @@ public:
     ncServerResponseData	    Response[MAX_RESPONSES];
 };
 
-extern ncServer _server;
-
+extern ncServer *n_server;
 
 // SERVER
 extern ncConsoleVariable       Server_Name;                       // Server name.

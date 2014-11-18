@@ -1,19 +1,22 @@
 "
+
+precision lowp float;
 layout(location = 0) in vec2 vertexPosition_screenspace;
 layout(location = 1) in vec2 vertexUV;
 
 out vec2 UV;
 
 void main(){
-	vec2 vertexPosition_homoneneousspace = vertexPosition_screenspace - vec2(400.0,300.0); 
-	vertexPosition_homoneneousspace /= vec2(400.0,300.0);
-	gl_Position = vec4(vertexPosition_homoneneousspace,0.0,1.0);
+	vec2 vphn = vertexPosition_screenspace - vec2(400.0,300.0); 
+	vphn /= vec2(400.0,300.0);
+	gl_Position = vec4(vphn,0.0,1.0);
 	
 	UV = vertexUV;
 }
 
 "
 
+precision lowp float;
 in vec2 UV;
 out vec4 color;
 
@@ -21,7 +24,7 @@ uniform sampler2D font_texture;
 uniform vec3 colorModifier;
 
 void main(){
-	vec4 colorf = texture( font_texture, UV );
+	mediump vec4 colorf = texture( font_texture, UV );
 	color = colorf * vec4(colorModifier, 1.0);
 }
 

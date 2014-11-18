@@ -28,13 +28,13 @@
 class ncGameConsole {
 
 public:
-    void Execute( const char *msg, ... );
+    void Execute( const NString msg, ... );
     void Render( void );
-    void SetPrefix( const char *prefix );
+    void SetPrefix( const NString prefix );
     void Clear( void );
     void KeyInput( char key );
     void Initialize( void );
-    void PrintExternal( const char *msg );
+    void PrintExternal( const NString msg );
     
     bool    IsShown( void );
     void    SwitchVisibility( void );
@@ -75,6 +75,6 @@ private:
     const char  *Prefix;
 };
 
-extern ncGameConsole _gconsole;
+extern ncGameConsole *g_Console;
 
 #endif

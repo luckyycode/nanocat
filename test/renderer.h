@@ -12,6 +12,7 @@
 
 #include "Core.h"
 #include "ShaderLoader.h"
+#include "VBOOpenGL.h"
 
 enum ncSceneEye {
     EYE_FULL = 0,
@@ -47,7 +48,7 @@ public:
     // Renderer common stuff.
     // Just leave it here.
     // Scene 2d filter.
-    ncGLShader sceneShader;
+    ncGLShader *sceneShader;
     
     // Shader uniforms.
     // Used for main 2d screen filter.
@@ -65,9 +66,9 @@ public:
     // ------------
     
     uint    eye_vao[3];
-    uint    eye_vbo[3];
-    uint    eye_uv[3];
-    
+    ncGLVertexBufferObject    g_eyeVBO[3];
+    ncGLVertexBufferObject    g_eyeUV[3];
+  
     // Precached materials.
     uint    lens_texture;
     
@@ -84,17 +85,20 @@ public:
     void CreateFramebufferObject( uint *tex, uint *fbo, uint *rbo, uint *dbo, uint *depth, int winx, int winy );
     void UpdateFramebufferObject( int w, int h );
     void Refresh( void );
-    void RemoveWorld( const char *msg );
+    void RemoveWorld( const NString msg );
     void MakeScreenshot( void );
     void Render( int msec );
+    void RenderWorld( int msec, ncSceneEye eye ); // Not private.
+    void PreRender( void );
     void Preload( void );
+    void Shutdown( void );
     
+    void RemoveNCFramebuffer( ncFramebuffer *buffer );
+    void DeleteMainBuffers( void );
 private:
     void RenderGrass( void );
-    void RenderWorld( int msec, ncSceneEye eye );
     void UpdateMatrixRotation( void );
     void RenderBeautifulWater( void );
-    void PreRender( void );
     void RenderToShader( ncSceneEye eye );
     void RenderBSP( int reflected, ncSceneEye oc );
     void PrecacheWorld( void );
@@ -102,44 +106,45 @@ private:
     void Precache( void );
 };
 
-extern ncRenderer _renderer;
+extern ncRenderer *g_mainRenderer;
 
 // Framebuffers.
-extern ncFramebuffer _waterrefraction;
-extern ncFramebuffer _waterreflection;
-extern ncFramebuffer _scene;
+extern ncFramebuffer g_waterRefractionBuffer;
+extern ncFramebuffer g_waterReflectionBuffer;
+extern ncFramebuffer g_sceneBuffer[3];
 
 // Renderer console variables.
-extern ncConsoleVariable       render_openglversion;                   // OpenGL version.
-extern ncConsoleVariable       render_wireframe;                       // Wireframe mode.
-extern ncConsoleVariable       render_fullscreen;                      // Is game running full screen?
-extern ncConsoleVariable       render_fog;                             // Is fog enabled?
-extern ncConsoleVariable       render_fog_maxdist;                     // Fog maximum distance.
-extern ncConsoleVariable       render_fog_mindist;                     // Fog minimum distance. ( Fix me: rewritten in shaders )
-extern ncConsoleVariable       render_fog_colorR;                      // Fog red color.
-extern ncConsoleVariable       render_fog_colorG;                      // Fog green color.
-extern ncConsoleVariable       render_fog_colorB;                      // Fog blue color.
+extern ncConsoleVariable       OpenGL_Version;                   // OpenGL version.
+extern ncConsoleVariable       Render_Wireframe;                       // Wireframe mode.
+extern ncConsoleVariable       Render_Fullscreen;                      // Is game running full screen?
+extern ncConsoleVariable       Render_Fog;                             // Is fog enabled?
+extern ncConsoleVariable       Render_Fog_maxdist;                     // Fog maximum distance.
+extern ncConsoleVariable       Render_Fog_mindist;                     // Fog minimum distance. ( Fix me: rewritten in shaders )
+extern ncConsoleVariable       Render_Fog_colorR;                      // Fog red color.
+extern ncConsoleVariable       Render_Fog_colorG;                      // Fog green color.
+extern ncConsoleVariable       Render_Fog_colorB;                      // Fog blue color.
 extern ncConsoleVariable       render_glow;                            // Scene gamma.
-extern ncConsoleVariable       render_normalmap;                       // Is normal mapping enabled?
-extern ncConsoleVariable       render_reflections;                     // Are environment (water) reflections are enabled?
-extern ncConsoleVariable       render_water;                           // Render water?
-extern ncConsoleVariable       render_sky;                             // Render sky?
+extern ncConsoleVariable       Render_Normalmaps;                       // Is normal mapping enabled?
+extern ncConsoleVariable       Render_Reflections;                     // Are environment (water) reflections are enabled?
+extern ncConsoleVariable       Render_Water;                           // Render water?
+extern ncConsoleVariable       Render_Sky;                             // Render sky?
 
 extern ncConsoleVariable       render_usefbo;                          // Use frame buffer object? ( developer )
-extern ncConsoleVariable       render_vsync;                           // Is vertical syncing enabled?
-extern ncConsoleVariable       render_modeWidth;                       // Renderer width.
-extern ncConsoleVariable       render_modeHeight;                      // Renderer height.
-extern ncConsoleVariable       render_curvetesselation;                // Level curve tesselation.
-extern ncConsoleVariable       render_lightmapgamma;                   // Lightmap gamma.
-extern ncConsoleVariable       render_usescreenfx;                     // 2D screen filter.
-extern ncConsoleVariable       render_dof;                             // Depth of field.
-extern ncConsoleVariable       render_lensanamorph;                    // Lens anamorph.
+extern ncConsoleVariable       Render_VSync;                           // Is vertical syncing enabled?
+extern ncConsoleVariable       Render_Width;                       // Renderer width.
+extern ncConsoleVariable       Render_Height;                      // Renderer height.
+extern ncConsoleVariable       Render_CurveTesselation;                // Level curve tesselation.
+extern ncConsoleVariable       Render_LightmapGamma;                   // Lightmap gamma.
+extern ncConsoleVariable       Render_UseScreenFX;                     // 2D screen filter.
+extern ncConsoleVariable       Render_DepthOfField;                             // Depth of field.
+extern ncConsoleVariable       Render_ScreenLens;                    // Lens anamorph.
 
-extern ncConsoleVariable        render_ovr;                             // Virtual realilty.
+extern ncConsoleVariable        Render_OVR;                             // Virtual realilty.
 
 // FONTS
 extern ncConsoleVariable       render_fontspacing;                     // Font character line spacing.
 extern ncConsoleVariable       render_fonttype;                        // Font type.
 
-extern ncConsoleVariable          render_updatepvs;
+extern ncConsoleVariable        Render_CalculateVisibleData;
+
 #endif

@@ -1,23 +1,26 @@
 //
 //  Nanocat engine.
 //
-//  Game initializer & window manager for Linux, Mac OS, Windows.
+//  Window & context creator.
 //
 //  Created by Neko Vision on 22/08/2013.
 //  Copyright (c) 2013 Neko Vision. All rights reserved.
 //
 
-#include "core.h"
-#include "system.h"
-#include "systemshared.h"
+// Broken since I raged on Windows.
+// Fix me.
 
-
+#include "Core.h"
+#include "System.h"
+#include "SystemShared.h"
 
 // Window.
 #ifdef _WIN32
-#define EDIT_ID			100
-#define INPUT_ID		101
+
+#define CON_EDIT_ID			100
+#define CON_INPUT_ID		101
 #define EXTERNALCONSOLE_TEXTLEN 512
+
 typedef struct {
     HWND		hWnd;
     HWND		hwndBuffer;
@@ -285,7 +288,7 @@ int WINAPI WinMain(	HINSTANCE	hInstance,				// Instance
         _win.wcex.hIconSm            = LoadIcon(NULL, IDI_APPLICATION);;
 
         if ( !RegisterClassEx(&_win.wcex) ) {
-            _core.Error( ERC_FATAL, "failed to register window class\n" );
+            g_Core->Error( ERC_FATAL, "failed to register window class\n" );
             return 0;
         }
 
@@ -309,22 +312,22 @@ int WINAPI WinMain(	HINSTANCE	hInstance,				// Instance
 
             if( ChangeDisplaySettings(&dmScreenSettings, CDS_FULLSCREEN) != DISP_CHANGE_SUCCESSFUL )
             {
-                _core.Print( LOG_WARN, "Couldn't set fullscreen mode ( probably it's not supported by your video card \n" );
-                _core.Print( LOG_WARN, "Or wrong resolution set. )\n" );
-                _core.Print( LOG_INFO, "Setting windowed mode..\n" );
+                g_Core->Print( LOG_WARN, "Couldn't set fullscreen mode ( probably it's not supported by your video card \n" );
+                g_Core->Print( LOG_WARN, "Or wrong resolution set. )\n" );
+                g_Core->Print( LOG_INFO, "Setting windowed mode..\n" );
 
                 consolevar_set( "render_fullscreen", "0", true );              // Lock further changes.
                 consolevar_lock( "render_fullscreen" );
             }
 
         } else                                                      // Windowed.
-            _core.Print( LOG_INFO, "Setting windowed mode..\n" );
+            g_Core->Print( LOG_INFO, "Setting windowed mode..\n" );
 
 
         // 'render_fullscreen' is still enabled, so we are going to create the full screen window
         if( render_fullscreenGetInteger() )
         {
-            _core.Print( LOG_INFO, "Setting fullscreen mode..\n" );
+            g_Core->Print( LOG_INFO, "Setting fullscreen mode..\n" );
             _exstyle = WS_EX_APPWINDOW;
             _style = WS_POPUP;
         } else {    // Extended style.
@@ -349,7 +352,7 @@ int WINAPI WinMain(	HINSTANCE	hInstance,				// Instance
                                     hInstance,
                                     NULL )) ) {
 
-                _core.Error( ERC_FATAL, "Couldn't create window." );
+                g_Core->Error( ERC_FATAL, "Couldn't create window." );
                 return -1;
         }
 
@@ -371,28 +374,29 @@ int WINAPI WinMain(	HINSTANCE	hInstance,				// Instance
         _format = ChoosePixelFormat(_win.hDC, &pfd);
 
         if ( !SetPixelFormat(_win.hDC, _format, &pfd) ) {
-            _core.Error( ERC_FATAL, "Failed to setup window pixel format.\n" );
+            g_Core->Error( ERC_FATAL, "Failed to setup window pixel format.\n" );
             return -1;
         }
 
-        _core.Print( LOG_INFO, "Creating window..\n" );
-        _core.Print( LOG_INFO, "Successfully created window.\n" );
-        _core.Print( LOG_INFO, "Resolution: %ix%i\n", render_modeWidthGetInteger(), render_modeHeightGetInteger() );
+        g_Core->Print( LOG_INFO, "Creating window..\n" );
+        g_Core->Print( LOG_INFO, "Successfully created window.\n" );
+        g_Core->Print( LOG_INFO, "Resolution: %ix%i\n", render_modeWidthGetInteger(), render_modeHeightGetInteger() );
 
         // opengl context from a windows
         if ( !(_win.hRC = wglCreateContext(_win.hDC) ) ) {
-            _core.Error( ERC_GL, "Could not create OpenGL context.\n" );
+            g_Core->Error( ERC_GL, "Could not create OpenGL context.\n" );
             return -1;
         }
 
         if ( wglMakeCurrent(_win.hDC, _win.hRC) )
-            _core.Print( LOG_DEVELOPER, "Created OpenGL context.\n" );
+            g_Core->Print( LOG_DEVELOPER, "Created OpenGL context.\n" );
 
 
         // After OpenGL context created, use GLEW library.
         // NOTE: It's only one 3rd party lib even used in this
-        // engine for OpenGL 3.X, 4.X versions.
-        glewInit();
+        // engine for OpenGL 2.X versions.
+        // glewInit();
+        // .. not anymore.
     }
 
     // --------------------------------------------------------------------------------
@@ -453,7 +457,7 @@ int WINAPI WinMain(	HINSTANCE	hInstance,				// Instance
 */
 void win_resize( int w, int h ) {
     if( ( w <= 0 || h <= 0 ) ) {
-        _core.Print( LOG_WARN, "Given sizes for window resize are too small ( width: %i height: %i )\n" );
+        g_Core->Print( LOG_WARN, "Given sizes for window resize are too small ( width: %i height: %i )\n" );
         return;
     }
 
@@ -539,7 +543,7 @@ void console_logo( void ) {
     hOut = GetStdHandle(STD_OUTPUT_HANDLE);
     SetConsoleTextAttribute(hOut, FOREGROUND_GREEN | FOREGROUND_BLUE | FOREGROUND_INTENSITY );
 #endif
-    const char *meow[10]={
+    const NString meow[10]={
 
     "                                                           \n",
     "  .___  ___.  _______   ______   ____    __    ____       \n",
@@ -555,19 +559,19 @@ void console_logo( void ) {
 
     int i;
     for( i = 0; i < 10; i++) {
-        _core.Print( LOG_NONE, meow[i] );
+        g_Core->Print( LOG_NONE, meow[i] );
     }
 
-    _core.Print( LOG_NONE, "\n" );
+    g_Core->Print( LOG_NONE, "\n" );
 
     printf("--------------------------------------------------------------------------------\n" );
 #ifdef _WIN32
     SetConsoleTextAttribute(hOut, FOREGROUND_GREEN | FOREGROUND_BLUE | FOREGROUND_RED | FOREGROUND_INTENSITY );
 #endif
     
-    _core.Print( LOG_NONE,"Loading...\n");
-    _core.Print( LOG_NONE,"Welcome, %s!\n", _system.GetCurrentUsername());
-    _core.Print( LOG_NONE,"\n");
+    g_Core->Print( LOG_NONE,"Loading...\n");
+    g_Core->Print( LOG_NONE,"Welcome, %s!\n", c_coreSystem->GetCurrentUsername());
+    g_Core->Print( LOG_NONE,"\n");
 }
 
 

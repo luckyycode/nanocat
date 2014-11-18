@@ -15,15 +15,18 @@
 #include "Renderer.h"
 #include "GameWorld.h"
 
-ncGameWater _gamewater;
-ncGameWorld _gameworld;
+ncGameWater local_gameWater;
+ncGameWorld local_gameWorld;
+
+ncGameWater *g_gameWater = &local_gameWater;
+ncGameWorld *g_gameWorld = &local_gameWorld;
 
 // Water rendering.
 
-#define GFX_WATER_SCALE     1024.0
+#define GFX_WATER_SCALE     512.0
 #define MAX_WATER_SECTORS   64
 
-ncGLShader    water_shader;
+ncGLShader    *water_shader;
 
 // AAAAAAAAAAW!!
 // Global variables.
@@ -46,6 +49,7 @@ const float normal_water_data[] = {
     1.0f, 0.0f, 0.0f,
     0.0f, -1.0f, 0.0f,
     0.0f, 1.0f, 0.0f,
+    
 };
 
 const float vertex_water_data[] = {
@@ -73,12 +77,13 @@ void ncGameWater::Spawn( ncVec3 position, float size ) {
 */
 void ncGameWater::Initialize( void ) {
     if( Initialized ) {
-        _core.Print( LOG_WARN, "GFXWater already initialized, ignoring.\n" );
+        g_Core->Print( LOG_WARN, "GFXWater already initialized, ignoring.\n" );
         return;
     }
 
     // Find the shader.
-    _assetmanager.FindShader( "water", &water_shader );
+    //f_AssetManager->FindShaderByName( "water", water_shader );
+    water_shader = f_AssetManager->FindShaderByName( "water" );
     
     // Upload the values to the shader.
     Refresh();
@@ -92,7 +97,6 @@ void ncGameWater::Initialize( void ) {
     glEnableVertexAttribArray(0);
     glBufferData( GL_ARRAY_BUFFER, 10 * 3 * sizeof(float), vertex_water_data, GL_STATIC_DRAW );
     glVertexAttribPointer( 0, 3, GL_FLOAT, GL_FALSE, 0, (void*)0 );
-
     glBindBuffer( GL_ARRAY_BUFFER, 0 );
 
     glGenBuffers( 1, &texture_coord );
@@ -129,7 +133,7 @@ void ncGameWater::Remove( void ) {
 void ncGameWater::Render( ncSceneEye eye ) {
     
     ncMatrix4 model, pos;
-    ncVec3 position = ncVec3( 0.0f, (-GFX_WATER_SCALE * 1.0f) + 4.0f, 0.0f );
+    ncVec3 position = ncVec3( 0.0f, (-GFX_WATER_SCALE * 1.0f) + 24.0f, 0.0f );
     ncVec3 scale = ncVec3( 1.0 );
     
     model.Identity();
@@ -138,9 +142,10 @@ void ncGameWater::Render( ncSceneEye eye ) {
     pos.Translate( position );
     pos.Scale( scale );
 
-    model = model * _camera.ViewMatrix;
+    model = model * g_playerCamera->ViewMatrix;
     pos = model * pos;
-    
+  
+#ifdef OCULUSVR_SUPPORTED
     float ipd = 10.64;
     ncVec3 offset = ncVec3( ipd / 2.0f, 0.0f, 0.0f );
     ncVec3 minus_offset = ncVec3( -(ipd / 2.0f), 0.0f, 0.0f );
@@ -150,54 +155,59 @@ void ncGameWater::Render( ncSceneEye eye ) {
     ls.Translate( offset );
     rs.Translate( minus_offset );
     
-    pos = eye == EYE_LEFT ? ls * pos : rs * pos;
+    if( eye == EYE_LEFT ) {
+        pos = ls * pos;
+    } else {
+        pos = rs * pos;
+    }
+#endif
     
-    glUseProgram(water_shader.shader_id);
+    ncMatrix4 projectionModelView = g_playerCamera->ProjectionMatrix * pos;
+    
+    water_shader->Use();
     
     glBindVertexArray( waterVAO[0] );
     
-    glUniform1f( glGetUniformLocation(water_shader.shader_id, "time"), ( _core.Time / 100.0 ) );
+    water_shader->SetUniform( g_waterUniforms[WTIME_UNIFORM], (g_Core->Time / 100.0f) );
+    water_shader->SetUniform( g_waterUniforms[WMODELMATRIX_UNIFORM], 1, false, pos.m );
+    water_shader->SetUniform( g_waterUniforms[WPROJECTIONMATRIX_UNIFORM], 1, false, g_playerCamera->ProjectionMatrix.m );
+    water_shader->SetUniform( g_waterUniforms[WMVP_UNIFORM], 1, false, projectionModelView.m );
     
-    glUniformMatrix4fv( glGetUniformLocation(water_shader.shader_id, "ModelMatrix"), 1, false, pos.m );
-    glUniformMatrix4fv( glGetUniformLocation(water_shader.shader_id, "ProjMatrix"), 1, false, _camera.ProjectionMatrix.m );
-    
-    glActiveTexture(GL_TEXTURE0); glBindTexture(GL_TEXTURE_2D, _waterreflection.scene );
-    glActiveTexture(GL_TEXTURE1); glBindTexture(GL_TEXTURE_2D, _waterrefraction.scene );
-    glActiveTexture(GL_TEXTURE2); glBindTexture(GL_TEXTURE_2D, _materials.Find("env_water2_n").texture.tex_id);
-    glActiveTexture(GL_TEXTURE3); glBindTexture(GL_TEXTURE_2D, _scene.depthtex );
-    
-    switch ( render_wireframe.GetInteger() ) {
-        case 0:
-            glDrawArrays( GL_TRIANGLE_FAN, 0, sizeof(vertex_water_data) / sizeof(float) / 3 );   break;
-        case 1:
-            glDrawArrays( GL_LINES, 0, sizeof(vertex_water_data) / sizeof(float) / 3 );   break;
-        case 2:
-            glDrawArrays( GL_POINTS, 0, sizeof(vertex_water_data) / sizeof(float) / 3 );  break;
-        default:
-            glDrawArrays( GL_QUADS, 0, sizeof(vertex_water_data) / sizeof(float) / 3 );   break;
-    }
-    
-    glActiveTexture(GL_TEXTURE3); glBindTexture(GL_TEXTURE_2D, 0);
-    glActiveTexture(GL_TEXTURE2); glBindTexture(GL_TEXTURE_2D, 0);
-    glActiveTexture(GL_TEXTURE1); glBindTexture(GL_TEXTURE_2D, 0);
-    glActiveTexture(GL_TEXTURE0); glBindTexture(GL_TEXTURE_2D, 0);
+    glActiveTexture( GL_TEXTURE0 ); glBindTexture( GL_TEXTURE_2D, g_waterReflectionBuffer.scene );
+    glActiveTexture( GL_TEXTURE1 ); glBindTexture( GL_TEXTURE_2D, g_waterRefractionBuffer.scene );
+    glActiveTexture( GL_TEXTURE2 ); glBindTexture( GL_TEXTURE_2D, g_materialManager->Find("env_water2_n")->Image.TextureID );
+    glActiveTexture( GL_TEXTURE3 ); glBindTexture( GL_TEXTURE_2D, g_sceneBuffer[eye].depthtex );
+
+    // Draw now.
+    glDrawArrays( GL_TRIANGLE_FAN, 0, sizeof(vertex_water_data) / sizeof(ncVec3) );
+
+    glActiveTexture( GL_TEXTURE3 ); glBindTexture( GL_TEXTURE_2D, 0 );
+    glActiveTexture( GL_TEXTURE2 ); glBindTexture( GL_TEXTURE_2D, 0 );
+    glActiveTexture( GL_TEXTURE1 ); glBindTexture( GL_TEXTURE_2D, 0 );
+    glActiveTexture( GL_TEXTURE0 ); glBindTexture( GL_TEXTURE_2D, 0 );
     
     glBindVertexArray( 0 );
-    glUseProgram( 0 );
+    water_shader->Next();
 }
 
 /*
     Update water graphic settings.
 */
 void ncGameWater::Refresh( void ) {
+    
     // Set up parameters
-    glUseProgram( water_shader.shader_id );
+    water_shader->Use();
 
+    g_waterUniforms[WTIME_UNIFORM] = water_shader->UniformLocation( "time" );
+    g_waterUniforms[WMODELMATRIX_UNIFORM] = water_shader->UniformLocation( "ModelMatrix" );
+    g_waterUniforms[WPROJECTIONMATRIX_UNIFORM] = water_shader->UniformLocation( "ProjMatrix" );
+    g_waterUniforms[WMVP_UNIFORM] = water_shader->UniformLocation( "MVP" );
+    
     // Water samplers.
-    glUniform1i(glGetUniformLocation(water_shader.shader_id, "reflection_texture"), 0);
-    glUniform1i(glGetUniformLocation(water_shader.shader_id, "refraction_texture"), 1);
-    glUniform1i(glGetUniformLocation(water_shader.shader_id, "normal_texture"),     2);
-    glUniform1i(glGetUniformLocation(water_shader.shader_id, "depth_texture"),     3);
-
-    glUseProgram(0);
+    water_shader->SetUniform( "reflection_texture", 0 );
+    water_shader->SetUniform( "refraction_texture", 1 );
+    water_shader->SetUniform( "normal_texture", 2 );
+    water_shader->SetUniform( "depth_texture", 3 );
+    
+    water_shader->Next();
 }

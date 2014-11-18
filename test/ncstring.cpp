@@ -12,24 +12,21 @@
 #include "SystemShared.h"
 
 ncStringHelper _stringhelper;
-ncString::ncString( const char *text ) {
-    this->Owner = text;
-}
 
 /*
     Copy string to destination..
 */
-char *ncStringHelper::Copy( char *d, const char *s ) {
+NString ncStringHelper::Copy( NString d, const NString s ) {
     
     if( !d ) {
-        _core.Error( ERC_FATAL, "ncStringHelper::Copy failed, destination is null." );
+        g_Core->Error( ERR_FATAL, "ncStringHelper::Copy failed, destination is null." );
     }
     
     if( !s ) {
-        _core.Error( ERC_FATAL, "ncStringHelper::Copy failed, source is null." );
+        g_Core->Error( ERR_FATAL, "ncStringHelper::Copy failed, source is null." );
     }
     
-    char *dest = d;
+    NString dest = d;
     
     while( *s ) {
         *d++ = *s++;
@@ -43,8 +40,9 @@ char *ncStringHelper::Copy( char *d, const char *s ) {
 /*
     Remove character from string.
 */
-void ncStringHelper::RemoveChar( char *str, char garbage ) {
-    char *src, *dst;
+void ncStringHelper::RemoveChar( NString str, char garbage ) {
+    NString src;
+    NString dst;
     
     for( src = dst = str; *src != '\0'; src++ ) {
         *dst = *src;
@@ -57,13 +55,15 @@ void ncStringHelper::RemoveChar( char *str, char garbage ) {
 /*
     Safe copy string.
 */
-void ncStringHelper::SafeCopy( char *dest, const char *src, unsigned long size ) {
+void ncStringHelper::SafeCopy( NString dest, const NString src, unsigned long size ) {
     
-    if ( !src )
-        _core.Error( ERC_FATAL, "ncStringHelper::SafeCopy failed, null source." );
-    
-    if ( size < 1 )
-        _core.Error( ERC_FATAL, "ncStringHelper::SafeCopy failed, size is negative. :(" );
+    if ( !src ) {
+        g_Core->Error( ERR_FATAL, "ncStringHelper::SafeCopy failed, null source." );
+    }
+        
+    if ( size < 1 ) {
+        g_Core->Error( ERR_FATAL, "ncStringHelper::SafeCopy failed, size is negative. :(" );
+    }
     
     strncpy( dest, src, size - 1 );
     dest[size - 1] = 0;
@@ -72,7 +72,7 @@ void ncStringHelper::SafeCopy( char *dest, const char *src, unsigned long size )
 /*
     Safe copy character array.
 */
-void ncStringHelper::SPrintf( char *dest, ulong size, const char *fmt, ...) {
+void ncStringHelper::SPrintf( NString dest, ulong size, const NString fmt, ...) {
     
     int len;
     va_list	argptr;
@@ -91,7 +91,7 @@ void ncStringHelper::SPrintf( char *dest, ulong size, const char *fmt, ...) {
 /*
     Skip all next lines and return simple one lined string.
 */
-void ncStringHelper::Chomp(char *s) {
+void ncStringHelper::Chomp(NString s) {
     while( *s && *s != '\n' && *s != '\r' ) s++;
     
     *s = 0;
@@ -100,7 +100,7 @@ void ncStringHelper::Chomp(char *s) {
 /*
     Skip the chosen character.
 */
-void ncStringHelper::SkipCharacter( char *s, char a ) {
+void ncStringHelper::SkipCharacter( NString s, char a ) {
     while(*s != a) s++;
     
     *s = 0;
@@ -109,7 +109,7 @@ void ncStringHelper::SkipCharacter( char *s, char a ) {
 /*
     Combine the parts in one string.
 */
-const char *ncStringHelper::STR( const char *msg, ... ) {
+const NString ncStringHelper::STR( const NString msg, ... ) {
     va_list     argptr;
     char        text[MAX_SPRINTF_BUFFER];
     
@@ -120,18 +120,22 @@ const char *ncStringHelper::STR( const char *msg, ... ) {
     va_end( argptr );
     
     // Fix-me.
+    
+#pragma mark - Fix me
     return text;
 }
 
 /*
     Check if string contains next line.
 */
-bool ncStringHelper::ContainsNextLine( char *s ) {
+bool ncStringHelper::ContainsNextLine( NString s ) {
     int i;
     
-    for( i = 0; i < strlen(s); i++ )
-        if( s[i] == '\n' )
+    for( i = 0; i < strlen(s); i++ ) {
+        if( s[i] == '\n' ) {
             return true;
+        }
+    }
     
     return false;
 }

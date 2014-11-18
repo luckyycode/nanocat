@@ -1,4 +1,7 @@
 "
+
+precision mediump float;
+
 uniform float time;
 
 void main(void) {
@@ -24,6 +27,7 @@ void main(void) {
 
 "
 
+precision mediump float;
 #define midDist 0.7
 uniform float maxDist;
 

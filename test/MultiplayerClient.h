@@ -39,7 +39,7 @@ public:
     
     void Disconnect( void );
     void Initialize( void );
-    void SendAcknowledge( const char *command );
+    void SendAcknowledge( const NString command );
     void CheckTimeout( void );
     void Connect( void );
     void LoopbackConnect( void );
@@ -50,7 +50,7 @@ public:
     void Connectionless( ncNetdata *from, byte *data );
     void Process( ncNetdata *from, byte *buffer );
     void Reconnect( void );
-    void DisconnectForced( const char *msg, bool forced );
+    void DisconnectForced( const NString msg, bool forced );
     void ChangeName( void );
     void CheckConnect( void );
     void Interpolate( void );
@@ -93,7 +93,7 @@ public:
     float latestPositionTime = 0.0f;
 };
 
-extern ncClient _client;
+extern ncClient *n_client;
 
 // CLIENT
 extern ncConsoleVariable      Client_Running;                        // Is client running?

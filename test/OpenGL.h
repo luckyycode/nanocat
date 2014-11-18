@@ -29,7 +29,7 @@ private:
     int _minorVersion;
 };
 
-extern ncOpenGL _opengl;
+extern ncOpenGL *gl_Core;
 
 extern ncConsoleVariable     GLSL_Version;                              // Game GLSL version to use.
 

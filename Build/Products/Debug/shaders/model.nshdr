@@ -1,4 +1,7 @@
 "
+
+precision mediump float;
+
 layout(location = 0) in vec3 vertexPosition_modelspace;
 layout(location = 1) in vec2 UV;
 layout(location = 2) in vec3 vertexNormals;
@@ -43,6 +46,9 @@ void main() {
 }
 
 "
+
+precision mediump float;
+
 uniform float time; // time in seconds
 
 uniform sampler2D decal;
@@ -83,26 +89,26 @@ struct PointLight
   int gNumPointLights = 2;                                                                
 uniform DirectionalLight gDirectionalLight;                                                 
 uniform PointLight gPointLights[3];                                                                                                      
-float gMatSpecularIntensity = .9;                                                        
-float gSpecularPower = .7;
+float gMatSpecularIntensity = 0.9;                                                        
+float gSpecularPower = 0.7;
 
   
   vec4 CalcLightInternal(BaseLight Light, vec3 LightDirection, vec3 Normal)                   
 {                                                                                           
-    vec4 AmbientColor = vec4(Light.Color, 1.0f) * Light.AmbientIntensity;                   
+    vec4 AmbientColor = vec4(Light.Color, 1.0) * Light.AmbientIntensity;                   
     float DiffuseFactor = dot(Normal, -LightDirection);                                     
-    vec4 DiffuseColor  = vec4(0, 0, 0, 0);                                                  
-    vec4 SpecularColor = vec4(0, 0, 0, 0);                                                  
+    vec4 DiffuseColor  = vec4(0.0);                                                  
+    vec4 SpecularColor = vec4(0.0);                                                  
                                                                                             
-   if (DiffuseFactor > 0) {                                                                
-        DiffuseColor = vec4(Light.Color, 1.0f) * Light.DiffuseIntensity * DiffuseFactor;    
+   if (DiffuseFactor > 0.0) {                                                                
+        DiffuseColor = vec4(Light.Color, 1.0) * Light.DiffuseIntensity * DiffuseFactor;    
                                                                                             
         vec3 VertexToEye = normalize(cameraPos - worldPos);                             
         vec3 LightReflect = normalize(reflect(LightDirection, Normal));                     
         float SpecularFactor = dot(VertexToEye, LightReflect);                              
         SpecularFactor = pow(SpecularFactor, gSpecularPower);                               
-        if (SpecularFactor > 0) {                                                           
-            SpecularColor = vec4(Light.Color, 1.0f) *                                       
+        if (SpecularFactor > 0.0) {                                                           
+            SpecularColor = vec4(Light.Color, 1.0) *                                       
                             gMatSpecularIntensity * SpecularFactor;                         
         }                                                                                   
     }                                                                                       

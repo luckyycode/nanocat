@@ -15,10 +15,10 @@
 
 - (void)applicationDidFinishLaunching:(NSNotification *)aNotification {
     
-    _opengl.Initialized = true;
-    _opengl.OnResize( render_modeWidth.GetInteger(), render_modeHeight.GetInteger() );
+    gl_Core->Initialized = true;
+    gl_Core->OnResize( Render_Width.GetInteger(), Render_Height.GetInteger() );
     
-    _core.Loaded();
+    g_Core->Loaded();
 }
 
 @end

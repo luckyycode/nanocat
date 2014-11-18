@@ -26,24 +26,26 @@
 */
 class ncMaterial {
 public:
-    char        name[64];
+    char        Name[64];
     
-    ncImage     texture;
-    int         index;
+    ncImage     Image;
+    int         Index;
 };
 
 class ncMaterialManager {
 public:
     void Initialize( void );
-    void Load( const char *mat_name );
-    void LoadImage( const char *material_name, const char *material_parameter, const char *material_file,
+    void Load( const NString mat_name );
+    void LoadImage( const NString material_name, const NString material_parameter, const NString material_file,
                           ncImageType type );
-    ncMaterial Find( const char *entry );
+    ncMaterial *Find( const NString entry );
     
     int MaterialCount;
     int MaterialEntryCount;
+    
+    ncMaterial *m_Materials;
 };
 
-extern ncMaterialManager _materials;
+extern ncMaterialManager *g_materialManager;
 
 #endif

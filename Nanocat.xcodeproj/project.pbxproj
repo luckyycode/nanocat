@@ -42,7 +42,10 @@
 		7E547D5D18737FEB00B5AD82 /* CoreVideo.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7E547D5C18737FEB00B5AD82 /* CoreVideo.framework */; };
 		7E547D6118737FF900B5AD82 /* QuartzCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7E547D6018737FF900B5AD82 /* QuartzCore.framework */; };
 		7E591BBA19B00D9100B5ED7A /* NCString.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7E591BB819B00D9100B5ED7A /* NCString.cpp */; };
+		7E74DDDA1A0B7CDE0090FE26 /* VBOOpenGL.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7E74DDD81A0B7CDE0090FE26 /* VBOOpenGL.cpp */; };
 		7E82BA2E19AC24920054E608 /* IOKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7E82BA2A19AC22BD0054E608 /* IOKit.framework */; };
+		7E8A19E81A079D5B00AE08A2 /* Terrain.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7E8A19E71A079D5B00AE08A2 /* Terrain.cpp */; };
+		7EC847201A1A3BBD008C147A /* Security.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7EC8471E1A1A3BBD008C147A /* Security.cpp */; };
 		7ED083DF19B61C990023DEDE /* MacUtils.mm in Sources */ = {isa = PBXBuildFile; fileRef = 7ED083DE19B61C990023DEDE /* MacUtils.mm */; };
 		7EDCDB8C19ACE03900438563 /* main.mm in Sources */ = {isa = PBXBuildFile; fileRef = 7EDCDB8A19ACE03900438563 /* main.mm */; };
 		7EDCDBBF19ACFD7500438563 /* CoreFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7EDCDBBE19ACFD7500438563 /* CoreFoundation.framework */; };
@@ -61,7 +64,7 @@
 		7E0BCCD619B3695600A5DE31 /* LocalGame.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = LocalGame.h; sourceTree = "<group>"; };
 		7E0BCCD819B3796900A5DE31 /* LevelEnvironment.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = LevelEnvironment.h; sourceTree = "<group>"; };
 		7E0BCCD919B38C5100A5DE31 /* SharedWin.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SharedWin.h; sourceTree = "<group>"; };
-		7E0BCCDA19B38CCA00A5DE31 /* SharedMac.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SharedMac.h; sourceTree = "<group>"; };
+		7E0BCCDA19B38CCA00A5DE31 /* SharedApple.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SharedApple.h; sourceTree = "<group>"; };
 		7E0C0C0519B101B0001C2FE6 /* OpenGL.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = OpenGL.h; sourceTree = "<group>"; };
 		7E0C0C0619B10772001C2FE6 /* MaterialLoader.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = MaterialLoader.h; sourceTree = "<group>"; };
 		7E0C0C0719B10889001C2FE6 /* ImageManager.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ImageManager.h; sourceTree = "<group>"; };
@@ -113,8 +116,14 @@
 		7E591BB719B0094800B5ED7A /* FileSystem.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = FileSystem.h; sourceTree = "<group>"; };
 		7E591BB819B00D9100B5ED7A /* NCString.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = NCString.cpp; sourceTree = "<group>"; };
 		7E591BB919B00D9100B5ED7A /* NCString.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = NCString.h; sourceTree = "<group>"; };
+		7E6784671A0BE869003F069D /* Terrain.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Terrain.h; sourceTree = "<group>"; };
+		7E74DDD81A0B7CDE0090FE26 /* VBOOpenGL.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = VBOOpenGL.cpp; sourceTree = "<group>"; };
+		7E74DDD91A0B7CDE0090FE26 /* VBOOpenGL.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = VBOOpenGL.h; sourceTree = "<group>"; };
 		7E82BA2A19AC22BD0054E608 /* IOKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = IOKit.framework; path = System/Library/Frameworks/IOKit.framework; sourceTree = SDKROOT; };
 		7E82BA2C19AC22C60054E608 /* libovr.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libovr.a; path = ../libovr.a; sourceTree = "<group>"; };
+		7E8A19E71A079D5B00AE08A2 /* Terrain.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Terrain.cpp; sourceTree = "<group>"; };
+		7EC8471E1A1A3BBD008C147A /* Security.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Security.cpp; sourceTree = "<group>"; };
+		7EC8471F1A1A3BBD008C147A /* Security.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Security.h; sourceTree = "<group>"; };
 		7ED083DE19B61C990023DEDE /* MacUtils.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = MacUtils.mm; sourceTree = "<group>"; };
 		7ED083E019B61CAC0023DEDE /* MacUtils.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = MacUtils.h; sourceTree = "<group>"; };
 		7EDCDB8A19ACE03900438563 /* main.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = main.mm; sourceTree = "<group>"; };
@@ -182,10 +191,10 @@
 			name = Windows;
 			sourceTree = "<group>";
 		};
-		7E5249E7191DD54300497626 /* Mac */ = {
+		7E5249E7191DD54300497626 /* Apple */ = {
 			isa = PBXGroup;
 			children = (
-				7E0BCCDA19B38CCA00A5DE31 /* SharedMac.h */,
+				7E0BCCDA19B38CCA00A5DE31 /* SharedApple.h */,
 				7EDCDB8A19ACE03900438563 /* main.mm */,
 				7EF8EAFE18737E2C00D2384D /* AppDelegate.h */,
 				7EF8EAFF18737E2C00D2384D /* AppDelegate.mm */,
@@ -197,7 +206,7 @@
 				7EF8EB0418737E2C00D2384D /* Images.xcassets */,
 				7EF8EAF318737E2C00D2384D /* Supporting Files */,
 			);
-			name = Mac;
+			name = Apple;
 			sourceTree = "<group>";
 		};
 		7EF8EAE018737E2B00D2384D = {
@@ -254,7 +263,7 @@
 			isa = PBXGroup;
 			children = (
 				7E0BCCD719B3788D00A5DE31 /* Windows */,
-				7E5249E7191DD54300497626 /* Mac */,
+				7E5249E7191DD54300497626 /* Apple */,
 				7E0C0C0919B123A8001C2FE6 /* GameWorld.cpp */,
 				7E0C0C0A19B123A8001C2FE6 /* GameWorld.h */,
 				7E591BB819B00D9100B5ED7A /* NCString.cpp */,
@@ -312,7 +321,13 @@
 				7E11EC45198BDB3C00098E5C /* Utils.cpp */,
 				7E19CDD119C2D7EC00DD5422 /* Utils.h */,
 				7E11EC46198BDB3C00098E5C /* Water.cpp */,
+				7E8A19E71A079D5B00AE08A2 /* Terrain.cpp */,
+				7E6784671A0BE869003F069D /* Terrain.h */,
 				7E406F5F19C037A900F1A823 /* NOTE TO ME.txt */,
+				7E74DDD81A0B7CDE0090FE26 /* VBOOpenGL.cpp */,
+				7E74DDD91A0B7CDE0090FE26 /* VBOOpenGL.h */,
+				7EC8471E1A1A3BBD008C147A /* Security.cpp */,
+				7EC8471F1A1A3BBD008C147A /* Security.h */,
 			);
 			name = mycode;
 			path = test;
@@ -355,7 +370,7 @@
 		7EF8EAE118737E2B00D2384D /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
-				LastUpgradeCheck = 0600;
+				LastUpgradeCheck = 0610;
 				ORGANIZATIONNAME = "Neko Vision";
 			};
 			buildConfigurationList = 7EF8EAE418737E2B00D2384D /* Build configuration list for PBXProject "Nanocat" */;
@@ -410,6 +425,7 @@
 				7E11EC65198BDB3C00098E5C /* Water.cpp in Sources */,
 				7E11EC55198BDB3C00098E5C /* ImageManager.cpp in Sources */,
 				7E0C0C0B19B123A8001C2FE6 /* GameWorld.cpp in Sources */,
+				7E8A19E81A079D5B00AE08A2 /* Terrain.cpp in Sources */,
 				7E11EC53198BDB3C00098E5C /* OpenGL.cpp in Sources */,
 				7E591BBA19B00D9100B5ED7A /* NCString.cpp in Sources */,
 				7E11EC49198BDB3C00098E5C /* ncBSP.cpp in Sources */,
@@ -423,10 +439,12 @@
 				7ED083DF19B61C990023DEDE /* MacUtils.mm in Sources */,
 				7E11EC5B198BDB3C00098E5C /* MaterialLoader.cpp in Sources */,
 				7EF8EB0018737E2C00D2384D /* AppDelegate.mm in Sources */,
+				7EC847201A1A3BBD008C147A /* Security.cpp in Sources */,
 				7E11EC62198BDB3C00098E5C /* System.cpp in Sources */,
 				7E11EC5A198BDB3C00098E5C /* MapLevel.cpp in Sources */,
 				7E11EC4B198BDB3C00098E5C /* LocalGame.cpp in Sources */,
 				7E11EC50198BDB3C00098E5C /* LevelEnvironment.cpp in Sources */,
+				7E74DDDA1A0B7CDE0090FE26 /* VBOOpenGL.cpp in Sources */,
 				7E11EC61198BDB3C00098E5C /* ShaderLoader.cpp in Sources */,
 				7E11EC48198BDB3C00098E5C /* ncBitMessage.cpp in Sources */,
 				7EDCDB8C19ACE03900438563 /* main.mm in Sources */,
@@ -459,7 +477,6 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
-				ARCHS = "$(ARCHS_STANDARD)";
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
 				CLANG_CXX_LIBRARY = "libc++";
 				CLANG_ENABLE_OBJC_ARC = YES;
@@ -498,7 +515,6 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
-				ARCHS = "$(ARCHS_STANDARD)";
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
 				CLANG_CXX_LIBRARY = "libc++";
 				CLANG_ENABLE_OBJC_ARC = YES;
@@ -531,7 +547,6 @@
 		7EF8EB1B18737E2C00D2384D /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ARCHS = "$(ARCHS_STANDARD_64_BIT)";
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_CXX_LANGUAGE_STANDARD = "c++14";
 				CLANG_CXX_LIBRARY = "libstdc++";
@@ -569,7 +584,6 @@
 		7EF8EB1C18737E2C00D2384D /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ARCHS = "$(ARCHS_STANDARD_64_BIT)";
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_CXX_LANGUAGE_STANDARD = "c++14";
 				CLANG_CXX_LIBRARY = "libstdc++";

@@ -50,13 +50,42 @@
 #include <sys/stat.h>
 #include <sys/time.h>
 
+/*                ,MMM8&&&.            *
+        *        MMMM88&&&&&    .
+                MMMM88&&&&&&&
+ *              MMM88&&&&&&&&
+                MMM88&&&&&&&&
+                'MMM88&&&&&&'
+                  'MMM8&&&'      *
+    *    |\___/|
+         )     (             .              '
+        >\     /<
+          )===(       *
+         /     \
+         |     |
+        /       \           *
+        \       /
+ _/\_/\_/\__  _/_/\_/\_/\_/\_/\_/\_/\_/\_/\_
+ |  |  |  |( (  |  |  |  |  |  |  |  |  |  |
+ |  |  |  | ) ) |  |  |  |  |  |  |  |  |  |
+ |  |  |  |(_(  |  |  |  |  |  |  |  |  |  |
+ |  |  |  |  |  |  |  |  |  |  |  |  |  |  |
+ |                    |                    |
+ */
+
+// We don't need this on mobile devices.
+// #define OCULUSVR_SUPPORTED
+
 /*
-     Mac OS
+     Mac OS and iOS.
 */
 
 #ifdef __APPLE__
 
-#include "SharedMac.h"
+// Use this while building iOS build.
+//#define iOS_BUILD
+
+#include "SharedApple.h"
 
     #define MAX_PATH            256
 
@@ -73,7 +102,11 @@
     #define KEY_ARROW_LEFT      123
     #define KEY_ARROW_RIGHT     124
 
-    #define  _osname            "Mac OS X"
+#ifndef iOS_BUILD
+    #define _osname             "Mac OS X"
+#else 
+    #define _osname             "iOS"
+#endif
 
     #define zeromem( type, size ) bzero( type, size )
 
@@ -88,7 +121,7 @@
 
     #include "SharedWin.h"
 
-    #define _osname             "Win"
+    #define _osname "Win"
 
     #define zeromem( type, size ) ZeroMemory( type, size )
 
@@ -102,6 +135,10 @@
     #include "SharedLinux.h"
 
     #define _osname     "Linux"
+
+    // For some time, got it working on Linux,
+    // but lazy to do something on it.
+    #error Implement me!
 
 #endif
 
@@ -133,13 +170,12 @@
 #define ulong  unsigned long
 #define uint   unsigned int
 #define byte   unsigned char
+#define Byte   unsigned char
+
+#define NString char *
+#define NChar char
 
 // Uh...
-typedef unsigned char Byte;
-
-// Uncomment to enable memory check on application startup.
-// #define USE_MEMCHECK_ON_STARTUP
-
 // We throw error if something goes wrong, or just warn the user.
 #define WARN_LEVEL_ERROR
 
@@ -183,7 +219,7 @@ typedef unsigned char Byte;
 #define COMMANDHEADER_SERVERENTITY              24
 
 // System
-void            win_resize( int w, int h );
+void win_resize( int w, int h );
 
 #endif
 

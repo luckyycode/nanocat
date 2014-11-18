@@ -20,48 +20,49 @@ ncConsoleVariable  Filesystem_Log("filesystem", "log", "Log file to write.", "lo
 ncConsoleVariable  Filesystem_Path("filesystem", "path", "Current directory.", "", CVFLAG_NEEDSREFRESH );
 ncConsoleVariable  Filesystem_Logging("filesystem", "logging", "Is file logging enabled?", "0", CVFLAG_NEEDSREFRESH );
 
-ncFileSystem _filesystem;
-
-// #define FILESYSTEM_LOGERRORS // Print errors such as "ncFileSystem failed to read" etc...
+ncFileSystem local_filesystem;
+ncFileSystem *c_FileSystem = &local_filesystem;
 
 // Lazy functions.
 void lazyFileGenerateConfig( void ) {
-    _filesystem.GenerateConfigurationFile();
+    c_FileSystem->GenerateConfigurationFile();
 }
 
 
 /*
     Initialize file system.
 */
-void ncFileSystem::Initialize( const char *defaultpath ) {
-    _core.Print( LOG_INFO, "Loading file system..\n" );
+void ncFileSystem::Initialize( const NString defaultpath ) {
+    
+    g_Core->LoadState = NCCLOAD_FILESYSTEM;
+    g_Core->Print( LOG_INFO, "Loading file system..\n" );
 
     if( strlen(defaultpath) > MAX_PATH ) {
-        _core.Error( ERC_FS, "Nanocat is placed far far away. Please make a path shorter.\n", MAX_PATH );
+        g_Core->Error( ERR_FILESYSTEM, "Nanocat is placed far far away. Please make a path shorter.\n", MAX_PATH );
         return;
     }
     
     Filesystem_Path.Set( _stringhelper.STR("%s/%s", defaultpath, DEFAULT_EXEC_PATH) );
     
     /* Notify */
-    _core.Print( LOG_INFO, "Current directory: \"%s\"\n", defaultpath );
+    g_Core->Print( LOG_INFO, "Current directory: \"%s\"\n", defaultpath );
 
     /* Check file logging. */
     if( Filesystem_Logging.GetInteger() ) {
-        _core.Print( LOG_INFO, "Logging to file is enabled ( %s ).\n", Filesystem_Log.GetString() );
-        if( !( _gconsole.logFile = fopen( _stringhelper.STR("%s/%s", defaultpath, Filesystem_Log.GetString() ), "ab+" ) ) ) {
-            _core.Print( LOG_ERROR, "Couldn't write or create the '%s' file for logging. Please check permissions.\n");
-            _core.Print( LOG_INFO, "Logging is disabled.\n");
-            _core.Print( LOG_NONE, "\n");
+        g_Core->Print( LOG_INFO, "Logging to file is enabled ( %s ).\n", Filesystem_Log.GetString() );
+        if( !( g_Console->logFile = fopen( _stringhelper.STR("%s/%s", defaultpath, Filesystem_Log.GetString() ), "ab+" ) ) ) {
+            g_Core->Print( LOG_ERROR, "Couldn't write or create the '%s' file for logging. Please check permissions.\n");
+            g_Core->Print( LOG_INFO, "Logging is disabled.\n");
+            g_Core->Print( LOG_NONE, "\n");
             
             Filesystem_Logging.Set( "0" );
             Filesystem_Logging.Lock();
          }
     }
-    else _core.Print( LOG_INFO, "File logging is disabled.\n" );
+    else g_Core->Print( LOG_INFO, "File logging is disabled.\n" );
 
 
-    _commandManager.Add( "writeconfig", lazyFileGenerateConfig );
+    c_CommandManager->Add( "writeconfig", lazyFileGenerateConfig );
 }
 
 /*
@@ -69,19 +70,16 @@ void ncFileSystem::Initialize( const char *defaultpath ) {
     If 'raw' is true - generate a new file with default values.
 */
 void ncFileSystem::GenerateConfigurationFile( void ) {
-    if ( _commandManager.ArgCount() < 1 ) {
-        _core.Print( LOG_INFO, "usage: writeconfig <raw>\n" );
-        _core.Print( LOG_INFO, "raw: \"1\" - write default values\n" );
-        _core.Print( LOG_INFO, "raw: \"0\" - write used values\n" );
+    if ( c_CommandManager->ArgCount() < 1 ) {
+        g_Core->Print( LOG_INFO, "USAGE: writeconfig <raw>\n" );
+        g_Core->Print( LOG_INFO, "raw: \"1\" - write default values\n" );
+        g_Core->Print( LOG_INFO, "raw: \"0\" - write used values\n" );
         return;
     }
     
-    int szArg = atoi( _commandManager.Arguments(0) );
+    int szArg = atoi( c_CommandManager->Arguments(0) );
 
-    if( szArg < 0 )
-        return;
-
-    if( szArg > 1 )
+    if( szArg < 0 || szArg > 1 )
         return;
 
     FILE     *_cfg;
@@ -89,8 +87,8 @@ void ncFileSystem::GenerateConfigurationFile( void ) {
 
     // Create new file.
     if ( !( _cfg = OpenWrite( _stringhelper.STR("%s/config.profile", Filesystem_Path.GetString()) ) ) ) {
-        _core.Print( LOG_ERROR, "Couldn't generate configuration file.\n" );
-        _core.Print( LOG_INFO, "Please check folder permissions.\n" );
+        g_Core->Print( LOG_ERROR, "Couldn't generate configuration file.\n" );
+        g_Core->Print( LOG_INFO, "Please check folder permissions.\n" );
         return;
     }
 
@@ -103,7 +101,7 @@ void ncFileSystem::GenerateConfigurationFile( void ) {
         fprintf( _cfg, "%s %s\n", _cvarmngr.consoleVariables[i]->GetName(), szArg == 1 ? _cvarmngr.consoleVariables[i]->GetDefaultValue() : _cvarmngr.consoleVariables[i]->GetString() );
     }
 
-    _core.Print( LOG_INFO, "Done writing the configuration file for %s's profile. :)\n", NameVar.GetString() );
+    g_Core->Print( LOG_INFO, "Done writing the configuration file for %s's profile. :)\n", NameVar.GetString() );
     
     fclose( _cfg );
 }
@@ -114,18 +112,18 @@ void ncFileSystem::GenerateConfigurationFile( void ) {
 */
 void ncFileSystem::Shutdown( void ) {
 
-    _core.Print( LOG_INFO, "File system shutting down...\n" );
+    g_Core->Print( LOG_INFO, "File system shutting down...\n" );
 
     // Close the log file.
-    if( _gconsole.logFile )
-        fclose( _gconsole.logFile );
+    if( g_Console->logFile )
+        fclose( g_Console->logFile );
 }
 
 /*
     Get file name from a path.
 */
-const char *ncFileSystem::GetFileName( const char *path ) {
-    const char *filename;
+const NString ncFileSystem::GetFileName( const NString path ) {
+    const NString filename;
 
     // Loop thru every slash.
     filename = strrchr(path, '\\');
@@ -141,8 +139,8 @@ const char *ncFileSystem::GetFileName( const char *path ) {
 /*
     Get file extension.
 */
-const char *ncFileSystem::GetFileExtension( const char *filename ) {
-    const char *dot;
+const NString ncFileSystem::GetFileExtension( const NString filename ) {
+    const NString dot;
 
     dot = strrchr( filename, '.' );
 
@@ -162,16 +160,16 @@ const char *ncFileSystem::GetFileExtension( const char *filename ) {
 void ncFileSystem::ReadConfiguration( void ) {
     FILE    *cfg;
 
-    if( _commandManager.ArgCount() < 1 ) {
-        _core.Print( LOG_INFO, "Read configuration file and load it.\n" );
-        _core.Print( LOG_INFO, "USAGE: readconfig <configfile>\n" );
+    if( c_CommandManager->ArgCount() < 1 ) {
+        g_Core->Print( LOG_INFO, "Read configuration file and load it.\n" );
+        g_Core->Print( LOG_INFO, "USAGE: readconfig <configfile>\n" );
         return;
     }
 
-    cfg = OpenRead( _stringhelper.STR("%s/%s.nconf", Filesystem_Path.GetString(), _commandManager.Arguments(0)) );
+    cfg = OpenRead( _stringhelper.STR("%s/%s.nconf", Filesystem_Path.GetString(), c_CommandManager->Arguments(0)) );
 
     if( !cfg ) {
-        _core.Print( LOG_INFO, "Could not read %s configuration file.\n", _commandManager.Arguments(0) );
+        g_Core->Print( LOG_INFO, "Could not read %s configuration file.\n", c_CommandManager->Arguments(0) );
         return;
     }
     else {
@@ -185,7 +183,7 @@ void ncFileSystem::ReadConfiguration( void ) {
                     buff[i] = '\0';
             }
 
-            _gconsole.Execute( buff );
+            g_Console->Execute( buff );
         }
     }
 
@@ -195,15 +193,15 @@ void ncFileSystem::ReadConfiguration( void ) {
 /*
     Write to the log file.
 */
-void ncFileSystem::WriteLog( const char *msg ) {
-    if ( !_gconsole.logFile )
+void ncFileSystem::WriteLog( const NString msg ) {
+    if ( !g_Console->logFile )
         return;
 
     // Gosh.
     if( !msg || strlen( msg ) < 1 )
         return;
     
-    fprintf( _gconsole.logFile, "%s", msg );
+    fprintf( g_Console->logFile, "%s", msg );
 }
 
 /*
@@ -227,19 +225,19 @@ long ncFileSystem::GetFileLength( FILE *f ) {
 */
 void ncFileSystem::Write( FILE *f, const void *buffer, int len ) {
     if ( fwrite (buffer, 1, len, f) != (size_t)len )
-        _core.Error ( ERC_FS, "File system failed to write." );
+        g_Core->Error ( ERR_FILESYSTEM, "File system failed to write." );
 }
 
 /*
     Open file for writing. ( Nor create it )
 */
-FILE *ncFileSystem::OpenWrite( const char *filename ) {
+FILE *ncFileSystem::OpenWrite( const NString filename ) {
     FILE   *f;
 
     f = fopen( filename, "wb" );
 
     if (!f)
-        _core.Print( LOG_ERROR, "File system failed to open \"%s\".\n", filename );
+        g_Core->Print( LOG_ERROR, "File system failed to open \"%s\".\n", filename );
 
     return f;
 }
@@ -247,15 +245,12 @@ FILE *ncFileSystem::OpenWrite( const char *filename ) {
 /*
     Open file for read.
 */
-FILE *ncFileSystem::OpenRead( const char *filename ) {
+FILE *ncFileSystem::OpenRead( const NString filename ) {
     FILE    *f;
 
     f = fopen( filename, "rb" );
 
-#ifdef FILESYSTEM_LOGERRORS
-    if (!f)
-        _core.Print( LOG_ERROR, "File system failed to read \"%s\"\n", filename );
-#endif
+    // Also returns null if fopen failed.
     return f;
 }
 
@@ -264,13 +259,13 @@ FILE *ncFileSystem::OpenRead( const char *filename ) {
 */
 void ncFileSystem::Read( FILE *f, void *data, long len ) {
     if ( fread( data, 1, len, f ) != (size_t)len )
-        _core.Error( ERC_FS, "ncFileSystem::Read failed to read file." );
+        g_Core->Error( ERR_FILESYSTEM, "ncFileSystem::Read failed to read file." );
 }
 
 /*
     Load file and get its data.
 */
-long ncFileSystem::Load( const char *filename, void **buffer ) {
+long ncFileSystem::Load( const NString filename, void **buffer ) {
     FILE        *f;
     void        *data;
     long        len;
@@ -281,9 +276,9 @@ long ncFileSystem::Load( const char *filename, void **buffer ) {
         return -1;
 
     len     = GetFileLength( f );
-    data    = malloc( len + 1 );    // Sometimes it doesn't fit..fuu
+    data    = malloc( len + 1 );
 
-    ((char *)data)[len] = 0;
+    ((char*)data)[len] = 0;
 
     Read( f, data, len );
     fclose( f );
@@ -292,6 +287,6 @@ long ncFileSystem::Load( const char *filename, void **buffer ) {
     return len;
 }
 
-void ncFileSystem::LoadNFC( const char *name ) {
+void ncFileSystem::LoadNFC( const NString name ) {
     
 }

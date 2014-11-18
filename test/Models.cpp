@@ -19,17 +19,18 @@
 #include "Renderer.h"
 #include "LevelEnvironment.h"
 
-ncGLShader            sky;
-ncGLShader            fxmodel;
+ncGLShader            *sky;
+ncGLShader            *fxmodel;
 
 int                 sky_id;
 
-ncModelLoader _modelLoader;
+ncModelLoader local_modelLoader;
+ncModelLoader *g_modelManager = &local_modelLoader;
 
 #define MODEL_GAME_FORMAT   "sm1"
 
 void model_spawnit( void ) {
-    _modelLoader.Spawn(MODEL_DEFAULT, _commandManager.Arguments(0), "model", _camera.g_vEye, _camera.g_vEye, false);
+    g_modelManager->Spawn(MODEL_DEFAULT, c_CommandManager->Arguments(0), "model", g_playerCamera->g_vEye, g_playerCamera->g_vEye, false);
 }
 
 /*
@@ -40,14 +41,14 @@ void ncModelLoader::Initialize( void ) {
     DIR             *dir;
     struct dirent   *ent;
 
-    _core.Print( LOG_INFO, "Loading models....\n" );
+    g_Core->Print( LOG_INFO, "Loading models....\n" );
 
-    _gameworld.cmodel_count = 0;
-    _gameworld.spawned_models = 0;
+    g_gameWorld->cmodel_count = 0;
+    g_gameWorld->spawned_models = 0;
 
-    _gmodel = (ncPrecachedModel*)malloc(sizeof(ncPrecachedModel) * MAX_MODELS);
-    _model = (ncModel*)malloc(sizeof(ncModel) * MAX_MODELS);
-
+    _gmodel = new ncPrecachedModel[MAX_MODELS];
+    _model = new ncModel[MAX_MODELS];
+    
     // Load models now
     i = 0;
 
@@ -55,76 +56,84 @@ void ncModelLoader::Initialize( void ) {
     if ( ( dir = opendir( _stringhelper.STR( "%s/%s", Filesystem_Path.GetString(), MODEL_FOLDER ) ) ) != NULL ) {
         while ( ( ent = readdir (dir) ) != NULL ) {
             // TEMP
-            if( !strcmp( _filesystem.GetFileExtension( ent->d_name ), MODEL_GAME_FORMAT ) )
+            if( !strcmp( c_FileSystem->GetFileExtension( ent->d_name ), MODEL_GAME_FORMAT ) )
             {
                 i++;
-                Load( (char*)_stringhelper.STR("%s", _filesystem.GetFileName( ent->d_name ) ) );
+                Load( (char*)_stringhelper.STR("%s", c_FileSystem->GetFileName( ent->d_name ) ) );
             }
         }
         closedir (dir);
     }
     else {
         // Failed to get to the directory.
-        _core.Error( ERC_FATAL, "Couldn't load files from '%s' folder ( possibly this folder does not exist. )\n", MODEL_FOLDER );
+        g_Core->Error( ERR_FATAL, "Couldn't load files from '%s' folder ( possibly this folder does not exist. )\n", MODEL_FOLDER );
     }
 
-    _core.Print( LOG_INFO, "%i models loaded.\n", i );
+    g_Core->Print( LOG_INFO, "%i models loaded.\n", i );
 
     // Load mesh shader.
-    _assetmanager.FindShader( "model", &fxmodel );
+    //f_AssetManager->FindShaderByName( "model", &fxmodel );
 
-    glUseProgram( fxmodel.shader_id );
-    glUniform1i( glGetUniformLocation( fxmodel.shader_id, "decal" ), 0 );
-    glUseProgram( 0 );
+    //glUseProgram( fxmodel.Id );
+    //glUniform1i( glGetUniformLocation( fxmodel.Id, "decal" ), 0 );
+    //glUseProgram( 0 );
 
-    _commandManager.Add( "sm", model_spawnit );
+    c_CommandManager->Add( "sm", model_spawnit );
+}
+
+/*  
+    Remove all active spawned models.
+*/
+void ncModelLoader::RemoveSpawnedModels( void ) {
+    g_Core->Print( LOG_DEVELOPER, "Removing all spawned models...\n" );
 }
 
 /*
     Spawn model.
 */
-void ncModelLoader::Spawn( ncModelType type, const char *name, const char *shadername,
+void ncModelLoader::Spawn( ncModelType type, const NString name, const NString shadername,
                  ncVec3 pos, ncVec3 rot, bool followsplayer ) {
     int i;
 
-    for( i = 0; i < _gameworld.cmodel_count; i++ )
+    for( i = 0; i < g_gameWorld->cmodel_count; i++ )
     {
         if( !strcmp( _model[i].m_name, name ))
         {
-            _gmodel[_gameworld.spawned_models].g_model         = &_model[i];
+            int num  = g_gameWorld->spawned_models;
+            _gmodel[num].g_model         = &_model[i];
 
-            _gmodel[_gameworld.spawned_models].position        = pos;
-            _gmodel[_gameworld.spawned_models].rotation        = rot;
+            _gmodel[num].position        = pos;
+            _gmodel[num].rotation        = rot;
 
-            _gmodel[_gameworld.spawned_models].in_use          = true;
-            _gmodel[_gameworld.spawned_models].follow_player   = followsplayer;
+            _gmodel[num].in_use          = true;
+            _gmodel[num].follow_player   = followsplayer;
 
             // replace previous ( if exists )
-            if ( _gmodel[_gameworld.spawned_models].type == MODEL_SKY )
-                sky_id = _gameworld.spawned_models;
+            if ( _gmodel[num].type == MODEL_SKY )
+                sky_id = num;
 
-            if( _gmodel[_gameworld.spawned_models].type != MODEL_SKY )
-                _assetmanager.FindShader( shadername, &_gmodel[_gameworld.spawned_models].g_shader );
+            if( _gmodel[num].type != MODEL_SKY )
+                _gmodel[num].g_shader = f_AssetManager->FindShaderByName( shadername );
 
-            _gmodel[_gameworld.spawned_models].type            = type;
-            _gameworld.spawned_models++;
+            _gmodel[num].type            = type;
+            g_gameWorld->spawned_models++;
             
-            _levelenvironment.PassShader( &_gmodel[_gameworld.spawned_models].g_shader.shader_id );
+            //g_LevelEnvironment->PassShader( &_gmodel[num].g_shader->GetId() );
 
             return;
         }
     }
 
-    _core.Print( LOG_WARN, "Couldn't find \"%s\"\n", name );
+    g_Core->Print( LOG_WARN, "Couldn't find \"%s\"\n", name );
 }
 
 /*
     Find model by the name.
 */
-ncModel ncModelLoader::Find( char *name ) {
+ncModel ncModelLoader::Find( NString name ) {
     int i;
 
-    for( i = 0; i < _gameworld.cmodel_count; i++ ) {
+    for( i = 0; i < g_gameWorld->cmodel_count; i++ ) {
         if( !strcmp( _model[i].m_name, name )) {
             return _model[i];
         }
@@ -138,30 +147,26 @@ ncModel ncModelLoader::Find( char *name ) {
 /*
     Load the model file.
 */
-void ncModelLoader::Load( const char *filename ) {
+void ncModelLoader::Load( const NString filename ) {
     ncSM1Header     *head;
 
-    _stringhelper.SPrintf( _model[_gameworld.cmodel_count].m_name, strlen(filename) + 1, filename );
-    _filesystem.Load( _stringhelper.STR("%s/%s/%s", Filesystem_Path.GetString(), MODEL_FOLDER, filename), (void**)&head );
+    _stringhelper.SPrintf( _model[g_gameWorld->cmodel_count].m_name, strlen(filename) + 1, filename );
+    c_FileSystem->Load( _stringhelper.STR("%s/%s/%s", Filesystem_Path.GetString(), MODEL_FOLDER, filename), (void**)&head );
 
     // check the model header
     if (head->id != SM1HEADER) {
-#ifdef WARN_LEVEL_ERROR
-        _core.Error( ERC_ASSET, "Could not load \"%s\"", filename );
-#else
-        _core.Print(LOG_INFO, "Could not load \"%s\" - corrupted.\n");
-#endif
+        g_Core->Error( ERR_ASSET, "Could not load \"%s\"", filename );
         return;
     }
 
-    _model[_gameworld.cmodel_count].material = _materials.Find( head->material );
+    _model[g_gameWorld->cmodel_count].material = g_materialManager->Find( head->material );
 
     int            length, ofs;
     ncVec3           *_verts;
     ncVec3           *_normals;
     ncVec2           *_uvs;
 
-    // Load vertices.
+    // Load m_vertices.
     length      = head->chunk[0].length;
     ofs         = head->chunk[0].offset;
 
@@ -182,35 +187,35 @@ void ncModelLoader::Load( const char *filename ) {
     _uvs = (ncVec2*)malloc( length * sizeof( ncVec2 ) );
     memcpy( _uvs, (Byte*)head + ofs, length );
 
-	_model[_gameworld.cmodel_count]._faces = 3 * head->poly_num;
+	_model[g_gameWorld->cmodel_count]._faces = 3 * head->poly_num;
 
     // - -------------------------------------------------------------------
     // Now we need to setup vertex array object and
     // vertex buffer object.
-    glGenVertexArrays( 1, &_model[_gameworld.cmodel_count].m_vao );
-    glBindVertexArray( _model[_gameworld.cmodel_count].m_vao );
+    glGenVertexArrays( 1, &_model[g_gameWorld->cmodel_count].m_vao );
+    glBindVertexArray( _model[g_gameWorld->cmodel_count].m_vao );
 
     // Vertices.
-	glGenBuffers(1, &_model[_gameworld.cmodel_count].m_vbo);
+	glGenBuffers(1, &_model[g_gameWorld->cmodel_count].m_vbo);
     glEnableVertexAttribArray(0);
-	glBindBuffer(GL_ARRAY_BUFFER, _model[_gameworld.cmodel_count].m_vbo);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * _model[_gameworld.cmodel_count]._faces * 3, _verts, GL_STATIC_DRAW);
+	glBindBuffer(GL_ARRAY_BUFFER, _model[g_gameWorld->cmodel_count].m_vbo);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * _model[g_gameWorld->cmodel_count]._faces * 3, _verts, GL_STATIC_DRAW);
     glVertexAttribPointer( 0, 3, GL_FLOAT, GL_FALSE, 0, (void*)NULL );
     glBindBuffer(GL_ARRAY_BUFFER, 0);
 
 	// Normals.
-    glGenBuffers(1, &_model[_gameworld.cmodel_count].m_normals);
+    glGenBuffers(1, &_model[g_gameWorld->cmodel_count].m_normals);
     glEnableVertexAttribArray(2);
-	glBindBuffer(GL_ARRAY_BUFFER, _model[_gameworld.cmodel_count].m_normals);
+	glBindBuffer(GL_ARRAY_BUFFER, _model[g_gameWorld->cmodel_count].m_normals);
 	glVertexAttribPointer( 2, 3, GL_FLOAT, GL_FALSE, 0, (void*)NULL );
-	glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * _model[_gameworld.cmodel_count]._faces * 3, _normals, GL_STATIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * _model[g_gameWorld->cmodel_count]._faces * 3, _normals, GL_STATIC_DRAW);
     glBindBuffer(GL_ARRAY_BUFFER, 0);
 
     // Texture coordinates.
-    glGenBuffers(1, &_model[_gameworld.cmodel_count].m_uv);
+    glGenBuffers(1, &_model[g_gameWorld->cmodel_count].m_uv);
     glEnableVertexAttribArray(1);
-    glBindBuffer(GL_ARRAY_BUFFER, _model[_gameworld.cmodel_count].m_uv);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * _model[_gameworld.cmodel_count]._faces * 2, _uvs, GL_STATIC_DRAW);
+    glBindBuffer(GL_ARRAY_BUFFER, _model[g_gameWorld->cmodel_count].m_uv);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * _model[g_gameWorld->cmodel_count]._faces * 2, _uvs, GL_STATIC_DRAW);
     glVertexAttribPointer( 1, 2, GL_FLOAT, GL_FALSE, 0, (void*)NULL );
     glBindBuffer(GL_ARRAY_BUFFER, 0);
 
@@ -220,7 +225,7 @@ void ncModelLoader::Load( const char *filename ) {
     free( _normals );
     free( _uvs );
 
-    _gameworld.cmodel_count++;
+    g_gameWorld->cmodel_count++;
 }
 
 /*
@@ -236,12 +241,12 @@ void model_sky_render( void ) {
 void ncModelLoader::Render( bool reflection, ncSceneEye eye ) {
     int i;
 
-    if( !_gameworld.Active )
+    if( !g_gameWorld->Active )
         return;
 
-    glUseProgram( fxmodel.shader_id  );
+    fxmodel->Use();
 
-    for( i = 0; i < _gameworld.spawned_models; i++ ) {
+    for( i = 0; i < g_gameWorld->spawned_models; i++ ) {
         if( !_gmodel[i].in_use )
             continue;
 
@@ -267,7 +272,7 @@ void ncModelLoader::Render( bool reflection, ncSceneEye eye ) {
         else
             pos.Scale( defaultView );
 
-        model = model * _camera.ViewMatrix;
+        model = model * g_playerCamera->ViewMatrix;
         pos = model * pos;
         
         float ipd = 10.64;
@@ -281,29 +286,27 @@ void ncModelLoader::Render( bool reflection, ncSceneEye eye ) {
         
         pos = eye == EYE_LEFT ? ls * pos : rs * pos;
 
-        glUniformMatrix4fv( glGetUniformLocation( fxmodel.shader_id, "ProjMatrix" ), 1, false, _camera.ProjectionMatrix.m );
-        glUniformMatrix4fv( glGetUniformLocation( fxmodel.shader_id, "ModelMatrix" ), 1, false, pos.m );
+        fxmodel->SetUniform( "ProjMatrix", 1, false, g_playerCamera->ProjectionMatrix.m );
+        fxmodel->SetUniform( "ModelMatrix", 1, false, pos.m );
+        fxmodel->SetUniform( "cameraPos", g_playerCamera->g_vEye );
         
-        glUniform3f( glGetUniformLocation( fxmodel.shader_id, "cameraPos" ), _camera.g_vEye.x, _camera.g_vEye.y, _camera.g_vEye.z );
+        //g_LevelEnvironment->PassShader( &fxmodel->Id );
         
-        _levelenvironment.PassShader( &fxmodel.shader_id );
-        
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, _gmodel[i].g_model->material.texture.tex_id );
+        glActiveTexture( GL_TEXTURE0 );
+        glBindTexture( GL_TEXTURE_2D, _gmodel[i].g_model->material->Image.TextureID );
 
-        glUniform1f( glGetUniformLocation( _gmodel[i].g_shader.shader_id, "time"), (float) _core.Time / 1000.0 );
+        fxmodel->SetUniform( "time", (float)g_Core->Time / 1000.0f );
 
         glBindVertexArray( _gmodel[i].g_model->m_vao );
 
-        switch ( render_wireframe.GetInteger() ) {
-            case 0:  glDrawArrays( GL_TRIANGLES, 0, _gmodel[i].g_model->_faces );
-                break;
-            case 1:  glDrawArrays( GL_LINES, 0, _gmodel[i].g_model->_faces );
-                break;
-            case 2:  glDrawArrays( GL_POINTS, 0, _gmodel[i].g_model->_faces );
-                break;
-            default: glDrawArrays( GL_TRIANGLES, 0, _gmodel[i].g_model->_faces );
-                break;
+        if( Render_Wireframe.GetInteger() == 0 ) {
+            glDrawArrays( GL_TRIANGLES, 0, _gmodel[i].g_model->_faces );
+        } else if( Render_Wireframe.GetInteger() == 1 ) {
+            glDrawArrays( GL_LINES, 0, _gmodel[i].g_model->_faces );
+        } else if ( Render_Wireframe.GetInteger() == 2 ) {
+            glDrawArrays( GL_POINTS, 0, _gmodel[i].g_model->_faces );
+        } else {
+            glDrawArrays( GL_TRIANGLES, 0, _gmodel[i].g_model->_faces );
         }
 
         glBindVertexArray( 0 );

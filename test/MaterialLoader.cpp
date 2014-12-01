@@ -54,8 +54,8 @@ void ncMaterialManager::Initialize( void ) {
     
     glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT );
     glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT );
-    glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST );
-    glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST );
+    glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_TEXTUREFILTERING );
+    glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_TEXTUREFILTERING );
     
     glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA, NULL_TEXTURE_SIZE, NULL_TEXTURE_SIZE, 0, GL_RGBA, GL_UNSIGNED_BYTE, ci_data1 );
 
@@ -76,7 +76,7 @@ void ncMaterialManager::Load( const NString mat_name ) {
         return;
     }
 
-    mat_file = c_FileSystem->OpenRead( _stringhelper.STR("%s/%s/%s.material", Filesystem_Path.GetString(), MATERIAL_FOLDER, mat_name) );
+    mat_file = c_FileSystem->OpenRead( NC_TEXT("%s/%s/%s.material", Filesystem_Path.GetString(), MATERIAL_FOLDER, mat_name) );
 
     if( !mat_file ) {
         // Throw error if file wasn't found.
@@ -154,7 +154,7 @@ void ncMaterialManager::LoadImage( const NString material_name, const NString ma
         tex_param = GL_REPEAT;
     }
 
-    _stringhelper.Copy( m_Materials[MaterialEntryCount].Name, material_name );
+    g_stringHelper->Copy( m_Materials[MaterialEntryCount].Name, material_name );
     m_Materials[MaterialEntryCount].Index = MaterialEntryCount;
 
     if( &m_Materials[MaterialEntryCount].Image ) {
@@ -181,8 +181,8 @@ void ncMaterialManager::LoadImage( const NString material_name, const NString ma
         glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAX_LOD, 2 );
         glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_LOD, 1 );
         
-        glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST );
-        glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST );
+        glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_TEXTUREFILTERING );
+        glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_TEXTUREFILTERING );
 
         glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, tex_param );
         glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, tex_param );

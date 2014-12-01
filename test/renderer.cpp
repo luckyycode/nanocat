@@ -21,6 +21,7 @@
 #include "Input.h"
 #include "System.h"
 #include "Terrain.h"
+#include "BeautifulEnvironment.h"
 
 // Main beautiful game renderer.
 
@@ -52,7 +53,7 @@ ncConsoleVariable  Render_VSync("render", "vsync", "Vertical sync enabled?", "1"
 
 ncConsoleVariable  Render_Width("render", "width", "Rendering width.", "1366", CVFLAG_NEEDSREFRESH);
 ncConsoleVariable  Render_Height("render", "height", "Rendering height.", "768", CVFLAG_NEEDSREFRESH);
-
+ncConsoleVariable  Render_AspectRatio( "render", "aspectratio", "Screen aspect ratio.", "-1.0", CVFLAG_NEEDSREFRESH );
 ncConsoleVariable  Render_CurveTesselation("bsp", "curvetesselation", "Curve tesselation.", "7", CVFLAG_NEEDSREFRESH);
 ncConsoleVariable  Render_CalculateVisibleData("render", "pvs", "Calculate visibility data?", "1", CVFLAG_NEEDSREFRESH);
 ncConsoleVariable  Render_LightmapGamma("bsp", "lightmapgamma", "Lightmap gamma.", "2.5", CVFLAG_NEEDSREFRESH);
@@ -64,11 +65,6 @@ ncConsoleVariable  Render_ScreenLens("render", "lens", "Lens effects enabled?", 
 // Uh oh, a bit of magic we got.
 ncConsoleVariable   Render_OVR("render", "ovr", "Is Virtual reality mode turned on?", "0", CVFLAG_NEEDSREFRESH );
 
-ncFramebuffer g_waterReflectionBuffer;
-ncFramebuffer g_waterRefractionBuffer;
-
-// Left, Right, Full eyes.
-ncFramebuffer g_sceneBuffer[3];
 
 void lazyScreenshot( void ) {
     g_mainRenderer->MakeScreenshot();
@@ -85,7 +81,7 @@ void lazyRefreshGraphics( void ) {
     Precache world.
 */
 void ncRenderer::PrecacheWorld( void ) {
-
+    
 }
 
 /*
@@ -98,7 +94,6 @@ void ncRenderer::Preload( void ) {
     // Initial values.
     Initialized = false;
     g_gameWater->Initialized = false;
-    g_gameTerrain->Initialized = false;
 }
 
 /*
@@ -133,9 +128,9 @@ void ncRenderer::UpdateViewMatrix( void ) {
     g_playerCamera->ViewMatrix.m[10] = -g_playerCamera->g_vLook.z;
     g_playerCamera->ViewMatrix.m[11] =  0.0f;
     
-    g_playerCamera->ViewMatrix.m[12] = -ncVec3_Dot(g_playerCamera->g_vRight, g_playerCamera->g_vEye);
-    g_playerCamera->ViewMatrix.m[13] = -ncVec3_Dot(g_playerCamera->g_vUp, g_playerCamera->g_vEye);
-    g_playerCamera->ViewMatrix.m[14] =  ncVec3_Dot(g_playerCamera->g_vLook, g_playerCamera->g_vEye);
+    g_playerCamera->ViewMatrix.m[12] = -ncVec3::Dot(g_playerCamera->g_vRight, g_playerCamera->g_vEye);
+    g_playerCamera->ViewMatrix.m[13] = -ncVec3::Dot(g_playerCamera->g_vUp, g_playerCamera->g_vEye);
+    g_playerCamera->ViewMatrix.m[14] =  ncVec3::Dot(g_playerCamera->g_vLook, g_playerCamera->g_vEye);
     g_playerCamera->ViewMatrix.m[15] =  1.0f;
 }
 
@@ -145,7 +140,7 @@ void ncRenderer::UpdateViewMatrix( void ) {
 void ncRenderer::Precache( void ) {
     
     // Initial stuff.
-    g_playerCamera->g_vEye = ncVec3( 5.0f, 15.0f, 5.0f );
+    g_playerCamera->g_vEye = ncVec3( 5.0f, 100.0f, 5.0f );
     g_playerCamera->g_vLook = ncVec3( -10.5f, -0.5f, -0.5f );
     g_playerCamera->g_vUp = ncVec3( 1.0f, 1.0f, 0.0f );
     g_playerCamera->g_vRight = ncVec3( 1.0f, 0.0f, 0.0f );
@@ -153,7 +148,7 @@ void ncRenderer::Precache( void ) {
     g_playerCamera->ViewMatrix.Identity();
     g_playerCamera->RotationMatrix.Identity();
     g_playerCamera->ProjectionMatrix.Identity();
-
+    
     // Scene shader.
     sceneShader = f_AssetManager->FindShaderByName( "passthru" );
     
@@ -307,6 +302,8 @@ void ncRenderer::Initialize( void ) {
     int g_err;
     float t1, t2; t1 = c_coreSystem->Milliseconds();
     
+    Render_AspectRatio.Set( NC_TEXT( "%f", renderWidth / renderHeight ) );
+    
     State = RENDER_IDLE;
     
     // Initialize asset system and load assets.
@@ -316,8 +313,9 @@ void ncRenderer::Initialize( void ) {
     g_modelManager->Initialize();   // Load all models & precache 'em.
     g_coreFont->Initialize();   // Load core font.
     g_gameWater->Initialize();  // Initialize game water.
-    //g_gameTerrain->Initialize();    // Initialize game terrain.
     g_staticWorld->Initialize();    // Initialize static world.
+    
+    bEnv->Makeup();
     
     // Initialize framebuffer stuff.
     UpdateFramebufferObject( renderWidth, renderHeight );
@@ -377,7 +375,7 @@ void ncRenderer::CreateFramebufferObject( uint *tex, uint *fbo, uint *rbo, uint 
     // Depth texture.
     glGenTextures(1, depth);
     glBindTexture(GL_TEXTURE_2D, *depth);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT24, winx, winy, 0, GL_DEPTH_ATTACHMENT, GL_FLOAT, 0);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT24, winx, winy, 0, GL_DEPTH_COMPONENT, GL_FLOAT, 0);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
@@ -396,7 +394,7 @@ void ncRenderer::CreateFramebufferObject( uint *tex, uint *fbo, uint *rbo, uint 
      now it's perfect.
      */
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, *tex, 0);
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_COMPONENT24, GL_TEXTURE_2D, *depth, 0);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, *depth, 0);
     
     glBindTexture(GL_TEXTURE_2D, 0);
     
@@ -417,6 +415,15 @@ void ncRenderer::CreateFramebufferObject( uint *tex, uint *fbo, uint *rbo, uint 
     glBindFramebuffer( GL_FRAMEBUFFER, 0 );
 }
 
+ncFramebuffer::ncFramebuffer( int x, int y ){
+    
+    g_mainRenderer->CreateFramebufferObject( &this->SceneTexture,
+                            &this->FrameBuffer,
+                            &this->DepthBuffer,
+                            &this->RenderBuffer,
+                            &this->DepthTexture, x, y );
+}
+
 /*
  
  We need to call this to create FBOs.
@@ -429,31 +436,13 @@ void ncRenderer::UpdateFramebufferObject( int w, int h ) {
     // Used for OVR. Three scene eyes, - Left, Right, Center ( full ).
     int i;
     for( i = 0; i < 3; i++ ) {
-        CreateFramebufferObject( &g_sceneBuffer[i].scene,
-                        &g_sceneBuffer[i].frame,
-                        &g_sceneBuffer[i].depth,
-                        &g_sceneBuffer[i].render,
-                        &g_sceneBuffer[i].depthtex, w, h);
+        g_sceneBuffer[i] = new ncFramebuffer( w, h );
     }
     
-    // Water refraction.
-    CreateFramebufferObject( &g_waterRefractionBuffer.scene,
-               &g_waterRefractionBuffer.frame,
-               &g_waterRefractionBuffer.depth,
-               &g_waterRefractionBuffer.render,
-               &g_waterRefractionBuffer.depthtex, w, h );
-    
-    // Water reflections.
-    CreateFramebufferObject( &g_waterReflectionBuffer.scene,
-               &g_waterReflectionBuffer.frame,
-               &g_waterReflectionBuffer.depth,
-               &g_waterReflectionBuffer.render,
-               &g_waterReflectionBuffer.depthtex, w, h);
+    g_waterRefractionBuffer = new ncFramebuffer( w, h );
+    g_waterReflectionBuffer = new ncFramebuffer( w, h );
 }
 
-void ncRenderer::RenderGrass( void ) {
-    // Grass.
-}
 
 /*
     Just render the world. :)
@@ -462,20 +451,17 @@ void ncRenderer::RenderWorld( int msec, ncSceneEye eye ) {
     
     // Render static world.
     RenderBSP( false, eye );
-    
-    //g_gameTerrain->Render( eye );
-    
+
     // Render beautiful sky.
     //gmodel_sky_render();
     
     // Render beautiful water.
-    g_gameWater->Render( eye );
+    //g_gameWater->Render( eye );
     
     // Render models.
-    //_modelLoader.Render( false, eye );
-
+    //g_modelManager->Render( false, eye );
     // Render grass.
-    //RenderGrass();
+    bEnv->Render( eye );
 }
 
 /*
@@ -483,10 +469,10 @@ void ncRenderer::RenderWorld( int msec, ncSceneEye eye ) {
 */
 void ncRenderer::UpdateMatrixRotation( void ) {
     
-    g_playerCamera->g_curMousePosition.x = c_Mouse->x;
-    g_playerCamera->g_curMousePosition.y = c_Mouse->y;
+    g_playerCamera->g_curMousePosition.x = g_Input->GetMouseX();
+    g_playerCamera->g_curMousePosition.y = g_Input->GetMouseY();
     
-    if( c_Mouse->Holding ) {
+    if( g_Input->IsMouseHold() ) {
         g_playerCamera->RotationMatrix.Identity();
         
         int nXDiff = (g_playerCamera->g_curMousePosition.x - g_playerCamera->g_lastMousePosition.x);
@@ -520,8 +506,8 @@ void ncRenderer::RenderBeautifulWater( void ) {
     if ( !Render_Water.GetInteger() )
         return;
     
-    glBindFramebuffer( GL_FRAMEBUFFER, g_waterReflectionBuffer.frame );
-    glBindRenderbuffer( GL_RENDERBUFFER, g_waterReflectionBuffer.render );
+    glBindFramebuffer( GL_FRAMEBUFFER, g_waterReflectionBuffer->FrameBuffer );
+    glBindRenderbuffer( GL_RENDERBUFFER, g_waterReflectionBuffer->RenderBuffer );
 
     //glViewport( 0, 0, 640, 480 );
     
@@ -543,8 +529,8 @@ void ncRenderer::RenderBeautifulWater( void ) {
     glBindFramebuffer( GL_FRAMEBUFFER, 0 );
     
     // Water refraction.
-    glBindFramebuffer( GL_FRAMEBUFFER, g_waterRefractionBuffer.frame );
-    glBindRenderbuffer( GL_RENDERBUFFER, g_waterRefractionBuffer.render );
+    glBindFramebuffer( GL_FRAMEBUFFER, g_waterRefractionBuffer->FrameBuffer );
+    glBindRenderbuffer( GL_RENDERBUFFER, g_waterRefractionBuffer->RenderBuffer );
     
     // Having an issues on different screen sizes on ES, added this.
     //glViewport( 0, 0, 640, 480 );
@@ -594,8 +580,8 @@ void ncRenderer::RenderToShader( ncSceneEye eye ) {
 #ifndef iOS_BUILD
     
     // Scene buffer.
-    glBindFramebuffer( GL_FRAMEBUFFER, g_sceneBuffer[eye].frame );
-    glBindRenderbuffer( GL_RENDERBUFFER, g_sceneBuffer[eye].render );
+    glBindFramebuffer( GL_FRAMEBUFFER, g_sceneBuffer[eye]->FrameBuffer );
+    glBindRenderbuffer( GL_RENDERBUFFER, g_sceneBuffer[eye]->RenderBuffer );
     
     if( eye == EYE_LEFT ) {
         glViewport( 0, 0, windowWidth / 2.0, windowHeight );
@@ -611,6 +597,9 @@ void ncRenderer::RenderToShader( ncSceneEye eye ) {
     glClear ( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
     
     RenderWorld( g_Core->Time, eye );
+    
+    // Should I move it to another place?
+    g_Console->Render();
     
     glBindRenderbuffer( GL_RENDERBUFFER, 0 );
     glBindFramebuffer( GL_FRAMEBUFFER, 0 );
@@ -661,10 +650,10 @@ void ncRenderer::RenderToShader( ncSceneEye eye ) {
 #endif
     
     glActiveTexture( GL_TEXTURE0 );
-    glBindTexture( GL_TEXTURE_2D, g_sceneBuffer[eye].scene );
+    glBindTexture( GL_TEXTURE_2D, g_sceneBuffer[eye]->SceneTexture );
     
     glActiveTexture( GL_TEXTURE1 );
-    glBindTexture( GL_TEXTURE_2D, g_sceneBuffer[eye].depthtex );
+    glBindTexture( GL_TEXTURE_2D, g_sceneBuffer[eye]->DepthTexture );
     
     glActiveTexture( GL_TEXTURE2 );
     glBindTexture( GL_TEXTURE_2D, lens_texture );
@@ -722,9 +711,7 @@ void ncRenderer::Render( int msec ) {
         RenderToShader( EYE_FULL );
     }
 
-    // Console is moved out from *render to texture* since we don't care about its rendering,
-    // it must be always shown correctly.
-    //g_Console->Render();
+    
     
 #ifdef _WIN32
     SwapBuffers(_win.hDC);
@@ -762,8 +749,7 @@ void ncRenderer::RemoveWorld( const NString msg ) {
         return;
     }
     
-    int i;
-    
+ 
     g_Core->Print( LOG_INFO, "Removing current world. Reason: \"%s\".\n", msg );
     g_Core->Print( LOG_NONE, "\n");
     
@@ -776,7 +762,7 @@ void ncRenderer::RemoveWorld( const NString msg ) {
     //terrain_destroy();
     
     // Remove all models ( not the loaded ones! )
-    g_gameWorld->spawned_models           = 0;
+    g_gameWorld->spawned_models = 0;
   
     g_modelManager->RemoveSpawnedModels();
     
@@ -784,6 +770,7 @@ void ncRenderer::RemoveWorld( const NString msg ) {
     g_staticWorld->visibleFaces.ClearAll();
     g_staticWorld->Unload();
     
+    // Reset player camera.
     g_playerCamera->Reset();
 }
 
@@ -810,21 +797,23 @@ void ncRenderer::DeleteMainBuffers( void ) {
     
     // Delete scene buffers.
     for( int i = 0; i < 3; i++ ) {
-        RemoveNCFramebuffer( &g_sceneBuffer[i] );
+        RemoveNCFramebuffer( g_sceneBuffer[i] );
         g_eyeVBO[i].Delete();
         g_eyeUV[i].Delete();
     }
 }
 
-/*
-    Remove generated framebuffer.
-*/
 void ncRenderer::RemoveNCFramebuffer( ncFramebuffer *buffer ) {
-    glDeleteFramebuffers( 1, &buffer->frame );
-    glDeleteTextures( 1, &buffer->scene );
-    glDeleteRenderbuffers( 1, &buffer->render );
-    glDeleteTextures( 1, &buffer->depthtex );
+    glDeleteFramebuffers( 1, &buffer->FrameBuffer );
+    glDeleteTextures( 1, &buffer->SceneTexture );
+    glDeleteRenderbuffers( 1, &buffer->RenderBuffer );
+    glDeleteTextures( 1, &buffer->DepthTexture );
+    
+    delete buffer;
+    
+    buffer = NULL;
 }
+
 
 /*
     Take the game screenshot.
@@ -834,7 +823,6 @@ void ncRenderer::MakeScreenshot( void ) {
 
 
 }
-
 
 
 

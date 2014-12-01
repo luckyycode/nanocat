@@ -5,7 +5,7 @@ dependencies: \
   /Users/nekocode/Documents/App\ resourses/nanocat/test/SystemShared.h \
   /Users/nekocode/Documents/App\ resourses/nanocat/test/SharedApple.h \
   /Users/nekocode/Documents/App\ resourses/nanocat/test/GameMath.h \
-  /Users/nekocode/Documents/App\ resourses/nanocat/test/ncBitMessage.h \
+  /Users/nekocode/Documents/App\ resourses/nanocat/test/ncMessage.h \
   /Users/nekocode/Documents/App\ resourses/nanocat/test/FileSystem.h \
   /Users/nekocode/Documents/App\ resourses/nanocat/test/ConsoleVariable.h \
   /Users/nekocode/Documents/App\ resourses/nanocat/test/NCString.h \
@@ -24,4 +24,5 @@ dependencies: \
   /Users/nekocode/Documents/App\ resourses/nanocat/test/GameWorld.h \
   /Users/nekocode/Documents/App\ resourses/nanocat/test/Input.h \
   /Users/nekocode/Documents/App\ resourses/nanocat/test/System.h \
-  /Users/nekocode/Documents/App\ resourses/nanocat/test/Terrain.h
+  /Users/nekocode/Documents/App\ resourses/nanocat/test/Terrain.h \
+  /Users/nekocode/Documents/App\ resourses/nanocat/test/BeautifulEnvironment.h

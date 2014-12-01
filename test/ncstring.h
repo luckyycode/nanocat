@@ -40,6 +40,6 @@ public:
     const NString Owner;
 };
 
-extern ncStringHelper _stringhelper;
+extern ncStringHelper *g_stringHelper;
 
 #endif

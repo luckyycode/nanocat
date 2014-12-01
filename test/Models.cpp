@@ -53,16 +53,16 @@ void ncModelLoader::Initialize( void ) {
     i = 0;
 
     // Find all model files in model folder.
-    if ( ( dir = opendir( _stringhelper.STR( "%s/%s", Filesystem_Path.GetString(), MODEL_FOLDER ) ) ) != NULL ) {
+    if ( ( dir = opendir( NC_TEXT( "%s/%s", Filesystem_Path.GetString(), MODEL_FOLDER ) ) ) != NULL ) {
         while ( ( ent = readdir (dir) ) != NULL ) {
             // TEMP
             if( !strcmp( c_FileSystem->GetFileExtension( ent->d_name ), MODEL_GAME_FORMAT ) )
             {
-                i++;
-                Load( (char*)_stringhelper.STR("%s", c_FileSystem->GetFileName( ent->d_name ) ) );
+                ++i;
+                Load( (char*)NC_TEXT("%s", c_FileSystem->GetFileName( ent->d_name ) ) );
             }
         }
-        closedir (dir);
+        closedir( dir );
     }
     else {
         // Failed to get to the directory.
@@ -72,11 +72,11 @@ void ncModelLoader::Initialize( void ) {
     g_Core->Print( LOG_INFO, "%i models loaded.\n", i );
 
     // Load mesh shader.
-    //f_AssetManager->FindShaderByName( "model", &fxmodel );
+    fxmodel = f_AssetManager->FindShaderByName( "model" );
 
-    //glUseProgram( fxmodel.Id );
-    //glUniform1i( glGetUniformLocation( fxmodel.Id, "decal" ), 0 );
-    //glUseProgram( 0 );
+    glUseProgram( fxmodel->GetId() );
+    glUniform1i( glGetUniformLocation( fxmodel->GetId(), "decal" ), 0 );
+    glUseProgram( 0 );
 
     c_CommandManager->Add( "sm", model_spawnit );
 }
@@ -118,7 +118,7 @@ void ncModelLoader::Spawn( ncModelType type, const NString name, const NString s
             _gmodel[num].type            = type;
             g_gameWorld->spawned_models++;
             
-            //g_LevelEnvironment->PassShader( &_gmodel[num].g_shader->GetId() );
+            //g_LevelEnvironment->PassShader( &_gmodel[num].g_shader->Id );
 
             return;
         }
@@ -150,42 +150,45 @@ ncModel ncModelLoader::Find( NString name ) {
 void ncModelLoader::Load( const NString filename ) {
     ncSM1Header     *head;
 
-    _stringhelper.SPrintf( _model[g_gameWorld->cmodel_count].m_name, strlen(filename) + 1, filename );
-    c_FileSystem->Load( _stringhelper.STR("%s/%s/%s", Filesystem_Path.GetString(), MODEL_FOLDER, filename), (void**)&head );
+    g_stringHelper->SPrintf( _model[g_gameWorld->cmodel_count].m_name, strlen(filename) + 1, filename );
+    c_FileSystem->Load( NC_TEXT("%s/%s/%s", Filesystem_Path.GetString(), MODEL_FOLDER, filename), (void**)&head );
 
     // check the model header
-    if (head->id != SM1HEADER) {
+    if( head->id != SM1HEADER ) {
         g_Core->Error( ERR_ASSET, "Could not load \"%s\"", filename );
         return;
     }
 
-    _model[g_gameWorld->cmodel_count].material = g_materialManager->Find( head->material );
+    _model[g_gameWorld->cmodel_count].material[0] = g_materialManager->Find( head->material );
+    _model[g_gameWorld->cmodel_count].material[1] = g_materialManager->Find( "cat_n" );
+    _model[g_gameWorld->cmodel_count].material[2] = g_materialManager->Find( head->material );
+    
+    uint   length, ofs;
+    
+    ncVec3  *m_Verts;
+    ncVec3  *m_Normals;
+    ncVec2  *m_UVs;
 
-    int            length, ofs;
-    ncVec3           *_verts;
-    ncVec3           *_normals;
-    ncVec2           *_uvs;
-
-    // Load m_vertices.
+    // Load vertices.
     length      = head->chunk[0].length;
     ofs         = head->chunk[0].offset;
 
-    _verts = (ncVec3*)malloc( length * sizeof( ncVec3 ) );
-    memcpy (_verts, (Byte*)head + ofs, length);
+    m_Verts = new ncVec3[length];
+    memcpy( m_Verts, (Byte*)head + ofs, length );
 
     // Load normals.
     length      = head->chunk[1].length;
     ofs         = head->chunk[1].offset;
 
-    _normals = (ncVec3*)malloc( length * sizeof( ncVec3 ) );
-    memcpy( _normals, (Byte*)head + ofs, length );
+    m_Normals = new ncVec3[length];
+    memcpy( m_Normals, (Byte*)head + ofs, length );
 
     // Load uvs.
     length      = head->chunk[2].length;
     ofs         = head->chunk[2].offset;
 
-    _uvs = (ncVec2*)malloc( length * sizeof( ncVec2 ) );
-    memcpy( _uvs, (Byte*)head + ofs, length );
+    m_UVs = new ncVec2[length];
+    memcpy( m_UVs, (Byte*)head + ofs, length );
 
 	_model[g_gameWorld->cmodel_count]._faces = 3 * head->poly_num;
 
@@ -199,31 +202,31 @@ void ncModelLoader::Load( const NString filename ) {
 	glGenBuffers(1, &_model[g_gameWorld->cmodel_count].m_vbo);
     glEnableVertexAttribArray(0);
 	glBindBuffer(GL_ARRAY_BUFFER, _model[g_gameWorld->cmodel_count].m_vbo);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * _model[g_gameWorld->cmodel_count]._faces * 3, _verts, GL_STATIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * _model[g_gameWorld->cmodel_count]._faces * 3, m_Verts, GL_STATIC_DRAW);
     glVertexAttribPointer( 0, 3, GL_FLOAT, GL_FALSE, 0, (void*)NULL );
     glBindBuffer(GL_ARRAY_BUFFER, 0);
 
 	// Normals.
-    glGenBuffers(1, &_model[g_gameWorld->cmodel_count].m_normals);
-    glEnableVertexAttribArray(2);
-	glBindBuffer(GL_ARRAY_BUFFER, _model[g_gameWorld->cmodel_count].m_normals);
+    glGenBuffers( 1, &_model[g_gameWorld->cmodel_count].m_normals );
+    glEnableVertexAttribArray( 2 );
+	glBindBuffer( GL_ARRAY_BUFFER, _model[g_gameWorld->cmodel_count].m_normals );
 	glVertexAttribPointer( 2, 3, GL_FLOAT, GL_FALSE, 0, (void*)NULL );
-	glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * _model[g_gameWorld->cmodel_count]._faces * 3, _normals, GL_STATIC_DRAW);
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
+	glBufferData( GL_ARRAY_BUFFER, sizeof(GLfloat) * _model[g_gameWorld->cmodel_count]._faces * 3, m_Normals, GL_STATIC_DRAW );
+    glBindBuffer( GL_ARRAY_BUFFER, 0 );
 
     // Texture coordinates.
     glGenBuffers(1, &_model[g_gameWorld->cmodel_count].m_uv);
     glEnableVertexAttribArray(1);
     glBindBuffer(GL_ARRAY_BUFFER, _model[g_gameWorld->cmodel_count].m_uv);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * _model[g_gameWorld->cmodel_count]._faces * 2, _uvs, GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * _model[g_gameWorld->cmodel_count]._faces * 2, m_UVs, GL_STATIC_DRAW);
     glVertexAttribPointer( 1, 2, GL_FLOAT, GL_FALSE, 0, (void*)NULL );
     glBindBuffer(GL_ARRAY_BUFFER, 0);
 
     glBindVertexArray( 0 );
 
-    free( _verts );
-    free( _normals );
-    free( _uvs );
+    delete [] m_Verts;
+    delete [] m_Normals;
+    delete [] m_UVs;
 
     g_gameWorld->cmodel_count++;
 }
@@ -241,8 +244,6 @@ void model_sky_render( void ) {
 void ncModelLoader::Render( bool reflection, ncSceneEye eye ) {
     int i;
 
-    if( !g_gameWorld->Active )
-        return;
 
     fxmodel->Use();
 
@@ -255,7 +256,7 @@ void ncModelLoader::Render( bool reflection, ncSceneEye eye ) {
             continue;
         
         
-        float defaultScale = 0.1f;
+        float defaultScale = 50.5f;
         
         ncVec3 reflectedView = ncVec3( defaultScale, -defaultScale, defaultScale );
         ncVec3 defaultView = ncVec3( defaultScale, defaultScale, defaultScale );
@@ -265,7 +266,11 @@ void ncModelLoader::Render( bool reflection, ncSceneEye eye ) {
         model.Identity();
         pos.Identity();
 
+        pos.RotateX( _gmodel[i].rotation.x );
+        pos.RotateY( _gmodel[i].rotation.y );
+        pos.RotateZ( _gmodel[i].rotation.z );
         pos.Translate( _gmodel[i].position );
+
         
         if( reflection )
             pos.Scale( reflectedView );
@@ -285,20 +290,24 @@ void ncModelLoader::Render( bool reflection, ncSceneEye eye ) {
         rs.Translate( minus_offset );
         
         pos = eye == EYE_LEFT ? ls * pos : rs * pos;
-
+        
+        ncMatrix4 mvp = g_playerCamera->ProjectionMatrix * g_playerCamera->ViewMatrix * pos;
         fxmodel->SetUniform( "ProjMatrix", 1, false, g_playerCamera->ProjectionMatrix.m );
         fxmodel->SetUniform( "ModelMatrix", 1, false, pos.m );
+        fxmodel->SetUniform( "MVP", 1, false, mvp.m );
         fxmodel->SetUniform( "cameraPos", g_playerCamera->g_vEye );
         
         //g_LevelEnvironment->PassShader( &fxmodel->Id );
         
         glActiveTexture( GL_TEXTURE0 );
-        glBindTexture( GL_TEXTURE_2D, _gmodel[i].g_model->material->Image.TextureID );
-
+        glBindTexture( GL_TEXTURE_2D, _gmodel[i].g_model->material[0]->Image.TextureID );
+        glActiveTexture( GL_TEXTURE1 );
+        glBindTexture( GL_TEXTURE_2D, _gmodel[i].g_model->material[1]->Image.TextureID );
+        
         fxmodel->SetUniform( "time", (float)g_Core->Time / 1000.0f );
 
         glBindVertexArray( _gmodel[i].g_model->m_vao );
-
+        
         if( Render_Wireframe.GetInteger() == 0 ) {
             glDrawArrays( GL_TRIANGLES, 0, _gmodel[i].g_model->_faces );
         } else if( Render_Wireframe.GetInteger() == 1 ) {
@@ -311,8 +320,13 @@ void ncModelLoader::Render( bool reflection, ncSceneEye eye ) {
 
         glBindVertexArray( 0 );
 
+        
+        glActiveTexture(GL_TEXTURE1);
+        glBindTexture(GL_TEXTURE_2D, 0);
+        
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, 0);
+        
     }
 
 

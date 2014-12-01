@@ -19,9 +19,9 @@
 // Some defines.
 #define NC_LOG( text ) g_Core->Print( LOG_INFO, text )
 #define NC_ASSERTWARN( what ) if( !what ) g_Core->Print( LOG_ASSERT, "Assert warning at line %i, %s function", __LINE__, __FUNCTION__ )
-#define NC_TEXT _stringhelper.STR
+#define NC_TEXT g_stringHelper->STR
 
-
+#define GL_TEXTUREFILTERING GL_LINEAR
 
 // Global load states.
 enum ncCoreGlobalLoadState {

@@ -11,7 +11,8 @@
 #include "NCString.h"
 #include "SystemShared.h"
 
-ncStringHelper _stringhelper;
+ncStringHelper local_stringhelper;
+ncStringHelper *g_stringHelper = &local_stringhelper;
 
 /*
     Copy string to destination..
@@ -106,23 +107,26 @@ void ncStringHelper::SkipCharacter( NString s, char a ) {
     *s = 0;
 }
 
+#define VA_BUFFER_COUNT		4
+#define VA_BUFFER_SIZE		4096
+
+static char g_vaBuffer[VA_BUFFER_COUNT][VA_BUFFER_SIZE];
+static int g_vaNextBufferIndex = 0;
+
 /*
     Combine the parts in one string.
 */
 const NString ncStringHelper::STR( const NString msg, ... ) {
-    va_list     argptr;
-    char        text[MAX_SPRINTF_BUFFER];
+    va_list ap;
     
-    va_start( argptr, msg );
+    char *dest = &g_vaBuffer[g_vaNextBufferIndex][0];
+    g_vaNextBufferIndex = (g_vaNextBufferIndex + 1) % VA_BUFFER_COUNT;
     
-    vsnprintf( text, sizeof(text), msg, argptr );
+    va_start( ap, msg );
+    vsprintf( dest, msg, ap );
+    va_end( ap );
     
-    va_end( argptr );
-    
-    // Fix-me.
-    
-#pragma mark - Fix me
-    return text;
+    return dest;
 }
 
 /*

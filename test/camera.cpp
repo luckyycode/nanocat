@@ -10,12 +10,18 @@
 #include "Core.h"
 #include "Camera.h"
 #include "Console.h"
+#include "Utils.h"
 
 ncCamera local_camera;
 ncCamera *g_playerCamera = &local_camera;
 
-ncConsoleVariable  GCamera_Speed( "camera", "speed", "Camera movement speed.", "20", CVFLAG_KID );
+ncConsoleVariable  GCamera_Speed( "camera", "speed", "Camera movement speed.", "5", CVFLAG_KID );
 ncConsoleVariable  GameView_FieldOfView( "camera", "fov", "Client field of view.", "85.0", CVFLAG_NEEDSREFRESH );
+
+ncMouseRay::ncMouseRay( ncVec3 ray_start, ncVec3 ray_end ) {
+    _start = ray_start;
+    _end = ray_end;
+}
 
 void ncCamera::Initialize() {
     NC_LOG( "Camera initializing...\n" );
@@ -23,7 +29,8 @@ void ncCamera::Initialize() {
     deltaMove = 0;
     
     lastMoveAt = 0.0;
-    lastPosition = ncVec3( 10.0 );
+    lastPosition = ncVec3( 0.0f, 100.0f, 0.0f );
+    g_vEye = ncVec3( 0.0f, 100.0f, 0.0f );
     
    /* "_color" "0.5 0.9 0.4"
     "light" "300"
@@ -33,6 +40,50 @@ void ncCamera::Initialize() {
 
 void ncCamera::Reset() {
     
+}
+
+ncMouseRay ncCamera::ScreenToWorld( ncMatrix4 modelView, int x, int y ) {
+    GLint viewport[4];
+    GLfloat winX, winY;
+    ncVec3 m_start, m_end;
+    
+    glGetIntegerv( GL_VIEWPORT, viewport );
+    winX = (float)x;
+    winY = (float)viewport[3] - (float)y;
+
+    ncUtils::gluUnProject( winX, winY, 0.0, g_playerCamera->ViewMatrix.m, g_playerCamera->ProjectionMatrix.m, viewport, &m_start.x, &m_start.y, &m_start.z );
+    ncUtils::gluUnProject( winX, winY, 1.0, g_playerCamera->ViewMatrix.m, g_playerCamera->ProjectionMatrix.m, viewport, &m_end.x, &m_end.y, &m_end.z );
+    
+    return ncMouseRay( m_start, m_end );
+}
+
+ncVec3 ncCamera::ScreenToWorldRP( ncMatrix4 modelView, int x, int y )
+{
+    GLint viewport[4];
+    GLfloat winX, winY, winZ;
+
+    ncVec3 m_ray;
+
+    glGetIntegerv( GL_VIEWPORT, viewport );
+    winX = (float)x;
+    winY = (float)viewport[3] - (float)y;
+    glReadPixels( x, int(winY), 1, 1, GL_DEPTH_COMPONENT, GL_FLOAT, &winZ );
+    
+    ncUtils::gluUnProject( winX, winY, winZ, modelView.m, g_playerCamera->ProjectionMatrix.m, viewport, &m_ray.x, &m_ray.y, &m_ray.z );
+    
+    return m_ray;
+}
+
+ncVec3 ncCamera::ScreenToWorld( ncMatrix4 modelView, int mouseX, int mouseY, int mouseZ ) {
+    GLint viewport[4];
+    glGetIntegerv(GL_VIEWPORT, viewport);
+    ncVec3 m_ray;
+    
+    float winY = float(viewport[3] - mouseY);
+ 
+    ncUtils::gluUnProject((double)mouseX, winY, mouseZ, modelView.m, g_playerCamera->ProjectionMatrix.m, viewport, &m_ray.x, &m_ray.y, &m_ray.z);
+    
+    return m_ray;
 }
 
 void ncCamera::Frame( float msec ) {

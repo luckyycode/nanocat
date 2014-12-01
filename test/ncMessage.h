@@ -12,6 +12,65 @@
 
 #include "SystemShared.h"
 
+// Memory stream.
+class ncDataStream {
+private:
+    
+    size_t  d_size;
+    size_t  d_offset;
+    NString d_location;
+    NString d_origin;
+    size_t  d_maxsize;
+    bool    d_freeOnClose;
+    
+public:
+    ncDataStream();
+    ncDataStream( NString buf, size_t size );
+    ncDataStream( size_t size );
+    ~ncDataStream();
+    
+    void Open( NString buf, size_t size );
+    void Resize( size_t newsize );
+    void WriteToFile( FILE * file );
+    
+    size_t GetSize();
+    size_t Read( void *dest, size_t size, size_t count );
+    size_t Write( const void * d_str, size_t size, size_t count );
+    size_t Write( int value, size_t count );
+    size_t Seek( size_t offset, size_t type );
+    size_t Tell();
+    size_t ReadString( register NString str, size_t max_size );
+    
+    NString     Current();
+    NString     GetData();
+
+    bool Find( NString d_str, size_t len );
+    ncDataStream *CompressZlib();
+    
+    void operator++() {
+        d_offset++;
+        d_location++;
+    }
+    void operator--() {
+        d_offset--;
+        d_location--;
+    }
+    void operator +=(int b) {
+        d_offset += b;
+        d_location += b;
+    }
+    void operator -= (int b) {
+        d_offset -= b;
+        d_location -= b;
+    }
+    operator NString() const {
+        return d_location;
+    }
+    
+};
+
+
+// Bitset.
 class ncBitset {
 public:
     int Size;

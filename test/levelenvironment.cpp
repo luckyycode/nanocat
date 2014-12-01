@@ -82,19 +82,19 @@ void ncLevelEnvironment::Prepare( void ) {
     g_staticWorld->bspShader->Use();
     
     for( int i = 0; i < 2; i++ ) {
-        g_staticWorld->bspShader->SetUniform( _stringhelper.STR("gPointLights[%d].Base.Color", i), pl[i].Color );
+        g_staticWorld->bspShader->SetUniform( NC_TEXT("gPointLights[%d].Base.Color", i), pl[i].Color );
         
-        g_staticWorld->bspShader->SetUniform( _stringhelper.STR("gPointLights[%d].Base.AmbientIntensity", i), pl[i].AmbientIntensity );
+        g_staticWorld->bspShader->SetUniform( NC_TEXT("gPointLights[%d].Base.AmbientIntensity", i), pl[i].AmbientIntensity );
         
-        g_staticWorld->bspShader->SetUniform( _stringhelper.STR("gPointLights[%d].Position", i), pl[i].Position );
+        g_staticWorld->bspShader->SetUniform( NC_TEXT("gPointLights[%d].Position", i), pl[i].Position );
     
-        g_staticWorld->bspShader->SetUniform( _stringhelper.STR("gPointLights[%d].Base.DiffuseIntensity", i),  pl[i].DiffuseIntensity );
+        g_staticWorld->bspShader->SetUniform( NC_TEXT("gPointLights[%d].Base.DiffuseIntensity", i),  pl[i].DiffuseIntensity );
 
-        g_staticWorld->bspShader->SetUniform( _stringhelper.STR("gPointLights[%d].Atten.Constant", i), pl[i].Attenuation.Constant );
+        g_staticWorld->bspShader->SetUniform( NC_TEXT("gPointLights[%d].Atten.Constant", i), pl[i].Attenuation.Constant );
         
-        g_staticWorld->bspShader->SetUniform( _stringhelper.STR("gPointLights[%d].Atten.Linear", i), pl[i].Attenuation.Linear );
+        g_staticWorld->bspShader->SetUniform( NC_TEXT("gPointLights[%d].Atten.Linear", i), pl[i].Attenuation.Linear );
         
-        g_staticWorld->bspShader->SetUniform( _stringhelper.STR("gPointLights[%d].Atten.Exp", i), pl[i].Attenuation.Exp );
+        g_staticWorld->bspShader->SetUniform( NC_TEXT("gPointLights[%d].Atten.Exp", i), pl[i].Attenuation.Exp );
     }
     
     ncVec3 LightDir( 1.0f, -1.0f, 1.0f );

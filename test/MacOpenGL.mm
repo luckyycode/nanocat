@@ -1,7 +1,21 @@
+//
+//  SharedMac.h
+//
+//  Entry point for core based on Mac OS.
+//
+//  Created by Neko Code on 8/31/14.
+//  Copyright (c) 2014 Neko Vision. All rights reserved.
+//
+
+/*
+    Not using Swift language here. Lazy to use three languages to call
+    functions. ( Swift -> Objective C/C++ wrapper -> Native C++ ).
+*/
 
 #import     "MacUtils.h"
 #import     "MacOpenGL.h"
 
+// C++ includes.
 #include    "Core.h"
 #include    "Console.h"
 #include    "Input.h"
@@ -10,7 +24,6 @@
 #include    "MultiplayerServer.h"
 
 @interface glView (InternalMethods)
-
 @end
 
 @implementation glView
@@ -30,19 +43,14 @@
     g_Console->Execute( "readconfig config.nconf" );     // Load some settings
     
     g_Core->UseGraphics = Server_Dedicated.GetInteger() ? false : true;
-    
     g_Core->Print( LOG_INFO, "Initializing OpenGL context\n" );
     
-    NSOpenGLPixelFormat      *w_pf;
+    NSOpenGLPixelFormat *w_pf;
     uint attributeCount = 0;
-    uint version = 0;
-    
+    const uint version = NSOpenGLProfileVersion4_1Core;
 
-    version = NSOpenGLProfileVersion4_1Core;
-
-    
-#define ADD_ATTR(x) { attributes[attributeCount++] = x; }
-#define ADD_ATTR2(x, y) { ADD_ATTR(x); ADD_ATTR(y); }
+#define ADD_ATTR(x1) { attributes[attributeCount++] = x1; }
+#define ADD_ATTR2(x1, y1) { ADD_ATTR(x1); ADD_ATTR(y1); }
     
     NSOpenGLPixelFormatAttribute attributes[40];
     
@@ -65,15 +73,18 @@
     
     g_Core->Print( LOG_INFO, "Initializing pixel format...\n" );
     
-    bzero(&w_pf, sizeof(w_pf));
+    bzero( &w_pf, sizeof(w_pf) );
     
     w_pf = [[NSOpenGLPixelFormat alloc] initWithAttributes:attributes];
     
-    if( !w_pf )
+    if( !w_pf ) {
         g_Core->Error( ERR_OPENGL, "Failed to initialize pixel format..\n" );
-    
+        return nil;
+    }
+        
     g_Core->Print( LOG_INFO, "Initializing OpenGL view..\n" );
     
+    // Instance.
     self = [super initWithFrame:frameRect pixelFormat:w_pf];
     
     if ( !self )
@@ -81,7 +92,6 @@
     
     [w_pf release];
     
-    //[[self openGLContext] setValues:&swapInt forParameter:NSOpenGLCPSwapRectangleEnable];
     [[self openGLContext] setValues:&swapInt forParameter:NSOpenGLCPSwapInterval];
     
     /*
@@ -161,7 +171,7 @@
     
     g_Input->OnMouseDown( location.x, location.y );
 
-    c_Mouse->Holding = true;
+    //g_Input->SetMouseHold( true );
 }
 
 - (void) mouseDragged:(NSEvent *)theEvent {

@@ -18,13 +18,6 @@ enum ncInputKeyType {
     NCKEY_ESCAPE
 };
 
-class ncMouse {
-public:
-    bool Holding;
-    uint x;
-    uint y;
-};
-
 class ncInput {
 public:
     void Initialize( void );
@@ -38,10 +31,23 @@ public:
     
     void MakeKeyEvent( char key );
     void MakeKeyEvent( ncInputKeyType type );
+    
+    uint GetMouseX( void );
+    uint GetMouseY( void );
+    
+    bool IsMouseHold( void );
+    void SetMouseHold( bool value );
+    void SetMouseY( uint value );
+    void SetMouseX( uint value );
+    
+private:
+    // Mouse stuff.
+    bool Holding;
+    uint x;
+    uint y;
 };
 
 extern ncInput *g_Input;
-extern ncMouse *c_Mouse;
 
 // DEVELOPER
 extern ncConsoleVariable       dev_showcursorpos;                         // Show cursor position on screen.

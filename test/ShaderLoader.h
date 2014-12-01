@@ -13,11 +13,11 @@
 #include "SystemShared.h"
 #include "GameMath.h"
 
-#define MAX_SHADERNAMELEN 18
+#define MAX_SHADERNAMELEN 32
 
 // Shaders.
 #define MAX_SHADERS 64
-#define MAX_SHADERNAME_LENGTH 12
+#define MAX_SHADERNAME_LENGTH 24
 
 class ncGLShader {
     friend class ncShaderManager;

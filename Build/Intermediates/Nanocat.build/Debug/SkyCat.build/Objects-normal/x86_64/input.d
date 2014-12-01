@@ -12,7 +12,12 @@ dependencies: \
   /Users/nekocode/Documents/App\ resourses/nanocat/test/GameMath.h \
   /Users/nekocode/Documents/App\ resourses/nanocat/test/ncBSP.h \
   /Users/nekocode/Documents/App\ resourses/nanocat/test/ShaderLoader.h \
-  /Users/nekocode/Documents/App\ resourses/nanocat/test/ncBitMessage.h \
+  /Users/nekocode/Documents/App\ resourses/nanocat/test/ncMessage.h \
   /Users/nekocode/Documents/App\ resourses/nanocat/test/FileSystem.h \
   /Users/nekocode/Documents/App\ resourses/nanocat/test/Renderer.h \
-  /Users/nekocode/Documents/App\ resourses/nanocat/test/VBOOpenGL.h
+  /Users/nekocode/Documents/App\ resourses/nanocat/test/VBOOpenGL.h \
+  /Users/nekocode/Documents/App\ resourses/nanocat/test/BeautifulEnvironment.h \
+  /Users/nekocode/Documents/App\ resourses/nanocat/test/Terrain.h \
+  /Users/nekocode/Documents/App\ resourses/nanocat/test/Models.h \
+  /Users/nekocode/Documents/App\ resourses/nanocat/test/MaterialLoader.h \
+  /Users/nekocode/Documents/App\ resourses/nanocat/test/ImageManager.h

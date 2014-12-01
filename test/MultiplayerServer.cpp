@@ -101,6 +101,8 @@ ncServerClient::ncServerClient( void ) {
     ackAcknowledged = 0;
     zombifiedAt = 0;
     response = 0;
+    
+    memset( this, NULL, sizeof(ncServerClient) );
 }
 
 /*
@@ -113,7 +115,7 @@ void ncServer::Initialize( void ) {
     t1 = c_coreSystem->Milliseconds();
     
     g_Core->LoadState = NCCLOAD_SERVER;
-    g_Core->Print( LOG_INFO, "Server initializing	...\n" );
+    g_Core->Print( LOG_INFO, "Server initializing...\n" );
 
     if( Initialized ) {
         g_Core->Print( LOG_DEVELOPER, "Uh, someone tried to call me, but I have already initialized.\n" );
@@ -126,7 +128,7 @@ void ncServer::Initialize( void ) {
     LastInfoPrintTime = 0;
     State = SERVER_IDLE;
     
-    zeromem( Response, sizeof(ncServerResponseData) );
+    DZeroMemory( Response, sizeof(ncServerResponseData) );
 
     // Execute server file.
     g_Console->Execute( "readconfig server.nconf" );
@@ -138,7 +140,7 @@ void ncServer::Initialize( void ) {
     Port  = Network_Port.GetInteger();
     ClientNum = 0;
     
-    _stringhelper.Copy( Name, Server_Name.GetString() );
+    g_stringHelper->Copy( Name, Server_Name.GetString() );
 
     g_Core->Print( LOG_INFO, "Initializing server client data...\n" );
 
@@ -267,7 +269,7 @@ void ncServer::ProcessClientMessage( ncServerClient *client, ncBitMessage *msg )
         i = 0;
         p = strtok (command, " ");
 
-        while (p != NULL) {
+        while( p != NULL ) {
             token[i++] = p;
             p = strtok (NULL, " ");
         }
@@ -328,9 +330,9 @@ void ncServer::CreateClient( ncNetdata *from, int response, const NString name, 
         // Keep this first.
         p_temp->address = *from;
         
-        _stringhelper.Copy( p_temp->version, version );
-        _stringhelper.Copy( p_temp->name, name );
-        _stringhelper.Copy( p_temp->address.IPAddress, inet_ntoa(from->SockAddress.sin_addr) );
+        g_stringHelper->Copy( p_temp->version, version );
+        g_stringHelper->Copy( p_temp->name, name );
+        g_stringHelper->Copy( p_temp->address.IPAddress, inet_ntoa(from->SockAddress.sin_addr) );
         
         p_temp->response = response;
         p_temp->clientnum = ClientNum;
@@ -652,7 +654,7 @@ void ncServer::CheckParams( void ) {
     // Already checked in SetupClients, but nevermind...
     if( Server_Maxclients.GetInteger() ) {
         g_Core->Print( LOG_INFO, "Server has too much client number, resetting..\n" );
-        Server_Maxclients.Set( _stringhelper.STR( "%i", SERVER_DEFAULT_CLIENTNUM ) );
+        Server_Maxclients.Set( NC_TEXT( "%i", SERVER_DEFAULT_CLIENTNUM ) );
         return;
     }
 }
@@ -912,7 +914,7 @@ void ncServer::CheckZombies( void ) {
         if( &Clients[i] && Clients[i].state == SVCL_ZOMBIE ) {
             if( Time - Clients[i].zombifiedAt > 1000 ) {
                 
-                zeromem( &Clients[i], sizeof(ncServerClient) );
+                DZeroMemory( &Clients[i], sizeof(ncServerClient) );
                 
                 Clients[i].state = SVCL_FREE;
                 ClientNum--;
@@ -1131,7 +1133,7 @@ void ncServer::Shutdown( const NString finalmsg ) {
     State   =   SERVER_IDLE;
 
     // Clear server data.
-    zeromem( &n_server, sizeof(n_server) );
+    DZeroMemory( &n_server, sizeof(n_server) );
 }
 
 /*

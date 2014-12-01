@@ -60,7 +60,7 @@ bool ncClientGame::Loadmap( const NString map_name ) {
     g_Console->Execute( "removeworld" );
 
     // Get map file and load it.
-    if( g_staticWorld->Load( _stringhelper.STR( "%s.bsp", map_name ) ) ) {
+    if( g_staticWorld->Load( NC_TEXT( "%s.bsp", map_name ) ) ) {
         World_Name.Set( map_name );
 
         g_LevelEnvironment->Prepare();
@@ -76,7 +76,7 @@ bool ncClientGame::Loadmap( const NString map_name ) {
 
         g_gameWorld->Active = true;
         g_gameWater->InUse = true;
-        g_gameTerrain->InUse = true;
+    
         g_staticWorld->InUse = false;
         
         return true;

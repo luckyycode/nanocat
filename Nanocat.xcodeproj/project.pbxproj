@@ -9,7 +9,7 @@
 /* Begin PBXBuildFile section */
 		7E0C0C0B19B123A8001C2FE6 /* GameWorld.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7E0C0C0919B123A8001C2FE6 /* GameWorld.cpp */; };
 		7E11EC47198BDB3C00098E5C /* AssetManager.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7E11EC28198BDB3C00098E5C /* AssetManager.cpp */; };
-		7E11EC48198BDB3C00098E5C /* ncBitMessage.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7E11EC29198BDB3C00098E5C /* ncBitMessage.cpp */; };
+		7E11EC48198BDB3C00098E5C /* ncMessage.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7E11EC29198BDB3C00098E5C /* ncMessage.cpp */; };
 		7E11EC49198BDB3C00098E5C /* ncBSP.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7E11EC2A198BDB3C00098E5C /* ncBSP.cpp */; };
 		7E11EC4A198BDB3C00098E5C /* MultiplayerClient.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7E11EC2B198BDB3C00098E5C /* MultiplayerClient.cpp */; };
 		7E11EC4B198BDB3C00098E5C /* LocalGame.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7E11EC2C198BDB3C00098E5C /* LocalGame.cpp */; };
@@ -46,6 +46,7 @@
 		7E82BA2E19AC24920054E608 /* IOKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7E82BA2A19AC22BD0054E608 /* IOKit.framework */; };
 		7E8A19E81A079D5B00AE08A2 /* Terrain.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7E8A19E71A079D5B00AE08A2 /* Terrain.cpp */; };
 		7EC847201A1A3BBD008C147A /* Security.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7EC8471E1A1A3BBD008C147A /* Security.cpp */; };
+		7ECA38C11A2B95B7002E87A2 /* BeautifulEnvironment.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7ECA38BF1A2B95B7002E87A2 /* BeautifulEnvironment.cpp */; };
 		7ED083DF19B61C990023DEDE /* MacUtils.mm in Sources */ = {isa = PBXBuildFile; fileRef = 7ED083DE19B61C990023DEDE /* MacUtils.mm */; };
 		7EDCDB8C19ACE03900438563 /* main.mm in Sources */ = {isa = PBXBuildFile; fileRef = 7EDCDB8A19ACE03900438563 /* main.mm */; };
 		7EDCDBBF19ACFD7500438563 /* CoreFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7EDCDBBE19ACFD7500438563 /* CoreFoundation.framework */; };
@@ -71,12 +72,12 @@
 		7E0C0C0819B10B4D001C2FE6 /* CoreFont.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = CoreFont.h; sourceTree = "<group>"; };
 		7E0C0C0919B123A8001C2FE6 /* GameWorld.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = GameWorld.cpp; sourceTree = "<group>"; };
 		7E0C0C0A19B123A8001C2FE6 /* GameWorld.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = GameWorld.h; sourceTree = "<group>"; };
-		7E11EC22198BDB3C00098E5C /* ncBitMessage.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ncBitMessage.h; sourceTree = "<group>"; };
+		7E11EC22198BDB3C00098E5C /* ncMessage.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ncMessage.h; sourceTree = "<group>"; };
 		7E11EC23198BDB3C00098E5C /* ncBSP.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ncBSP.h; sourceTree = "<group>"; };
 		7E11EC25198BDB3C00098E5C /* GameMath.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = GameMath.h; sourceTree = "<group>"; };
 		7E11EC27198BDB3C00098E5C /* SystemShared.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SystemShared.h; sourceTree = "<group>"; };
 		7E11EC28198BDB3C00098E5C /* AssetManager.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = AssetManager.cpp; sourceTree = "<group>"; };
-		7E11EC29198BDB3C00098E5C /* ncBitMessage.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ncBitMessage.cpp; sourceTree = "<group>"; };
+		7E11EC29198BDB3C00098E5C /* ncMessage.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ncMessage.cpp; sourceTree = "<group>"; };
 		7E11EC2A198BDB3C00098E5C /* ncBSP.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ncBSP.cpp; sourceTree = "<group>"; };
 		7E11EC2B198BDB3C00098E5C /* MultiplayerClient.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = MultiplayerClient.cpp; sourceTree = "<group>"; };
 		7E11EC2C198BDB3C00098E5C /* LocalGame.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = LocalGame.cpp; sourceTree = "<group>"; };
@@ -124,6 +125,8 @@
 		7E8A19E71A079D5B00AE08A2 /* Terrain.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Terrain.cpp; sourceTree = "<group>"; };
 		7EC8471E1A1A3BBD008C147A /* Security.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Security.cpp; sourceTree = "<group>"; };
 		7EC8471F1A1A3BBD008C147A /* Security.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Security.h; sourceTree = "<group>"; };
+		7ECA38BF1A2B95B7002E87A2 /* BeautifulEnvironment.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = BeautifulEnvironment.cpp; sourceTree = "<group>"; };
+		7ECA38C01A2B95B7002E87A2 /* BeautifulEnvironment.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BeautifulEnvironment.h; sourceTree = "<group>"; };
 		7ED083DE19B61C990023DEDE /* MacUtils.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = MacUtils.mm; sourceTree = "<group>"; };
 		7ED083E019B61CAC0023DEDE /* MacUtils.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = MacUtils.h; sourceTree = "<group>"; };
 		7EDCDB8A19ACE03900438563 /* main.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = main.mm; sourceTree = "<group>"; };
@@ -147,6 +150,7 @@
 		7EDCDBDA19AEB29300438563 /* Input.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Input.h; sourceTree = "<group>"; };
 		7EDCDBDB19AEB48700438563 /* Camera.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Camera.cpp; sourceTree = "<group>"; };
 		7EDCDBDC19AEB48700438563 /* Camera.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Camera.h; sourceTree = "<group>"; };
+		7EEEB9DE1A1D1FEF00C4683D /* SkyCat-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "SkyCat-Bridging-Header.h"; sourceTree = "<group>"; };
 		7EF8EAE918737E2C00D2384D /* SkyCat.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SkyCat.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		7EF8EAEC18737E2C00D2384D /* Cocoa.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Cocoa.framework; path = System/Library/Frameworks/Cocoa.framework; sourceTree = SDKROOT; };
 		7EF8EAEF18737E2C00D2384D /* AppKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AppKit.framework; path = System/Library/Frameworks/AppKit.framework; sourceTree = SDKROOT; };
@@ -266,13 +270,15 @@
 				7E5249E7191DD54300497626 /* Apple */,
 				7E0C0C0919B123A8001C2FE6 /* GameWorld.cpp */,
 				7E0C0C0A19B123A8001C2FE6 /* GameWorld.h */,
+				7ECA38BF1A2B95B7002E87A2 /* BeautifulEnvironment.cpp */,
+				7ECA38C01A2B95B7002E87A2 /* BeautifulEnvironment.h */,
 				7E591BB819B00D9100B5ED7A /* NCString.cpp */,
 				7E591BB919B00D9100B5ED7A /* NCString.h */,
 				7E11EC27198BDB3C00098E5C /* SystemShared.h */,
 				7E11EC28198BDB3C00098E5C /* AssetManager.cpp */,
 				7EDCDBD319AE6D6B00438563 /* AssetManager.h */,
-				7E11EC29198BDB3C00098E5C /* ncBitMessage.cpp */,
-				7E11EC22198BDB3C00098E5C /* ncBitMessage.h */,
+				7E11EC29198BDB3C00098E5C /* ncMessage.cpp */,
+				7E11EC22198BDB3C00098E5C /* ncMessage.h */,
 				7E11EC2A198BDB3C00098E5C /* ncBSP.cpp */,
 				7E11EC23198BDB3C00098E5C /* ncBSP.h */,
 				7E11EC2B198BDB3C00098E5C /* MultiplayerClient.cpp */,
@@ -328,6 +334,7 @@
 				7E74DDD91A0B7CDE0090FE26 /* VBOOpenGL.h */,
 				7EC8471E1A1A3BBD008C147A /* Security.cpp */,
 				7EC8471F1A1A3BBD008C147A /* Security.h */,
+				7EEEB9DE1A1D1FEF00C4683D /* SkyCat-Bridging-Header.h */,
 			);
 			name = mycode;
 			path = test;
@@ -434,6 +441,7 @@
 				7E11EC60198BDB3C00098E5C /* MultiplayerServer.cpp in Sources */,
 				7E11EC64198BDB3C00098E5C /* Utils.cpp in Sources */,
 				7E11EC5C198BDB3C00098E5C /* Models.cpp in Sources */,
+				7ECA38C11A2B95B7002E87A2 /* BeautifulEnvironment.cpp in Sources */,
 				7E11EC58198BDB3C00098E5C /* Input.cpp in Sources */,
 				7E11EC57198BDB3C00098E5C /* Core.cpp in Sources */,
 				7ED083DF19B61C990023DEDE /* MacUtils.mm in Sources */,
@@ -446,7 +454,7 @@
 				7E11EC50198BDB3C00098E5C /* LevelEnvironment.cpp in Sources */,
 				7E74DDDA1A0B7CDE0090FE26 /* VBOOpenGL.cpp in Sources */,
 				7E11EC61198BDB3C00098E5C /* ShaderLoader.cpp in Sources */,
-				7E11EC48198BDB3C00098E5C /* ncBitMessage.cpp in Sources */,
+				7E11EC48198BDB3C00098E5C /* ncMessage.cpp in Sources */,
 				7EDCDB8C19ACE03900438563 /* main.mm in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -504,7 +512,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				MACOSX_DEPLOYMENT_TARGET = 10.8;
+				MACOSX_DEPLOYMENT_TARGET = 10.9;
 				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = macosx;
 				SUPPORTED_PLATFORMS = macosx;
@@ -537,7 +545,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				MACOSX_DEPLOYMENT_TARGET = 10.8;
+				MACOSX_DEPLOYMENT_TARGET = 10.9;
 				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = macosx;
 				SUPPORTED_PLATFORMS = macosx;
@@ -550,6 +558,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_CXX_LANGUAGE_STANDARD = "c++14";
 				CLANG_CXX_LIBRARY = "libstdc++";
+				CLANG_ENABLE_MODULES = YES;
 				CLANG_ENABLE_OBJC_ARC = NO;
 				COMBINE_HIDPI_IMAGES = YES;
 				COPY_PHASE_STRIP = YES;
@@ -565,6 +574,7 @@
 					"/Users/nekocode/Documents/Libs/LibOVR-master/Include",
 				);
 				INFOPLIST_FILE = "test/SkyCat-Info.plist";
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks";
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
 					/Users/nekocode/Desktop,
@@ -573,10 +583,12 @@
 					"/Users/nekocode/Downloads/LibOVR-master/Src",
 					"/Users/nekocode/Downloads/SimpleOculus-master/LibOVR/Lib/MacOS/Debug",
 				);
-				MACOSX_DEPLOYMENT_TARGET = 10.8;
+				MACOSX_DEPLOYMENT_TARGET = 10.9;
 				ONLY_ACTIVE_ARCH = YES;
 				PRODUCT_NAME = SkyCat;
 				SDKROOT = macosx;
+				SWIFT_OBJC_BRIDGING_HEADER = "test/SkyCat-Bridging-Header.h";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				WRAPPER_EXTENSION = app;
 			};
 			name = Debug;
@@ -587,6 +599,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_CXX_LANGUAGE_STANDARD = "c++14";
 				CLANG_CXX_LIBRARY = "libstdc++";
+				CLANG_ENABLE_MODULES = YES;
 				CLANG_ENABLE_OBJC_ARC = NO;
 				COMBINE_HIDPI_IMAGES = YES;
 				COPY_PHASE_STRIP = NO;
@@ -602,6 +615,7 @@
 					"/Users/nekocode/Documents/Libs/LibOVR-master/Include",
 				);
 				INFOPLIST_FILE = "test/SkyCat-Info.plist";
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks";
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
 					/Users/nekocode/Desktop,
@@ -610,10 +624,11 @@
 					"/Users/nekocode/Downloads/LibOVR-master/Src",
 					"/Users/nekocode/Downloads/SimpleOculus-master/LibOVR/Lib/MacOS/Debug",
 				);
-				MACOSX_DEPLOYMENT_TARGET = 10.8;
+				MACOSX_DEPLOYMENT_TARGET = 10.9;
 				ONLY_ACTIVE_ARCH = NO;
 				PRODUCT_NAME = SkyCat;
 				SDKROOT = macosx;
+				SWIFT_OBJC_BRIDGING_HEADER = "test/SkyCat-Bridging-Header.h";
 				WRAPPER_EXTENSION = app;
 			};
 			name = Release;

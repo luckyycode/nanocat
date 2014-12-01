@@ -42,7 +42,7 @@ void ncFileSystem::Initialize( const NString defaultpath ) {
         return;
     }
     
-    Filesystem_Path.Set( _stringhelper.STR("%s/%s", defaultpath, DEFAULT_EXEC_PATH) );
+    Filesystem_Path.Set( NC_TEXT("%s/%s", defaultpath, DEFAULT_EXEC_PATH) );
     
     /* Notify */
     g_Core->Print( LOG_INFO, "Current directory: \"%s\"\n", defaultpath );
@@ -50,7 +50,7 @@ void ncFileSystem::Initialize( const NString defaultpath ) {
     /* Check file logging. */
     if( Filesystem_Logging.GetInteger() ) {
         g_Core->Print( LOG_INFO, "Logging to file is enabled ( %s ).\n", Filesystem_Log.GetString() );
-        if( !( g_Console->logFile = fopen( _stringhelper.STR("%s/%s", defaultpath, Filesystem_Log.GetString() ), "ab+" ) ) ) {
+        if( !( g_Console->logFile = fopen( NC_TEXT("%s/%s", defaultpath, Filesystem_Log.GetString() ), "ab+" ) ) ) {
             g_Core->Print( LOG_ERROR, "Couldn't write or create the '%s' file for logging. Please check permissions.\n");
             g_Core->Print( LOG_INFO, "Logging is disabled.\n");
             g_Core->Print( LOG_NONE, "\n");
@@ -86,7 +86,7 @@ void ncFileSystem::GenerateConfigurationFile( void ) {
     int      i;
 
     // Create new file.
-    if ( !( _cfg = OpenWrite( _stringhelper.STR("%s/config.profile", Filesystem_Path.GetString()) ) ) ) {
+    if ( !( _cfg = OpenWrite( NC_TEXT("%s/config.profile", Filesystem_Path.GetString()) ) ) ) {
         g_Core->Print( LOG_ERROR, "Couldn't generate configuration file.\n" );
         g_Core->Print( LOG_INFO, "Please check folder permissions.\n" );
         return;
@@ -156,7 +156,7 @@ const NString ncFileSystem::GetFileExtension( const NString filename ) {
     Needs a bit improvements.
 */
 
-#define CONFIGLINE_SZ 1024
+#define CFG_LINECHAR 1024
 void ncFileSystem::ReadConfiguration( void ) {
     FILE    *cfg;
 
@@ -166,19 +166,19 @@ void ncFileSystem::ReadConfiguration( void ) {
         return;
     }
 
-    cfg = OpenRead( _stringhelper.STR("%s/%s.nconf", Filesystem_Path.GetString(), c_CommandManager->Arguments(0)) );
+    cfg = OpenRead( NC_TEXT("%s/%s.nconf", Filesystem_Path.GetString(), c_CommandManager->Arguments(0)) );
 
     if( !cfg ) {
         g_Core->Print( LOG_INFO, "Could not read %s configuration file.\n", c_CommandManager->Arguments(0) );
         return;
     }
     else {
-        char buff[CONFIGLINE_SZ];
-        while( fgets (buff, CONFIGLINE_SZ, cfg) ) {
+        char buff[CFG_LINECHAR];
+        while( fgets( buff, CFG_LINECHAR, cfg ) ) {
 
             // Remove some useless symbols.
             int i;
-            for( i = 0; i < CONFIGLINE_SZ; i++ ) {
+            for( i = 0; i < CFG_LINECHAR; i++ ) {
                 if( (buff[i] == '\n' || buff[i] == '\r' || buff[i] == '/' ) )
                     buff[i] = '\0';
             }

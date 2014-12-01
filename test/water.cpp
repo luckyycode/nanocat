@@ -173,10 +173,10 @@ void ncGameWater::Render( ncSceneEye eye ) {
     water_shader->SetUniform( g_waterUniforms[WPROJECTIONMATRIX_UNIFORM], 1, false, g_playerCamera->ProjectionMatrix.m );
     water_shader->SetUniform( g_waterUniforms[WMVP_UNIFORM], 1, false, projectionModelView.m );
     
-    glActiveTexture( GL_TEXTURE0 ); glBindTexture( GL_TEXTURE_2D, g_waterReflectionBuffer.scene );
-    glActiveTexture( GL_TEXTURE1 ); glBindTexture( GL_TEXTURE_2D, g_waterRefractionBuffer.scene );
+    glActiveTexture( GL_TEXTURE0 ); glBindTexture( GL_TEXTURE_2D, g_mainRenderer->g_waterReflectionBuffer->SceneTexture );
+    glActiveTexture( GL_TEXTURE1 ); glBindTexture( GL_TEXTURE_2D, g_mainRenderer->g_waterRefractionBuffer->SceneTexture );
     glActiveTexture( GL_TEXTURE2 ); glBindTexture( GL_TEXTURE_2D, g_materialManager->Find("env_water2_n")->Image.TextureID );
-    glActiveTexture( GL_TEXTURE3 ); glBindTexture( GL_TEXTURE_2D, g_sceneBuffer[eye].depthtex );
+    glActiveTexture( GL_TEXTURE3 ); glBindTexture( GL_TEXTURE_2D, g_mainRenderer->g_sceneBuffer[eye]->DepthTexture );
 
     // Draw now.
     glDrawArrays( GL_TRIANGLE_FAN, 0, sizeof(vertex_water_data) / sizeof(ncVec3) );

@@ -7,4 +7,5 @@ dependencies: \
   /Users/nekocode/Documents/App\ resourses/nanocat/test/SharedApple.h \
   /Users/nekocode/Documents/App\ resourses/nanocat/test/Camera.h \
   /Users/nekocode/Documents/App\ resourses/nanocat/test/GameMath.h \
-  /Users/nekocode/Documents/App\ resourses/nanocat/test/Console.h
+  /Users/nekocode/Documents/App\ resourses/nanocat/test/Console.h \
+  /Users/nekocode/Documents/App\ resourses/nanocat/test/Utils.h

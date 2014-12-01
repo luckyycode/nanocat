@@ -44,7 +44,7 @@ void ncGameConsole::Execute( const NString msg, ... ) {
     int i;
     NString p;
 
-    zeromem( cmds, sizeof(cmds) );
+    DZeroMemory( cmds, sizeof(cmds) );
 
     i = 0;
     p = strtok( g_message, " " );
@@ -64,12 +64,12 @@ void ncGameConsole::Execute( const NString msg, ... ) {
 void ncGameConsole::Render( void )
 {
     int i;
-
+    
     if( !IsShown() ) {
         if( !IsUIShown() ) {
-            g_coreFont->Print2D( ncVec4(0.9, 0.2, 0.6, 1.0), 10, 15, 10, "Nanocat, %s", g_Core->GetVersioNString () );
-            g_coreFont->Print2D( COLOR_GREEN, 10, 45, 10, "look: x: %4.2f y: %4.2f z: %4.2f", g_playerCamera->g_vLook.x, g_playerCamera->g_vLook.y, g_playerCamera->g_vLook.z );
-            g_coreFont->Print2D( COLOR_GREEN, 10, 35, 10, "eye: x: %4.2f y: %4.2f z: %4.2f", g_playerCamera->g_vEye.x, g_playerCamera->g_vEye.y, g_playerCamera->g_vEye.z );
+            g_coreFont->Print2D( COLOR_WHITE, 10, 15, 10, "Nanocat, %s", g_Core->GetVersioNString () );
+            g_coreFont->Print2D( COLOR_WHITE, 10, 45, 10, "look: x: %4.2f y: %4.2f z: %4.2f", g_playerCamera->g_vLook.x, g_playerCamera->g_vLook.y, g_playerCamera->g_vLook.z );
+            g_coreFont->Print2D( COLOR_WHITE, 10, 35, 10, "eye: x: %4.2f y: %4.2f z: %4.2f", g_playerCamera->g_vEye.x, g_playerCamera->g_vEye.y, g_playerCamera->g_vEye.z );
         }
         else {
            
@@ -77,7 +77,7 @@ void ncGameConsole::Render( void )
     }
     else {
         // Version > buffer
-        g_coreFont->Print2D( COLOR_RED, 10, 70, 8, "%s > %s", Prefix, Buffer );
+        g_coreFont->Print2D( COLOR_WHITE, 10, 70, 8, "%s > %s", Prefix, Buffer );
 
         // Console log.
         for( i = 0; i < logCount; i++ ) {
@@ -175,7 +175,7 @@ void ncGameConsole::KeyInput( char key ) {
         // Show/hide console.
         case '~':
             isShown = !isShown;
-            zeromem( Buffer, MAX_COMMAND_SIZE );
+            DZeroMemory( Buffer, MAX_COMMAND_SIZE );
             break;
         
         // Execute command buffer.
@@ -184,7 +184,7 @@ void ncGameConsole::KeyInput( char key ) {
                 g_Core->Print( LOG_NONE, "> %s\n", Buffer );
                 
                 Execute( Buffer );
-                zeromem( Buffer, MAX_COMMAND_SIZE );
+                DZeroMemory( Buffer, MAX_COMMAND_SIZE );
                 
                 charFill = 0;
             }

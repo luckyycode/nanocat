@@ -14,4 +14,5 @@ dependencies: \
   /Users/nekocode/Documents/App\ resourses/nanocat/test/ImageManager.h \
   /Users/nekocode/Documents/App\ resourses/nanocat/test/Renderer.h \
   /Users/nekocode/Documents/App\ resourses/nanocat/test/VBOOpenGL.h \
+  /Users/nekocode/Documents/App\ resourses/nanocat/test/LocalGame.h \
   /Users/nekocode/Documents/App\ resourses/nanocat/test/Utils.h

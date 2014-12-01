@@ -73,7 +73,7 @@ Byte Sharedsecret[] =
 
 void temp_tokenize( void ) {
     
-    g_Core->Print( LOG_ERROR, "version: %f\n", g_Core->GetVersionDouble() );
+    g_Core->Print( LOG_ERROR, "version: %1.1f\n", g_Core->GetVersionDouble() );
     
     NC_ASSERTWARN( false );
 }
@@ -168,7 +168,7 @@ void ncCore::Initialize( void )
     cg_LocalGame->Initialize();
     
     // Build version info.
-    core_version.Set( _stringhelper.STR("%s %s %s", _osname, _version, __DATE__) );
+    core_version.Set( NC_TEXT("%s %s %s", _osname, _version, __DATE__) );
     
     // User input.
     g_Input->Initialize();
@@ -341,7 +341,7 @@ void ncCore::Error( ncCoreErrorType err, const NString msg, ... ) {
     // Message box for Windows
 #ifdef _WIN32
     
-    MessageBox( NULL, _stringhelper.STR("%s\nError code: 0x%x\n%s", text, err, ERROR_REPORT ), "Error", MB_OK | MB_ICONINFORMATION );
+    MessageBox( NULL, NC_TEXT("%s\nError code: 0x%x\n%s", text, err, ERROR_REPORT ), "Error", MB_OK | MB_ICONINFORMATION );
     
     HANDLE hOut;
     
@@ -349,7 +349,7 @@ void ncCore::Error( ncCoreErrorType err, const NString msg, ... ) {
     SetConsoleTextAttribute(hOut, FOREGROUND_BLUE | FOREGROUND_RED | FOREGROUND_INTENSITY );
     
 #elif __APPLE__ // and Cocoa
-    MassageBox( _stringhelper.STR( "%s (errorcode: 0x%x)\n%s", text, err, ERROR_REPORT ) );
+    MassageBox( NC_TEXT( "%s (errorcode: 0x%x)\n%s", text, err, ERROR_REPORT ) );
 #endif // _WIN32
     
     g_Core->Print( LOG_NONE, "\n" );
@@ -387,7 +387,7 @@ void ncCore::Error( ncCoreErrorType err, const NString msg, ... ) {
     g_Core->Print( LOG_NONE, "Bye! :>\n" );
     
     // Shutdown the game now.
-    c_coreSystem->Quit( _stringhelper.STR( "Error - 0x%i\n", err ) );
+    c_coreSystem->Quit( NC_TEXT( "Error - 0x%i\n", err ) );
 }
 
 
@@ -446,8 +446,8 @@ void ncCore::Print( ncCoreLogType type, char const *msg, ... ) {
             g_Console->Execute("clear ext");
     }
     
-    if(!_stringhelper.ContainsNextLine(text)) {
-        strcat(g_Console->Log[g_Console->logFill], _stringhelper.STR("%s%s", logtype, text));
+    if(!g_stringHelper->ContainsNextLine(text)) {
+        strcat(g_Console->Log[g_Console->logFill], NC_TEXT("%s%s", logtype, text));
     }
     else {
         ++g_Console->logFill;
@@ -457,8 +457,8 @@ void ncCore::Print( ncCoreLogType type, char const *msg, ... ) {
     // External console.
 #ifdef SHOW_CONSOLE_LINE_PREFIX
     
-    fputs( _stringhelper.STR("%s%s", logtype, text), stdout );
-    g_Console->PrintExternal( _stringhelper.STR("%s%s", logtype, text) );
+    fputs( NC_TEXT("%s%s", logtype, text), stdout );
+    g_Console->PrintExternal( NC_TEXT("%s%s", logtype, text) );
     
 #else
     

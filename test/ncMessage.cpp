@@ -8,7 +8,7 @@
 //
 
 #include "Core.h"
-#include "ncBitMessage.h"
+#include "ncMessage.h"
 
 bool ncBitset::Initialize( int num ) {
 	if( Bits )

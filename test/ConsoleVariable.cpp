@@ -39,7 +39,8 @@ void ncConsoleVariableManager::AddToList( ncConsoleVariable *var ) {
 }
 
 void ncConsoleVariable::Set( const NString value ) {
-    _stringhelper.Copy(StringValue, value);
+    g_stringHelper->Copy(StringValue, value);
+    
     FloatValue = atof(value);
     Integer = atoi(value);
 }
@@ -51,12 +52,12 @@ ncConsoleVariable::ncConsoleVariable( const NString group, const NString name, c
     else
         c_flag = flags;
     
-    _stringhelper.Copy(Name, name);
-    _stringhelper.Copy(Group, group);
-    _stringhelper.Copy(Description, desc);
+    g_stringHelper->Copy(Name, name);
+    g_stringHelper->Copy(Group, group);
+    g_stringHelper->Copy(Description, desc);
     
-    _stringhelper.Copy(StringValue, value);
-    _stringhelper.Copy(DefaultValue, value);
+    g_stringHelper->Copy(StringValue, value);
+    g_stringHelper->Copy(DefaultValue, value);
     
     Modified = false;
     ModificationCount = 0;

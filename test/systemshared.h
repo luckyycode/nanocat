@@ -108,7 +108,7 @@
     #define _osname             "iOS"
 #endif
 
-    #define zeromem( type, size ) bzero( type, size )
+    #define DZeroMemory( type, size ) memset( type, 0, size )
 
 /*
      Windows
@@ -123,7 +123,7 @@
 
     #define _osname "Win"
 
-    #define zeromem( type, size ) ZeroMemory( type, size )
+    #define DZeroMemory( type, size ) memset( type, 0, size )
 
 /*
  
@@ -174,6 +174,11 @@
 
 #define NString char *
 #define NChar char
+
+#define ifarrdelete( w ) if( w ) \
+                      { \
+                        delete [] w; \
+                      } \
 
 // Uh...
 // We throw error if something goes wrong, or just warn the user.

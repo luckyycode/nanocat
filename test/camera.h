@@ -12,9 +12,30 @@
 
 #include "GameMath.h"
 #include "SystemShared.h"
+#include "ConsoleVariable.h"
 
 // (Dev) Uncomment to use non-server based player control.
 #define PLAYER_SERVERLESS_CONTROL
+
+class ncMouseRay {
+public:
+    ncMouseRay( ncVec3 ray_start, ncVec3 ray_end );
+    
+    ncVec3 GetRayStart() {
+        return _start;
+    }
+    ncVec3 GetRayEnd() {
+        return _end;
+    }
+    ncVec3 GetDirection() {
+        return _dir;
+    }
+    
+private:
+    ncVec3 _start;
+    ncVec3 _end;
+    ncVec3 _dir;
+};
 
 class ncCamera {
 public:
@@ -32,7 +53,7 @@ public:
     void Reset( void );
     void Movement( char key );
     void Frame( float msec );
- 
+    
     int deltaMove;
     
     ncVec2  g_lastMousePosition;
@@ -44,8 +65,12 @@ public:
     ncMatrix4 RotationMatrix;
     ncMatrix4 ProjectionMatrix;
     ncMatrix4 ViewMatrix;
+    
+    static ncVec3 ScreenToWorld( unsigned int x, unsigned int y );
+    static ncVec3 ScreenToWorld( ncMatrix4 modelView, int mouseX, int mouseY, int mouseZ );
+    static ncMouseRay ScreenToWorld( ncMatrix4 modelView, int mouseX, int mouseY );
+    static ncVec3 ScreenToWorldRP( ncMatrix4 modelView, int x, int y );
    
-private:
     float lastMoveAt;
     ncVec3 lastPosition;
 };

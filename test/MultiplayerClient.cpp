@@ -19,7 +19,7 @@
 #include "NCString.h"
 #include "GameMath.h"
 #include "LocalGame.h"
-#include "ncBitMessage.h"
+#include "ncMessage.h"
 
 ncClient local_client;
 ncClient *n_client = &local_client;
@@ -74,7 +74,7 @@ void ncClient::Initialize() {
     c_CommandManager->Add( "name", lazyName );
     c_CommandManager->Add( "say", lazySay );
 
-    _stringhelper.Copy( Name, NameVar.GetString() );
+    g_stringHelper->Copy( Name, NameVar.GetString() );
 
     AckAcknowledged = 0;
     AckSequence = 0;
@@ -156,7 +156,7 @@ void ncClient::Connect( void ) {
     
     
     // Create temp sockaddr.
-    zeromem( &_server, sizeof( _server ) );
+    DZeroMemory( &_server, sizeof( _server ) );
 
     _server.sin_family = AF_INET;
     _server.sin_port = htons( port );
@@ -166,12 +166,12 @@ void ncClient::Connect( void ) {
     
     CurrentServer = new ncNetdata( _server, port, socket );
     
-    _stringhelper.Copy( CurrentServer->IPAddress, addr );
+    g_stringHelper->Copy( CurrentServer->IPAddress, addr );
     
     // Resolve the network address.
     // If it changes then re-assign it.
     if( g_networkManager->Resolve( CurrentServer, addr ) )
-        _stringhelper.Copy( CurrentServer->IPAddress, inet_ntoa( CurrentServer->SockAddress.sin_addr ) );
+        g_stringHelper->Copy( CurrentServer->IPAddress, inet_ntoa( CurrentServer->SockAddress.sin_addr ) );
     
     // Create network channel.
     g_networkManager->CreateChannel( &Channel, CurrentServer );
@@ -447,7 +447,7 @@ void ncClient::DisconnectForced( const NString msg, bool forced ) {
     // Causes some errors, I don't know why.
     //delete CurrentServer;
     
-    zeromem( CurrentServer, sizeof(CurrentServer) );
+    DZeroMemory( CurrentServer, sizeof(CurrentServer) );
     
     memset( AckCommands, 0, sizeof( AckCommands ) );
     
@@ -473,7 +473,7 @@ void ncClient::ChangeName( void ) {
         return;
     }
 
-    _stringhelper.SPrintf( Name, MAX_PLAYER_NAME_LEN + 1,  c_CommandManager->Arguments(0));
+    g_stringHelper->SPrintf( Name, MAX_PLAYER_NAME_LEN + 1,  c_CommandManager->Arguments(0));
     NameVar.Set( c_CommandManager->Arguments(0) );
 
     g_Core->Print( LOG_INFO, "Your name was successfully changed to '%s'. Awesome!\n", NameVar.GetString() );
@@ -579,7 +579,7 @@ void ncClient::Say( void ) {
     }
 
     if( Client_Running.GetInteger() ) {
-        SendAcknowledge( _stringhelper.STR("say %s", c_CommandManager->Arguments(0)) );
+        SendAcknowledge( g_stringHelper->STR("say %s", c_CommandManager->Arguments(0)) );
     }
 }
 

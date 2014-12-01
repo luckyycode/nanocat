@@ -41,6 +41,9 @@ void ncOpenGL::Initialize( void ) {
     g_mainRenderer->renderHeight = Render_Height.GetInteger();
     g_mainRenderer->renderWidth  = Render_Width.GetInteger();
     
+    g_mainRenderer->renderHalfWidth = g_mainRenderer->renderWidth / 2.0f;
+    g_mainRenderer->renderHalfHeight = g_mainRenderer->renderHeight / 2.0f;
+    
     // Initial values.
     g_mainRenderer->windowHeight = g_mainRenderer->renderHeight;
     g_mainRenderer->windowWidth = g_mainRenderer->renderWidth;

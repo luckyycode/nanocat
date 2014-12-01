@@ -52,7 +52,8 @@ public:
     // model manager ( including converter ) but not in the game.
     char    m_name[MODEL_NAMELEN];
     
-    ncMaterial  *material;
+    // Decal, normal, specular.
+    ncMaterial  *material[3];
     
     int    _faces;
     

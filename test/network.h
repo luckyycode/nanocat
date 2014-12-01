@@ -12,7 +12,7 @@
 
 #include "Core.h"
 #include "SystemShared.h"
-#include "ncBitMessage.h"
+#include "ncMessage.h"
 
 #ifdef _WIN32
 #define WINSOCKET_STARTUP_CODE       0x0101

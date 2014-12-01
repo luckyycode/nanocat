@@ -31,16 +31,19 @@ enum ncRenderState {
 
 class ncFramebuffer {
 public:
+    ncFramebuffer() { };
+    ncFramebuffer( int x, int y );
+    
     // Depth buffer.
-    uint depth;
+    uint DepthBuffer;
     // Render buffer.
-    uint render;
+    uint RenderBuffer;
     // Frame buffer.
-    uint frame;
+    uint FrameBuffer;
     // Depth texture.
-    uint depthtex;
+    uint DepthTexture;
     // Scene texture.
-    uint scene;
+    uint SceneTexture;
 };
 
 class ncRenderer {
@@ -75,6 +78,10 @@ public:
     // Some settings.
     uint    renderWidth;
     uint    renderHeight;
+    
+    uint    renderHalfWidth;
+    uint    renderHalfHeight;
+    
     uint    windowWidth;
     uint    windowHeight;
     
@@ -95,6 +102,12 @@ public:
     
     void RemoveNCFramebuffer( ncFramebuffer *buffer );
     void DeleteMainBuffers( void );
+    
+    // Framebuffers.
+    ncFramebuffer *g_waterRefractionBuffer;
+    ncFramebuffer *g_waterReflectionBuffer;
+    ncFramebuffer *g_sceneBuffer[3];
+    
 private:
     void RenderGrass( void );
     void UpdateMatrixRotation( void );
@@ -108,10 +121,6 @@ private:
 
 extern ncRenderer *g_mainRenderer;
 
-// Framebuffers.
-extern ncFramebuffer g_waterRefractionBuffer;
-extern ncFramebuffer g_waterReflectionBuffer;
-extern ncFramebuffer g_sceneBuffer[3];
 
 // Renderer console variables.
 extern ncConsoleVariable       OpenGL_Version;                   // OpenGL version.
@@ -128,8 +137,6 @@ extern ncConsoleVariable       Render_Normalmaps;                       // Is no
 extern ncConsoleVariable       Render_Reflections;                     // Are environment (water) reflections are enabled?
 extern ncConsoleVariable       Render_Water;                           // Render water?
 extern ncConsoleVariable       Render_Sky;                             // Render sky?
-
-extern ncConsoleVariable       render_usefbo;                          // Use frame buffer object? ( developer )
 extern ncConsoleVariable       Render_VSync;                           // Is vertical syncing enabled?
 extern ncConsoleVariable       Render_Width;                       // Renderer width.
 extern ncConsoleVariable       Render_Height;                      // Renderer height.
@@ -138,7 +145,8 @@ extern ncConsoleVariable       Render_LightmapGamma;                   // Lightm
 extern ncConsoleVariable       Render_UseScreenFX;                     // 2D screen filter.
 extern ncConsoleVariable       Render_DepthOfField;                             // Depth of field.
 extern ncConsoleVariable       Render_ScreenLens;                    // Lens anamorph.
-
+extern ncConsoleVariable       Render_AspectRatio;                     // Aspect ratio. ( Width / Height )
+extern ncConsoleVariable       Render_HalfWidth;
 extern ncConsoleVariable        Render_OVR;                             // Virtual realilty.
 
 // FONTS

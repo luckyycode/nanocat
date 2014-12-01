@@ -12,8 +12,277 @@
 #include "FileSystem.h"
 #include "NCString.h"
 #include "Models.h"
+#include "LocalGame.h"
 
 #include "Utils.h"
+
+/*
+    Make mouse ray from screen coordinates.
+*/
+ncVec3 ncUtils::RayFromMousePos( ncMatrix4 m_modelView, int x, int y )
+{
+    float value_fov = DEG2RAD( GameView_FieldOfView.GetFloat() );
+    float value_aspect = Render_AspectRatio.GetFloat();
+    
+    float modifier_x;
+    float modifier_y;
+    //mathematical handling of the difference between
+    //your mouse position and the 'center' of the window
+    
+    float point[3];
+    //the untransformed ray will be put here
+    
+    float point_dist = 100.0;
+    //it'll be put this far on the Z plane
+    
+    float camera_origin[3];
+    //this is where the camera sits, in 3dspace
+    
+    float point_xformed[3];
+    //this is the transformed point
+    
+    
+    
+    float final_point[3];
+    
+    //for the wuDrawSprite call.
+    
+    //These lines are the biggest part of this function.
+    //This is where the mouse position is turned into a mathematical
+    //'relative' of 3d space. The conversion to an actual point
+    modifier_x = tan( value_fov * 0.5 )
+    * (( 1.0 - x / g_mainRenderer->renderHalfWidth ) * ( value_aspect ) );
+    modifier_y = tan( value_fov * 0.5 )
+    * -( 1.0 - y / g_mainRenderer->renderHalfWidth );
+    modifier_y *= -1.0f;
+    //These 3 take our modifier_x/y values and our 'casting' distance
+    //to throw out a point in space that lies on the point_dist plane.
+    //If we were using completely untransformed, untranslated space,
+    //this would be fine - but we're not :)
+    point[0] = modifier_x * point_dist;
+    point[1] = modifier_y * point_dist;
+    point[2] = point_dist;
+    
+    //Next we make an openGL call to grab our MODELVIEW_MATRIX -
+    //This is the matrix that rasters 3d points to 2d space - which is
+    //kinda what we're doing, in reverse
+    //glGetFloatv(GL_MODELVIEW_MATRIX, pulledMatrix);
+    //Some folks would then invert the matrix - I invert the results.
+    
+    //First, to get the camera_origin, we transform the 12, 13, 14
+    //slots of our pulledMatrix - this gets us the actual viewing
+    //position we are 'sitting' at when the function is called
+    camera_origin[0] = -(
+                         m_modelView.m[0] * m_modelView.m[12] +
+                         m_modelView.m[1] * m_modelView.m[13] +
+                         m_modelView.m[2] * m_modelView.m[14]);
+    camera_origin[1] = -(
+                         m_modelView.m[4] * m_modelView.m[12] +
+                         m_modelView.m[5] * m_modelView.m[13] +
+                         m_modelView.m[6] * m_modelView.m[14]);
+    camera_origin[2] = -(
+                         m_modelView.m[8] * m_modelView.m[12] +
+                         m_modelView.m[9] * m_modelView.m[13] +
+                         m_modelView.m[10] * m_modelView.m[14]);
+    
+    //Second, we transform the position we generated earlier - the '3d'
+    //mouse position - by our viewing matrix.
+    point_xformed[0] = -(
+                         m_modelView.m[0] * point[0] +
+                         m_modelView.m[1] * point[1] +
+                         m_modelView.m[2] * point[2]);
+    point_xformed[1] = -(
+                         m_modelView.m[4] * point[0] +
+                         m_modelView.m[5] * point[1] +
+                         m_modelView.m[6] * point[2]);
+    point_xformed[2] = -(
+                         m_modelView.m[8] * point[0] +
+                         m_modelView.m[9] * point[1] +
+                         m_modelView.m[10] * point[2]);
+    
+    //That's pretty much that. Using the camera origin and the
+    //transformed ray, you can now do ray-triangle collision
+    //detection, which i'll leave up to you.
+    
+    //so you can see this function in action, i've included a second
+    //function to draw a sprite (billboard)
+    final_point[0] = point_xformed[0] + camera_origin[0];
+    final_point[1] = point_xformed[1] + camera_origin[1];
+    final_point[2] = point_xformed[2] + camera_origin[2];
+    
+    
+    ncVec3 finalWoot = ncVec3( final_point[0], final_point[1], final_point[2] );
+    
+    //g_modelManager->Spawn( MODEL_DEFAULT, "cat.sm1", "model", finalWoot, finalWoot, false );
+    return finalWoot;
+}
+
+
+/* 
+    GL projection function.
+    From GLU library.
+*/
+
+static void __gluMultMatrixVecf(const GLfloat matrix[16], const GLfloat in[4],
+                                GLfloat out[4])
+{
+    int i;
+    
+    for( i = 0; i < 4; i++ ) {
+        out[i] =
+        in[0] * matrix[0*4+i] +
+        in[1] * matrix[1*4+i] +
+        in[2] * matrix[2*4+i] +
+        in[3] * matrix[3*4+i];
+    }
+}
+
+/*
+ ** Invert 4x4 matrix.
+ ** Contributed by David Moore (See Mesa bug #6748)
+ */
+static int __gluInvertMatrixf(const GLfloat m[16], GLfloat invOut[16])
+{
+    float inv[16], det;
+    int i;
+    
+    inv[0] =   m[5]*m[10]*m[15] - m[5]*m[11]*m[14] - m[9]*m[6]*m[15]
+    + m[9]*m[7]*m[14] + m[13]*m[6]*m[11] - m[13]*m[7]*m[10];
+    inv[4] =  -m[4]*m[10]*m[15] + m[4]*m[11]*m[14] + m[8]*m[6]*m[15]
+    - m[8]*m[7]*m[14] - m[12]*m[6]*m[11] + m[12]*m[7]*m[10];
+    inv[8] =   m[4]*m[9]*m[15] - m[4]*m[11]*m[13] - m[8]*m[5]*m[15]
+    + m[8]*m[7]*m[13] + m[12]*m[5]*m[11] - m[12]*m[7]*m[9];
+    inv[12] = -m[4]*m[9]*m[14] + m[4]*m[10]*m[13] + m[8]*m[5]*m[14]
+    - m[8]*m[6]*m[13] - m[12]*m[5]*m[10] + m[12]*m[6]*m[9];
+    inv[1] =  -m[1]*m[10]*m[15] + m[1]*m[11]*m[14] + m[9]*m[2]*m[15]
+    - m[9]*m[3]*m[14] - m[13]*m[2]*m[11] + m[13]*m[3]*m[10];
+    inv[5] =   m[0]*m[10]*m[15] - m[0]*m[11]*m[14] - m[8]*m[2]*m[15]
+    + m[8]*m[3]*m[14] + m[12]*m[2]*m[11] - m[12]*m[3]*m[10];
+    inv[9] =  -m[0]*m[9]*m[15] + m[0]*m[11]*m[13] + m[8]*m[1]*m[15]
+    - m[8]*m[3]*m[13] - m[12]*m[1]*m[11] + m[12]*m[3]*m[9];
+    inv[13] =  m[0]*m[9]*m[14] - m[0]*m[10]*m[13] - m[8]*m[1]*m[14]
+    + m[8]*m[2]*m[13] + m[12]*m[1]*m[10] - m[12]*m[2]*m[9];
+    inv[2] =   m[1]*m[6]*m[15] - m[1]*m[7]*m[14] - m[5]*m[2]*m[15]
+    + m[5]*m[3]*m[14] + m[13]*m[2]*m[7] - m[13]*m[3]*m[6];
+    inv[6] =  -m[0]*m[6]*m[15] + m[0]*m[7]*m[14] + m[4]*m[2]*m[15]
+    - m[4]*m[3]*m[14] - m[12]*m[2]*m[7] + m[12]*m[3]*m[6];
+    inv[10] =  m[0]*m[5]*m[15] - m[0]*m[7]*m[13] - m[4]*m[1]*m[15]
+    + m[4]*m[3]*m[13] + m[12]*m[1]*m[7] - m[12]*m[3]*m[5];
+    inv[14] = -m[0]*m[5]*m[14] + m[0]*m[6]*m[13] + m[4]*m[1]*m[14]
+    - m[4]*m[2]*m[13] - m[12]*m[1]*m[6] + m[12]*m[2]*m[5];
+    inv[3] =  -m[1]*m[6]*m[11] + m[1]*m[7]*m[10] + m[5]*m[2]*m[11]
+    - m[5]*m[3]*m[10] - m[9]*m[2]*m[7] + m[9]*m[3]*m[6];
+    inv[7] =   m[0]*m[6]*m[11] - m[0]*m[7]*m[10] - m[4]*m[2]*m[11]
+    + m[4]*m[3]*m[10] + m[8]*m[2]*m[7] - m[8]*m[3]*m[6];
+    inv[11] = -m[0]*m[5]*m[11] + m[0]*m[7]*m[9] + m[4]*m[1]*m[11]
+    - m[4]*m[3]*m[9] - m[8]*m[1]*m[7] + m[8]*m[3]*m[5];
+    inv[15] =  m[0]*m[5]*m[10] - m[0]*m[6]*m[9] - m[4]*m[1]*m[10]
+    + m[4]*m[2]*m[9] + m[8]*m[1]*m[6] - m[8]*m[2]*m[5];
+    
+    det = m[0]*inv[0] + m[1]*inv[4] + m[2]*inv[8] + m[3]*inv[12];
+    if (det == 0)
+        return GL_FALSE;
+    
+    det = 1.0 / det;
+    
+    for (i = 0; i < 16; i++)
+        invOut[i] = inv[i] * det;
+    
+    return GL_TRUE;
+}
+
+static void __gluMultMatricesf(const GLfloat a[16], const GLfloat b[16],
+                               GLfloat r[16])
+{
+    int i, j;
+    
+    for (i = 0; i < 4; i++) {
+        for (j = 0; j < 4; j++) {
+            r[i*4+j] =
+            a[i*4+0]*b[0*4+j] +
+            a[i*4+1]*b[1*4+j] +
+            a[i*4+2]*b[2*4+j] +
+            a[i*4+3]*b[3*4+j];
+        }
+    }
+}
+
+GLint ncUtils::gluProject(GLfloat objx, GLfloat objy, GLfloat objz,
+           const GLfloat modelMatrix[16],
+           const GLfloat projMatrix[16],
+           const GLint viewport[4],
+           GLfloat *winx, GLfloat *winy, GLfloat *winz)
+{
+    float in[4];
+    float out[4];
+    
+    in[0]=objx;
+    in[1]=objy;
+    in[2]=objz;
+    in[3]=1.0;
+    __gluMultMatrixVecf(modelMatrix, in, out);
+    __gluMultMatrixVecf(projMatrix, out, in);
+    if (in[3] == 0.0) return(GL_FALSE);
+    in[0] /= in[3];
+    in[1] /= in[3];
+    in[2] /= in[3];
+    /* Map x, y and z to range 0-1 */
+    in[0] = in[0] * 0.5 + 0.5;
+    in[1] = in[1] * 0.5 + 0.5;
+    in[2] = in[2] * 0.5 + 0.5;
+    
+    /* Map x,y to viewport */
+    in[0] = in[0] * viewport[2] + viewport[0];
+    in[1] = in[1] * viewport[3] + viewport[1];
+    
+    *winx=in[0];
+    *winy=in[1];
+    *winz=in[2];
+    
+    
+    return(GL_TRUE);
+}
+
+GLint ncUtils::gluUnProject(GLfloat winx, GLfloat winy, GLfloat winz,
+             const GLfloat modelMatrix[16],
+             const GLfloat projMatrix[16],
+             const GLint viewport[4],
+             GLfloat *objx, GLfloat *objy, GLfloat *objz)
+{
+    float finalMatrix[16];
+    float in[4];
+    float out[4];
+    
+    __gluMultMatricesf(modelMatrix, projMatrix, finalMatrix);
+    if (!__gluInvertMatrixf(finalMatrix, finalMatrix)) return(GL_FALSE);
+    
+    in[0]=winx;
+    in[1]=winy;
+    in[2]=winz;
+    in[3]=1.0;
+    
+    /* Map x and y from window coordinates */
+    in[0] = (in[0] - viewport[0]) / viewport[2];
+    in[1] = (in[1] - viewport[1]) / viewport[3];
+    
+    /* Map to range -1 to 1 */
+    in[0] = in[0] * 2 - 1;
+    in[1] = in[1] * 2 - 1;
+    in[2] = in[2] * 2 - 1;
+    
+    __gluMultMatrixVecf(finalMatrix, in, out);
+    if (out[3] == 0.0) return(GL_FALSE);
+    out[0] /= out[3];
+    out[1] /= out[3];
+    out[2] /= out[3];
+    *objx = out[0];
+    *objy = out[1];
+    *objz = out[2];
+    
+    
+    return(GL_TRUE);
+}
+
 
 /*
     Model convertation tool.
@@ -57,7 +326,7 @@ void ncUtils::OBJtoSM( const NString filename ) {
 
 
     // load the file
-    l_file = c_FileSystem->OpenRead( _stringhelper.STR("%s/%s/%s.obj", Filesystem_Path.GetString(), MODEL_FOLDER, filename) );
+    l_file = c_FileSystem->OpenRead( NC_TEXT("%s/%s/%s.obj", Filesystem_Path.GetString(), MODEL_FOLDER, filename) );
 
     if( !l_file  ){
         g_Core->Print( LOG_ERROR, "Couldn't find \"%s.obj\"\n", filename );
@@ -160,9 +429,9 @@ void ncUtils::OBJtoSM( const NString filename ) {
     header->id          = SM1HEADER;
     header->poly_num    = polygon_num;
 
-    _stringhelper.SPrintf( header->material, strlen(mat_name) + 1, mat_name );
+    g_stringHelper->SPrintf( header->material, strlen(mat_name) + 1, mat_name );
 
-    g_file  = c_FileSystem->OpenWrite( _stringhelper.STR("%s/%s.sm1", Filesystem_Path.GetString(), filename) );
+    g_file  = c_FileSystem->OpenWrite( NC_TEXT("%s/%s.sm1", Filesystem_Path.GetString(), filename) );
 
     c_FileSystem->Write(g_file, header, sizeof(ncSM1Header));
 

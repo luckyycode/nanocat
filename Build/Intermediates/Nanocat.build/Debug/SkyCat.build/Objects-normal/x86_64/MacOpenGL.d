@@ -16,4 +16,4 @@ dependencies: \
   /Users/nekocode/Documents/App\ resourses/nanocat/test/OpenGL.h \
   /Users/nekocode/Documents/App\ resourses/nanocat/test/MultiplayerServer.h \
   /Users/nekocode/Documents/App\ resourses/nanocat/test/Network.h \
-  /Users/nekocode/Documents/App\ resourses/nanocat/test/ncBitMessage.h
+  /Users/nekocode/Documents/App\ resourses/nanocat/test/ncMessage.h

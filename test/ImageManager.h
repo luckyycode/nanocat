@@ -54,6 +54,8 @@ public:
     
     bool LoadUncompressedTGA(ncImage* texture, const NString  filename, FILE * fTGA);
     bool LoadCompressedTGA(ncImage * texture, const NString  filename, FILE * fTGA);
+    
+    void MakeSeamlessTGA( ncImage *img );
 };
 
 extern ncImageLoader *g_imageManager;

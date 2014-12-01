@@ -207,7 +207,7 @@ GLuint ncShaderManager::Compile( const NString shadername, NString data, GLenum 
     shader = glCreateShader( type );
     length = strlen( data );
     
-    const NString versionId = _stringhelper.STR( "#version %s\n", GLSL_Version.GetString() );
+    const NString versionId = NC_TEXT( "#version %s\n", GLSL_Version.GetString() );
     const NString sources[2] = { versionId, data };
     
     glShaderSource( shader, 2, (const char**)&sources, NULL );
@@ -258,9 +258,9 @@ void ncShaderManager::CompileFromFile( const NString file, GLuint *vs, GLuint *f
     char    *data;
     char    *shaders[3];
     
-    result = c_FileSystem->Load( _stringhelper.STR("%s/%s/%s.nshdr", Filesystem_Path.GetString(), SHADER_FOLDER, file), (void**)&data );
+    result = c_FileSystem->Load( NC_TEXT( "%s/%s/%s.nshdr", Filesystem_Path.GetString(), SHADER_FOLDER, file), (void**)&data );
     
-    zeromem( shaders, sizeof(shaders) );
+    DZeroMemory( shaders, sizeof(shaders) );
     
     i = 0;
     p = strtok (data, "\"");
@@ -312,6 +312,11 @@ void ncShaderManager::Load( const NString file ) {
     glAttachShader(program, vs);
     glAttachShader(program, fs);
 
+    if( !strcmp( file, "terrain" ) ) {
+        const NString names[] = { "vertexHeight" };
+        glTransformFeedbackVaryings( program, 1, names, GL_INTERLEAVED_ATTRIBS );
+    }
+    
     glLinkProgram(program);
     glGetProgramiv(program, GL_LINK_STATUS, &err);
 
@@ -342,14 +347,15 @@ void ncShaderManager::Load( const NString file ) {
         
         s_temp = &shaders[shaderCount];
 
-        //memset( s_temp, 0, sizeof(ncGLShader) );
-
+        // Clear memory.
+        DZeroMemory( s_temp, sizeof(ncGLShader) );
+        
         s_temp->Fragment = fs;
         s_temp->Vertex = vs;
         s_temp->Geom = gs;
         s_temp->Id = program;
 
-        _stringhelper.Copy( s_temp->Name, file );
+        g_stringHelper->Copy( s_temp->Name, file );
 
         t2 = c_coreSystem->Milliseconds();
         g_Core->Print( LOG_DEVELOPER, "LoadShader: %s loaded.. ( %4.2f ms )\n", file, t2-t1 );
@@ -370,7 +376,7 @@ void ncShaderManager::Delete( ncGLShader *shader ) {
 
     glDeleteProgram( shader->Id );
 
-    bzero( &shader, sizeof( shader ) );
+    DZeroMemory( &shader, sizeof( shader ) );
 }
 
 /*

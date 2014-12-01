@@ -16,7 +16,7 @@ dependencies: \
   /Users/nekocode/Documents/App\ resourses/nanocat/test/VBOOpenGL.h \
   /Users/nekocode/Documents/App\ resourses/nanocat/test/MultiplayerServer.h \
   /Users/nekocode/Documents/App\ resourses/nanocat/test/Network.h \
-  /Users/nekocode/Documents/App\ resourses/nanocat/test/ncBitMessage.h \
+  /Users/nekocode/Documents/App\ resourses/nanocat/test/ncMessage.h \
   /Users/nekocode/Documents/App\ resourses/nanocat/test/CoreFont.h \
   /Users/nekocode/Documents/App\ resourses/nanocat/test/GameWorld.h \
   /Users/nekocode/Documents/App\ resourses/nanocat/test/ncBSP.h \

@@ -56,7 +56,7 @@ void ncSystem::Initialize( void ) {
         g_Core->Print( LOG_WARN, "Couldn't get physical memory size.\n" );
     } else {
         g_Core->Print( LOG_INFO, "Physical memory installed: %d mb\n", (ull >> 20) );
-        System_PhysMemory.Set( _stringhelper.STR("%u", ( ull >> 20 ) ) );
+        System_PhysMemory.Set( NC_TEXT( "%u", ( ull >> 20 ) ) );
     }
     
     g_Core->Print( LOG_INFO, "%i mb free memory available.\n", GetSysFreeMemory() );
@@ -77,7 +77,7 @@ void ncSystem::Initialize( void ) {
     } else {
         ull /= 1000000;
         g_Core->Print( LOG_INFO, "Processor clock frequency: %d mhz\n", ull );
-        System_CPUSpeed.Set( _stringhelper.STR( "%u", ull ) );
+        System_CPUSpeed.Set( NC_TEXT( "%u", ull ) );
     }
     
 #ifndef iOS_BUILD
@@ -88,7 +88,7 @@ void ncSystem::Initialize( void ) {
         g_Core->Print( LOG_WARN, "Couldn't determine CPU number of cores.\n" );
     } else {
         g_Core->Print( LOG_INFO, "Available processor cores: %i\n", ul );
-        System_CPUCores.Set( _stringhelper.STR( "%u", ul ) );
+        System_CPUCores.Set( NC_TEXT( "%u", ul ) );
     }
     
 #endif
@@ -100,8 +100,8 @@ void ncSystem::Initialize( void ) {
     statex.dwLength = sizeof( statex );
     
     if( GlobalMemoryStatusEx( &statex ) ) {
-        consolevar_set( "System_PhysMemory", _stringhelper.STR( "%u", statex.ullTotalPhys / MEGABYTE ), true );
-        consolevar_set( "System_VirtMemory", _stringhelper.STR( "%u", statex.ullTotalVirtual / MEGABYTE ), true );
+        consolevar_set( "System_PhysMemory", NC_TEXT( "%u", statex.ullTotalPhys / MEGABYTE ), true );
+        consolevar_set( "System_VirtMemory", NC_TEXT( "%u", statex.ullTotalVirtual / MEGABYTE ), true );
         
         g_Core->Print( LOG_INFO, "Installed physical memory: %u\n", statex.ullTotalPhys / MEGABYTE );
         g_Core->Print( LOG_INFO, "Available virtual memory: %u\n", statex.ullTotalVirtual / MEGABYTE );

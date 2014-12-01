@@ -36,9 +36,11 @@ void ncAssetManager::Initialize( void ) {
     f_AssetManager->Load( ASSET_SHADER, "passthru" );
     f_AssetManager->Load( ASSET_SHADER, "font" );
     // Not really core ones, user could make a custom ones.
+    f_AssetManager->Load( ASSET_SHADER, "beautifulgrass" );
     f_AssetManager->Load( ASSET_SHADER, "terrain" );
     f_AssetManager->Load( ASSET_SHADER, "water" );
     f_AssetManager->Load( ASSET_SHADER, "level" );
+    f_AssetManager->Load( ASSET_SHADER, "model" );
     
     // Initialize materials and load textures.
     g_materialManager->Initialize();

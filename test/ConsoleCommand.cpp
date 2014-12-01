@@ -27,7 +27,7 @@ void ncCommandManager::Add( const NString cmd, ncFunctionCall command ) {
     c_temp = &cmds[CommandCount];
 
     c_temp->function = command;
-    _stringhelper.SPrintf( c_temp->name, strlen(cmd) + 1, cmd );
+    g_stringHelper->SPrintf( c_temp->name, strlen(cmd) + 1, cmd );
 
     CommandCount++;
 }
@@ -72,7 +72,7 @@ void ncCommandManager::Execute( const NString cmd[] ) {
     int g_argc, g_cmd;
 
     // Clear last buffer.
-    zeromem( g_Console->lastBuffer, sizeof(g_Console->lastBuffer) );
+    DZeroMemory( g_Console->lastBuffer, sizeof(g_Console->lastBuffer) );
     argc = 0;
 
     /*
@@ -82,7 +82,7 @@ void ncCommandManager::Execute( const NString cmd[] ) {
     // Fill last buffer.
     for( g_argc = 0; g_argc < MAX_COMMAND_TOKENS; g_argc ++ ) {
         if( cmd[g_argc] != NULL ) {
-            _stringhelper.SPrintf( g_Console->lastBuffer[g_argc], strlen(cmd[g_argc]) + 1, cmd[g_argc] );
+            g_stringHelper->SPrintf( g_Console->lastBuffer[g_argc], strlen(cmd[g_argc]) + 1, cmd[g_argc] );
             argc ++;
         }
     }
@@ -97,7 +97,7 @@ void ncCommandManager::Execute( const NString cmd[] ) {
         if( !strcmp( cmd[0], cmds[g_cmd].name ) ) {
             for( g_argc = 0; g_argc < MAX_COMMAND_TOKENS; g_argc ++ ) {
                 if( cmd[g_argc] != NULL ) {
-                    _stringhelper.SPrintf( g_Console->lastBuffer[g_argc], strlen(cmd[g_argc]) + 1, cmd[g_argc] );
+                    g_stringHelper->SPrintf( g_Console->lastBuffer[g_argc], strlen(cmd[g_argc]) + 1, cmd[g_argc] );
                     argc ++;
                 }
             }

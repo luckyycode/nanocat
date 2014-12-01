@@ -1,6 +1,7 @@
 //
 //  SharedMac.h
-//  SkyCatCPP
+//
+//  Common includes and definitions for Mac/iOS systems.
 //
 //  Created by Neko Code on 8/31/14.
 //  Copyright (c) 2014 Neko Vision. All rights reserved.

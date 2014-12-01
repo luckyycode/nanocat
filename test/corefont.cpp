@@ -49,8 +49,8 @@ void ncCoreFontRenderer::Print2D( ncVec4 color, int x, int y, int size, const NS
     ncVec2 m_vertices[FONT_VERTICES];
     ncVec2 UVs[FONT_VERTICES];
 
-    zeromem( m_vertices, sizeof(ncVec2) * FONT_VERTICES );
-    zeromem( UVs, sizeof(ncVec2) * FONT_VERTICES );
+    DZeroMemory( m_vertices, sizeof(ncVec2) * FONT_VERTICES );
+    DZeroMemory( UVs, sizeof(ncVec2) * FONT_VERTICES );
 
     int i, c = 0;
     

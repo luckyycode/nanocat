@@ -11,7 +11,7 @@
 #define bspmngr_included
 
 #include "ShaderLoader.h"
-#include "ncBitMessage.h"
+#include "ncMessage.h"
 #include "FileSystem.h"
 #include "GameMath.h"
 #include "Renderer.h"

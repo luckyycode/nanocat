@@ -435,8 +435,27 @@ ncVec3 ncVec3::operator*( const float v ) const {
     return vResult;
 }
 
-float ncVec3_Dot( ncVec3 v1, ncVec3 v2 ) {
+ncVec3 ncVec3::CrossTwoVectors( ncVec3 v1, ncVec3 v2 ) {
+    ncVec3 finalResult;
+    
+    finalResult.x = v1.y * v2.z - v1.z * v2.y;
+    finalResult.y = v1.z * v2.x - v1.x * v2.z;
+    finalResult.z = v1.x * v2.y - v1.y * v2.x;
+    
+    return finalResult;
+}
+
+float ncVec3::Dot( ncVec3 v1, ncVec3 v2 ) {
     return( v1.x * v2.x + v1.y * v2.y + v1.z * v2.z  );
+}
+
+float ncVec3::Distance( const ncVec3 &v1 )
+{
+    float dx = this->x - v1.x;
+    float dy = this->y - v1.y;
+    float dz = this->z - v1.z;
+    
+    return sqrt(dx * dx + dy * dy + dz * dz);
 }
 
 ncVec3 ncVec3::operator-(const ncVec3& v) const {
@@ -491,6 +510,16 @@ ncVec3 ncVec3::operator/( const float v ) const {
     vResult.x = x / v;
     vResult.y = y / v;
     vResult.z = z / v;
+    
+    return vResult;
+}
+
+ncVec4 ncVec4::operator/( const float& v ) const {
+    ncVec4 vResult;
+    vResult.x = x / v;
+    vResult.y = y / v;
+    vResult.z = z / v;
+    vResult.w = w / v;
     
     return vResult;
 }
@@ -587,6 +616,63 @@ void ncMatrix4::CreateOrtho( float xMin, float xMax, float yMin, float yMax, flo
     m[13] = -((yMax + yMin)/(yMax - yMin));
     m[14] = -((zMax + zMin)/(zMax - zMin));
     m[15] = 1.0;
+}
+
+ncVec4 ncMatrix4::operator*( const ncVec4 &v ) const {
+  /*  double prod[4] = { 0,0,0,0 };
+    for (int r=0;r<4;r++)
+    {
+        for (int c=0;c<3;c++)
+            prod[r] += v[c]*get(c,r);
+            prod[r] += get(3,r);
+    }
+
+    double div = 1.0 / prod[3];
+    
+    return ncVec3(prod[0]*div,prod[1]*div,prod[2]*div);*/
+
+    double origvec[4]={v.x,v.y,v.z,1.0};
+    double vec[4]={0,0,0,0};
+    
+    for(int i=0;i<4;i++)
+    {
+        for(int j=0;j<4;j++)
+        {
+            vec[i]+=origvec[j]*m[i*j];   //dot product each row of the matrix with the vector
+        }
+    }
+
+        
+    return ncVec4((float)vec[0],(float)vec[1],(float)vec[2], (float)vec[3] );
+}
+
+
+ncVec3 ncMatrix4::operator*( const ncVec3 &v ) const {
+    /*  double prod[4] = { 0,0,0,0 };
+     for (int r=0;r<4;r++)
+     {
+     for (int c=0;c<3;c++)
+     prod[r] += v[c]*get(c,r);
+     prod[r] += get(3,r);
+     }
+     
+     double div = 1.0 / prod[3];
+     
+     return ncVec3(prod[0]*div,prod[1]*div,prod[2]*div);*/
+    
+    double origvec[4]={v.x,v.y,v.z,1.0};
+    double vec[4]={0,0,0,0};
+    
+    for(int i=0;i<4;i++)
+    {
+        for(int j=0;j<4;j++)
+        {
+            vec[i]+=origvec[j]*m[i*j];   //dot product each row of the matrix with the vector
+        }
+    }
+    
+    
+    return ncVec3((float)vec[0],(float)vec[1],(float)vec[2] );
 }
 
 /*
@@ -713,6 +799,41 @@ void ncPlane::Normalize() {
     
     intercept /= normalLength;
 }
+ncVec3 Crosss( ncVec3 a, ncVec3 b ) {
+    ncVec3 finalResult;
+    
+    finalResult.x = a.y * b.z - a.z * b.y;
+    finalResult.y = a.z * b.x - a.x * b.z;
+    finalResult.z = a.x * b.y - a.y * b.x;
+    
+    return finalResult;
+}
+void ncPlane::SetFromPoints(const ncVec3 & p0, const ncVec3 & p1, const ncVec3 & p2)
+{
+    normal= Crosss(p1-p0,p2-p0);
+    
+    normal.Normalize();
+    
+    CalculateIntercept(p0);
+}
+
+bool ncPlane::Intersect3(const ncPlane & p2, const ncPlane & p3, ncVec3 & result)//find point of intersection of 3 planes
+{
+    float denominator = ncVec3::Dot( normal, Crosss(p2.normal,p3.normal) );
+    //scalar triple product of normals
+    if(denominator==0.0f)									//if zero
+        return false;										//no intersection
+    
+    ncVec3 temp1, temp2, temp3;
+    temp1=(Crosss(p2.normal, p3.normal))*intercept;
+    temp2=(Crosss(p3.normal, normal))*p2.intercept;
+    temp3=(Crosss(normal, p2.normal))*p3.intercept;
+    
+    result=(temp1+temp2+temp3)/(-denominator);
+    
+    return true;
+}
+
 
 /*
     Tools and utilities.

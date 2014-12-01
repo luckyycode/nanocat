@@ -10,17 +10,22 @@
 #ifndef gamemath_h
 #define gamemath_h
 
-#define DEGTORAD(degree)    ((degree) * (3.141592654f / 180.0f))
-#define RADTODEG(radian)    ((radian) * (180.0f / 3.141592654f))
+#define PI 3.14159265358979323846
+#define DEGTORAD(degree)    ((degree) * (PI / 180.0f))
+#define RADTODEG(radian)    ((radian) * (180.0f / PI))
 #define DEG2RAD(a) ( (a) * PI / 180.0 )
-#define DEGINRAD ( 3.1415926 / 180.0 )
-#define ANG2RAD 3.14159265358979323846 / 180.0
+#define DEGINRAD ( PI / 180.0 )
+#define ANG2RAD PI / 180.0
 #define TWO_PI	2.0f * PI
 #define HALF_PI	0.5f * PI
 #define EPSILON 2.71828182845904523536f
+#define M_INFINITY 999999999.0f
 #define RAD2DEG 180.0f / PI
 #define SEC2MS 1000.0f
 #define MS2SEC 0.001f
+
+#define maxdef(x, y) (((x) > (y)) ? (x) : (y))
+#define mindef(x, y) (((x) < (y)) ? (x) : (y))
 
 #define POINT_ON_PLANE 0
 #define POINT_IN_FRONT_OF_PLANE 1
@@ -64,6 +69,11 @@ public:
     float z;
     float w;
     
+    ncVec4() {
+        this->x = 0.0f;
+        this->y = 0.0f;
+        this->z = 0.0f;
+    }
     ncVec4( float x, float y, float z, float w ) {
         this->x = x;
         this->y = y;
@@ -78,6 +88,7 @@ public:
     }
     
     void Inverse( ncVec4& v );
+    ncVec4 operator/(const float& v) const;
 };
 
 class ncVec3 {
@@ -105,6 +116,7 @@ public:
     void Normalize( void );
     void Cross( ncVec3 v1, ncVec3 v2 );
     float Length( void );
+    float Distance( const ncVec3 &v1 );
     void Inverse( void );
     
     ncVec3 operator+(const ncVec3& v) const;
@@ -112,6 +124,10 @@ public:
     ncVec3 operator*(const ncVec3& v) const;
     ncVec3 operator*(const float v) const;
     ncVec3 operator/(const float v) const;
+    
+    // Static functions.
+    static float Dot( ncVec3 v1, ncVec3 v2 );
+    static ncVec3 CrossTwoVectors( ncVec3 v1, ncVec3 v2 );
 };
 
 class ncMatrix4 {
@@ -146,6 +162,8 @@ public:
     ncMatrix4 operator-(const ncMatrix4& v) const;
     ncMatrix4 operator*(const ncMatrix4& v) const;
     ncMatrix4 operator*(const float f) const;
+    ncVec4 operator*(const ncVec4&v ) const;
+    ncVec3 operator*(const ncVec3&v ) const;
     
     // View stuff.
     void CreatePerspective( float fovy, float aspect_ratio, float near_plane, float far_plane );
@@ -156,7 +174,7 @@ public:
             GameMath Library functions.
 */
 
-float ncVec3_Dot( ncVec3 v1, ncVec3 v2 );
+
 
 void Matrix4_TransformPoint( ncMatrix4 *mat, ncVec3 *vec );
 void Matrix4_TransformVector( ncMatrix4 *mat, ncVec3 *vec );
@@ -188,6 +206,24 @@ public:
     
     int ClassifyPoint( ncVec3 point );
     void Normalize( void );
+    
+    void SetNormal( const ncVec3 & rhs ) { normal = rhs; }
+    void SetIntercept( float newIntercept ) { intercept = newIntercept; }
+    void SetFromPoints(const ncVec3 & p0, const ncVec3 & p1, const ncVec3 & p2);
+    
+    void CalculateIntercept(const ncVec3 & pointOnPlane) {
+        float nDotp = ncVec3::Dot( pointOnPlane, normal );
+        intercept=-nDotp;
+    }
+    
+    bool Intersect3(const ncPlane & p2, const ncPlane & p3, ncVec3 & result);
+    
+    
+    float GetDistance(const ncVec3 & point) const
+    {
+        return point.x * normal.x + point.y * normal.y + point.z * normal.z + intercept;
+    }
+    
 };
 
 class ncFrustum {

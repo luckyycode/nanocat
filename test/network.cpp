@@ -158,15 +158,15 @@ void ncNetwork::Initialize( void ) {
             
             port++;
             
-            Network_Port.Set( _stringhelper.STR("%i", port) );
+            Network_Port.Set( NC_TEXT("%i", port) );
             continue;
         }
         
         break;
     }
 
-    Network_IPAddress.Set( _stringhelper.STR( "%s", inet_ntoa(DataAddr.sin_addr) ) );
-    Network_Port.Set( _stringhelper.STR("%i", port) );
+    Network_IPAddress.Set( NC_TEXT( "%s", inet_ntoa(DataAddr.sin_addr) ) );
+    Network_Port.Set( NC_TEXT("%i", port) );
 
     if( Network_AddressType.GetInteger() == 1 )
         g_Core->Print( LOG_INFO, "Listening on '%s:%i'. \n", inet_ntoa(DataAddr.sin_addr), port );
@@ -206,6 +206,7 @@ bool ncNetwork::Frame( void ) {
     bytes = recvfrom( NetworkSocket, &data, size, 0, (struct sockaddr *)&RecvAddr, (socklen_t*)&packet_len );
     
     if ( bytes == -1 ) {
+        
         if( errno == EWOULDBLOCK || errno == ECONNREFUSED )
             return false;
    
@@ -435,7 +436,7 @@ bool ncNetwork::Resolve( ncNetdata *address, const NString host ) {
     {
         g_Core->Print( LOG_INFO, "ncNetwork::Resolve - Resolved as '%s'\n", inet_ntoa (*((struct in_addr *) hn->h_addr_list[0])) );
         memcpy( (void *)&address->SockAddress.sin_addr, hn->h_addr_list[0], hn->h_length );
-        _stringhelper.Copy( address->IPAddress, inet_ntoa ( *((struct in_addr *) hn->h_addr_list[0]) ) );
+        g_stringHelper->Copy( address->IPAddress, inet_ntoa ( *((struct in_addr *) hn->h_addr_list[0]) ) );
         //address->port = -1; // Not assigned yet.
         
         return true;

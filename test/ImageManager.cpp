@@ -285,7 +285,7 @@ bool ncImageLoader::LoadTGA( const NString name, ncImage *image ) {
     }
     
     g_Core->Print( LOG_INFO, "%s/%s/%s\n", Filesystem_Path.GetString(), TEXTURE_FOLDER, name  );
-    FILE *img = c_FileSystem->OpenRead(  _stringhelper.STR( "%s/%s/%s", Filesystem_Path.GetString(), TEXTURE_FOLDER, name ) );
+    FILE *img = c_FileSystem->OpenRead( NC_TEXT( "%s/%s/%s", Filesystem_Path.GetString(), TEXTURE_FOLDER, name ) );
     c_FileSystem->Read( img, (void**)&tgaheader, sizeof(tgaheader) );
 
     if( memcmp( uTGAcompare, &tgaheader, sizeof(tgaheader) ) ) {
@@ -316,7 +316,7 @@ bool ncImageLoader::CreateImage( int width, int height, byte *data, ncImageType 
         case NCBMP_IMAGE: {
                 FILE *f;
             
-                f = fopen( _stringhelper.STR( "%s/%s.bmp", Filesystem_Path.GetString(), filename), "wb" );
+                f = fopen( NC_TEXT( "%s/%s.bmp", Filesystem_Path.GetString(), filename), "wb" );
                 if( !f ) {
                     g_Core->Error( ERR_ASSET, "ncImageLoader::CreateImage - Couldn't create %s image.\n", filename );
                     return false;
@@ -391,7 +391,7 @@ bool ncImageLoader::LoadBMP( const NString filename, ncImage *img ) {
     unsigned int    imageSize;
     
     // BMP image.
-    imgfile = c_FileSystem->OpenRead( _stringhelper.STR( "%s/%s/%s.bmp", Filesystem_Path.GetString(), TEXTURE_FOLDER, filename ) );
+    imgfile = c_FileSystem->OpenRead( NC_TEXT( "%s/%s/%s.bmp", Filesystem_Path.GetString(), TEXTURE_FOLDER, filename ) );
     
     if( !imgfile ) {
         g_Core->Print( LOG_ERROR, "ncImageLoader::Load - Couldn't find %s image\n", filename);
@@ -459,7 +459,7 @@ bool ncImageLoader::Load( ncImageType type, const NString filename, ncImage *img
         // Load uncompressed targa image.
         case NCTGA_IMAGE:
 
-            imgfile = c_FileSystem->OpenRead( _stringhelper.STR( "%s/%s/%s.tga", Filesystem_Path.GetString(), TEXTURE_FOLDER, filename ) );
+            imgfile = c_FileSystem->OpenRead( NC_TEXT( "%s/%s/%s.tga", Filesystem_Path.GetString(), TEXTURE_FOLDER, filename ) );
 
             if( !imgfile ) {
                 g_Core->Print( LOG_ERROR, "ncImageLoader::Load - Couldn't find %s image.\n", filename );
@@ -518,13 +518,15 @@ bool ncImageLoader::Load( ncImageType type, const NString filename, ncImage *img
             // Will be freed in material manager.
             
             fclose( imgfile );
+            
+            //MakeSeamlessTGA( img );
 
             return true;
 
         case NCBMP_IMAGE:
             
             // BMP image.
-            imgfile = c_FileSystem->OpenRead( _stringhelper.STR( "%s/%s/%s.bmp", Filesystem_Path.GetString(), TEXTURE_FOLDER, filename ) );
+            imgfile = c_FileSystem->OpenRead( NC_TEXT( "%s/%s/%s.bmp", Filesystem_Path.GetString(), TEXTURE_FOLDER, filename ) );
 
             if( !imgfile ) {
                 g_Core->Print( LOG_ERROR, "ncImageLoader::Load - Couldn't find %s image\n", filename);
@@ -571,6 +573,33 @@ bool ncImageLoader::Load( ncImageType type, const NString filename, ncImage *img
     }
 
     return true;
+}
+
+/*
+    Make seamless on image.
+*/
+void ncImageLoader::MakeSeamlessTGA( ncImage *img ) {
+    unsigned char *image = (unsigned char*)img->ImageData;
+    unsigned char a[4], b[4];
+    char Bpp = img->BitsPerPixel / 8;
+    
+    for (int i=0; i< img->Width; i++) {
+        memcpy(a, &image[i*Bpp], Bpp);
+        memcpy(b, &image[(i+(img->Heigth-1)*img->Width)*Bpp], Bpp);
+        for (int j=0; j<Bpp; j++)
+            a[j] = ((int)a[j] + (int)b[j]) / 2;
+        memcpy(&image[i*Bpp], a, Bpp);
+        memcpy(&image[(i+(img->Heigth-1)*img->Width)*Bpp], a, Bpp);
+    }
+    
+    for (int i=0; i<img->Heigth; i++) {
+        memcpy(a, &image[i*img->Width*Bpp], Bpp);
+        memcpy(b, &image[(i*img->Width+img->Width-1)*Bpp], Bpp);
+        for (int j=0; j<Bpp; j++)
+            a[j] = ((int)a[j] + (int)b[j]) / 2;
+        memcpy(&image[i*img->Width*Bpp], a, Bpp);
+        memcpy(&image[(i*img->Width+img->Width-1)*Bpp], a, Bpp);
+    }
 }
 
 /*

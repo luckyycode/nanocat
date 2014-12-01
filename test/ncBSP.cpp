@@ -104,7 +104,7 @@ void ncBSP::Unload( void ) {
     if( m_normalTextures )
         delete [] m_normalTextures;
 
-    zeromem( &m_visibilityData, sizeof(m_visibilityData) );
+    DZeroMemory( &m_visibilityData, sizeof(m_visibilityData) );
     visibleFaces.Delete();
     
     InUse = false;
@@ -145,7 +145,7 @@ bool ncBSP::Load( const NString filename ) {
     
     t1 = c_coreSystem->Milliseconds();
     
-    g_mapFile = fopen( _stringhelper.STR("%s/%s", Filesystem_Path.GetString(), filename ), "rb" );
+    g_mapFile = fopen( NC_TEXT("%s/%s", Filesystem_Path.GetString(), filename ), "rb" );
     
     if( !g_mapFile ) {
         g_Core->Print( LOG_ERROR, "Couldn't load %s map file.\n", filename );
@@ -153,7 +153,7 @@ bool ncBSP::Load( const NString filename ) {
     }
     
     // Read and check its header!
-    zeromem( &header, sizeof( header ) );
+    DZeroMemory( &header, sizeof( header ) );
     
     // Clear memory, don't make it static.
     fread( &header, sizeof( ncBSPHeader ), 1, g_mapFile );
@@ -836,6 +836,9 @@ void ncBSP::LoadData( void ) {
     Calculate camera leaf.
 */
 int ncBSP::CalculateLeaf( ncVec3 cameraPosition ) {
+    if( !m_planes )
+        return 0;
+    
     int currentNode = 0;
     
     while( currentNode >= 0 ) {
@@ -883,6 +886,10 @@ void ncBSP::CalculateVisibleData( ncVec3 cameraPosition ) {
     if( !Render_CalculateVisibleData.GetInteger() )
         return;
     
+    // External.
+    if( !m_leaves )
+        return;
+    
     // Remove previous visibility data.
     visibleFaces.ClearAll();
  
@@ -924,12 +931,9 @@ void ncBSP::Render( bool reflection, ncSceneEye oc ) {
     
     bspShader->Use();
     
-  //  ncMatrix4 model;
     ncMatrix4 pos;
-    
-   // model.Identity();
+
     pos.Identity();
-    
     pos.Translate( bsp_position );
     
     ncVec3 reflectedScale = ncVec3( 1.0f, -1.0f, 1.0f );
@@ -1022,7 +1026,7 @@ void ncBSP::RenderPolygon( int polygonFaceNumber ) {
     glBindTexture(GL_TEXTURE_2D, m_lightmapTextures[pFace->lightmapIndex]);
 
     glActiveTexture(GL_TEXTURE2);
-    glBindTexture(GL_TEXTURE_2D, g_sceneBuffer[EYE_FULL].depthtex );
+    glBindTexture(GL_TEXTURE_2D, g_mainRenderer->g_sceneBuffer[EYE_FULL]->DepthTexture );
 
     glActiveTexture(GL_TEXTURE3);
     glBindTexture(GL_TEXTURE_2D, m_normalTextures[pFace->texture]);
@@ -1079,7 +1083,7 @@ void ncBSP::RenderMesh( int meshFaceNumber ) {
     glBindTexture(GL_TEXTURE_2D, m_lightmapTextures[pFace->lightmapIndex]);
 
     glActiveTexture(GL_TEXTURE2);
-    glBindTexture(GL_TEXTURE_2D, g_sceneBuffer[0].depthtex );
+    glBindTexture(GL_TEXTURE_2D, g_mainRenderer->g_sceneBuffer[0]->DepthTexture );
 
     glActiveTexture(GL_TEXTURE3);
     glBindTexture(GL_TEXTURE_2D, m_normalTextures[pFace->textureIndex] );
@@ -1151,7 +1155,7 @@ void ncBSP::RenderFaces( int faceNumber ) {
     glBindTexture( GL_TEXTURE_2D, m_lightmapTextures[pFace->lightmapIndex] );
   
     glActiveTexture( GL_TEXTURE2);
-    glBindTexture( GL_TEXTURE_2D, g_sceneBuffer[EYE_FULL].depthtex );
+    glBindTexture( GL_TEXTURE_2D, g_mainRenderer->g_sceneBuffer[EYE_FULL]->DepthTexture );
     
     glActiveTexture( GL_TEXTURE3 );
     glBindTexture( GL_TEXTURE_2D, m_normalTextures[pFace->texture] );
@@ -1221,7 +1225,7 @@ void ncBSP::RenderPatch( int patchNumber )
     glBindTexture( GL_TEXTURE_2D, m_lightmapTextures[pFace->lightmapIdx] );
     
     glActiveTexture( GL_TEXTURE2);
-    glBindTexture( GL_TEXTURE_2D, g_sceneBuffer[EYE_FULL].depthtex );
+    glBindTexture( GL_TEXTURE_2D, g_mainRenderer->g_sceneBuffer[EYE_FULL]->DepthTexture );
     
     glActiveTexture( GL_TEXTURE3 );
     glBindTexture( GL_TEXTURE_2D, m_normalTextures[pFace->textureIdx] );
